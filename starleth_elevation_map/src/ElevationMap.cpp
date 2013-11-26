@@ -7,6 +7,9 @@
  */
 #include "ElevationMap.hpp"
 
+// StarlETH Navigation
+#include <starleth_elevation_msg/ElevationMap.h>
+
 // PCL
 #include <pcl/common/transforms.h>
 #include <pcl/filters/passthrough.h>
@@ -27,6 +30,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
 {
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic, 1, &ElevationMap::pointCloudCallback, this);
+  elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
   timer_ = nodeHandle_.createTimer(ros::Duration(0.1), &ElevationMap::timerCallback, this);
   resize(length_, width_);
 }
@@ -72,6 +76,12 @@ void ElevationMap::pointCloudCallback(
   if (!addToElevationMap(pointCloud))
   {
     ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
+    return;
+  }
+
+  if (!publishElevationMap())
+  {
+    ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
     return;
   }
 
@@ -123,6 +133,29 @@ bool ElevationMap::transformPointCloud(
   }
 }
 
+bool ElevationMap::publishElevationMap()
+{
+  starleth_elevation_msg::ElevationMap elevationMapMessage_;
+
+  elevationMapMessage_.header.stamp = timeOfLastUpdate_;
+  elevationMapMessage_.header.frame_id = elevationMapFrameId_;
+  elevationMapMessage_.resolution = resolution_;
+  elevationMapMessage_.length = length_;
+  elevationMapMessage_.width = width_;
+
+  starleth_elevation_msg::matrixEigenToMsg(elevationData_, elevationMapMessage_.elevationData);
+  elevationMapMessage_.elevationData.layout.dim[0].label = "length";
+  elevationMapMessage_.elevationData.layout.dim[1].label = "width";
+
+  starleth_elevation_msg::matrixEigenToMsg(varianceData_, elevationMapMessage_.varianceData);
+  elevationMapMessage_.varianceData.layout.dim[0].label = "length";
+  elevationMapMessage_.varianceData.layout.dim[1].label = "width";
+
+  elevationMapPublisher_.publish(elevationMapMessage_);
+
+  return true;
+}
+
 bool ElevationMap::broadcastElevationMapTransform()
 {
   tf::Transform tfTransform;
@@ -142,7 +175,7 @@ bool ElevationMap::addToElevationMap(
 {
   elevationData_.setRandom();
 
-  elevationData_(100, 100) = NAN;
+  elevationData_(0, 0) = NAN;
 
 //  bool local_map_is_subscribed = (pub_local_map.getNumSubscribers () > 0);
 //  bool global_map_is_subscribed = (pub_global_map.getNumSubscribers () > 0);
@@ -272,7 +305,7 @@ bool ElevationMap::resize(double length, double width)
   int nRows = static_cast<int>(length_ / resolution_);
   int nCols = static_cast<int>(width_ / resolution_);
   elevationData_.resize(nRows, nCols);
-  cellVariance_.resize(nRows, nCols);
+  varianceData_.resize(nRows, nCols);
 
   ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
 }
