@@ -16,6 +16,7 @@
 
 // ROS
 #include <tf_conversions/tf_eigen.h>
+#include <eigen_conversions/eigen_msg.h>
 
 using namespace std;
 using namespace Eigen;
@@ -143,11 +144,11 @@ bool ElevationMap::publishElevationMap()
   elevationMapMessage_.length = length_;
   elevationMapMessage_.width = width_;
 
-  starleth_elevation_msg::matrixEigenToMsg(elevationData_, elevationMapMessage_.elevationData);
+  matrixEigenToMsg(elevationData_, elevationMapMessage_.elevationData);
   elevationMapMessage_.elevationData.layout.dim[0].label = "length";
   elevationMapMessage_.elevationData.layout.dim[1].label = "width";
 
-  starleth_elevation_msg::matrixEigenToMsg(varianceData_, elevationMapMessage_.varianceData);
+  matrixEigenToMsg(varianceData_, elevationMapMessage_.varianceData);
   elevationMapMessage_.varianceData.layout.dim[0].label = "length";
   elevationMapMessage_.varianceData.layout.dim[1].label = "width";
 
