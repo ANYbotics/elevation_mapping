@@ -32,15 +32,21 @@ class ElevationVisualization
 
  private:
   bool readParameters();
+  bool initializeVisualization();
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
+
+  enum class MarkerTypes
+  {
+    ElevationMap,
+    Count
+  };
 
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber mapSubscriber_;
   ros::Publisher mapMarkerArrayPublisher_;
   visualization_msgs::MarkerArray mapMarkerArrayMessage_;
   std::string mapTopic_;
-  int nCellsLastTime_;
-
+  double markerHeight_;
 };
 
 } /* namespace starleth_elevation_visualization */
