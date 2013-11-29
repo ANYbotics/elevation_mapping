@@ -7,12 +7,14 @@ set(CMAKE_CXX_FLAGS "-std=c++0x")
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
+  roscpp
   std_msgs
   message_generation
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+#find_package(Boost REQUIRED COMPONENTS system)
+find_package(Eigen REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -55,8 +57,8 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES starleth_elevation_map
-    CATKIN_DEPENDS std_msgs message_runtime
-#  DEPENDS system_lib
+    CATKIN_DEPENDS roscpp std_msgs message_runtime
+    DEPENDS Eigen
 )
 
 ###########
@@ -69,6 +71,7 @@ catkin_package(
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
+  ${EIGEN_INCLUDE_DIRS}
   #${Boost_INCLUDE_DIRS}
 )
 
