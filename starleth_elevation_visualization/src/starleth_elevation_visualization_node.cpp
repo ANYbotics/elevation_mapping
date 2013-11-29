@@ -19,7 +19,8 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle;
 
-  starleth::ElevationVisualization elevationVisualization(nodeHandle);
+  starleth_elevation_visualization::ElevationVisualization elevationVisualization(nodeHandle);
 
+  ros::spin();
   return 0;
 }

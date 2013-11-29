@@ -8,6 +8,9 @@ set(CMAKE_CXX_FLAGS "-std=c++0x")
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+  tf
+  starleth_elevation_msg
+  visualization_msgs
 )
 
 ## System dependencies are found with CMake's conventions
@@ -53,9 +56,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-#  INCLUDE_DIRS include
+  INCLUDE_DIRS include
 #  LIBRARIES starleth_elevation_map
-#  CATKIN_DEPENDS pcl_ros roscpp sensor_msgs std_msgs tf tf_conversions
+  CATKIN_DEPENDS roscpp sensor_msgs tf starleth_elevation_msg visualization_msgs
 #  DEPENDS system_lib
 )
 
@@ -63,14 +66,11 @@ catkin_package(
 ## Build ##
 ###########
 
-find_package(Boost COMPONENTS system thread chrono REQUIRED)
-include_directories(${Boost_INCLUDE_DIRS})
-
-
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 # include_directories(include)
 include_directories(
+  include
   ${catkin_INCLUDE_DIRS}
 )
 
