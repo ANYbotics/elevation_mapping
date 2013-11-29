@@ -24,16 +24,15 @@ using namespace pcl;
 using namespace ros;
 using namespace tf;
 
-namespace starleth {
+namespace starleth_elevation_map {
 
 ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
   readParameters();
-  pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic, 1, &ElevationMap::pointCloudCallback, this);
+  pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  timer_ = nodeHandle_.createTimer(ros::Duration(0.1), &ElevationMap::timerCallback, this);
-  resize(length_, width_);
+  resize(lengthInX_, lengthInY_);
 }
 
 ElevationMap::~ElevationMap()
@@ -43,13 +42,13 @@ ElevationMap::~ElevationMap()
 
 bool ElevationMap::readParameters()
 {
-  nodeHandle_.param("point_cloud_topic", pointCloudTopic, string("/depth_registered/points_throttled"));
-  nodeHandle_.param("map_frame_id", parentFrameId_, string("map"));
-  nodeHandle_.param("elevation_map_id", elevationMapFrameId_, string("elevation_map"));
+  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
+  nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
+  nodeHandle_.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle_.param("sensor_cutoff_depth", sensorCutoffDepth_, 3.0);
-  nodeHandle_.param("elevation_map_length", length_, 4.0);
-  nodeHandle_.param("elevation_map_width", width_, 3.0);
-  nodeHandle_.param("elevation_map_resolution", resolution_, 0.01);
+  nodeHandle_.param("elevation_map_length_in_x", lengthInX_, 1.0);
+  nodeHandle_.param("elevation_map_length_in_y", lengthInY_, 1.0);
+  nodeHandle_.param("elevation_map_resolution", resolution_, 0.1);
   ROS_ASSERT(resolution_ > 0.0);
   elevationMapToParentTransform_.setIdentity();
 
@@ -59,12 +58,20 @@ bool ElevationMap::readParameters()
 void ElevationMap::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
+  if (elevationMapPublisher_.getNumSubscribers () < 1) return;
+
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
 
   int pointCloudSize = pointCloud->width * pointCloud->height;
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", pointCloudSize);
+
+  if (!broadcastElevationMapTransform(pointCloud->header.stamp))
+  {
+    ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
+    return;
+  }
 
   cleanPointCloud(pointCloud);
 
@@ -141,40 +148,35 @@ bool ElevationMap::publishElevationMap()
   elevationMapMessage_.header.stamp = timeOfLastUpdate_;
   elevationMapMessage_.header.frame_id = elevationMapFrameId_;
   elevationMapMessage_.resolution = resolution_;
-  elevationMapMessage_.length = length_;
-  elevationMapMessage_.width = width_;
+  elevationMapMessage_.lengthInX = lengthInX_;
+  elevationMapMessage_.lengthInY = lengthInY_;
 
-  matrixEigenToMsg(elevationData_, elevationMapMessage_.elevationData);
-  elevationMapMessage_.elevationData.layout.dim[0].label = "length";
-  elevationMapMessage_.elevationData.layout.dim[1].label = "width";
+  matrixEigenToMsg(elevationData_, elevationMapMessage_.elevation);
+  elevationMapMessage_.elevation.layout.dim[0].label = "position_in_y";
+  elevationMapMessage_.elevation.layout.dim[1].label = "position_in_x";
 
-  matrixEigenToMsg(varianceData_, elevationMapMessage_.varianceData);
-  elevationMapMessage_.varianceData.layout.dim[0].label = "length";
-  elevationMapMessage_.varianceData.layout.dim[1].label = "width";
+  matrixEigenToMsg(varianceData_, elevationMapMessage_.variance);
+  elevationMapMessage_.variance.layout.dim[0].label = "position_in_y";
+  elevationMapMessage_.variance.layout.dim[1].label = "position_in_x";
 
   elevationMapPublisher_.publish(elevationMapMessage_);
 
   return true;
 }
 
-bool ElevationMap::broadcastElevationMapTransform()
+bool ElevationMap::broadcastElevationMapTransform(ros::Time time)
 {
   tf::Transform tfTransform;
   poseEigenToTF(elevationMapToParentTransform_, tfTransform);
-  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, Time::now(), parentFrameId_, elevationMapFrameId_));
-  ROS_DEBUG("Published transform for elevation map in parent frame.");
+  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
+  ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
-}
-
-void ElevationMap::timerCallback(const ros::TimerEvent& timerEvent)
-{
-  broadcastElevationMapTransform();
 }
 
 bool ElevationMap::addToElevationMap(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-  elevationData_.setRandom();
+  elevationData_.setOnes();
 
   elevationData_(0, 0) = NAN;
 
@@ -300,11 +302,11 @@ bool ElevationMap::addToElevationMap(
 
 bool ElevationMap::resize(double length, double width)
 {
-  length_ = length;
-  width_ = width;
+  lengthInX_ = length;
+  lengthInY_ = width;
 
-  int nRows = static_cast<int>(length_ / resolution_);
-  int nCols = static_cast<int>(width_ / resolution_);
+  int nRows = static_cast<int>(lengthInX_ / resolution_);
+  int nCols = static_cast<int>(lengthInY_ / resolution_);
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
 
@@ -316,4 +318,4 @@ void ElevationMap::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)
   timeOfLastUpdate_ = timeOfLastUpdate;
 }
 
-} /* namespace starleth */
+} /* namespace starleth_elevation_map */

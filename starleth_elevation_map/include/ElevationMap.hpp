@@ -24,7 +24,7 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 
-namespace starleth {
+namespace starleth_elevation_map {
 
 /*
  * Elevation map stored as planar grid holding elevation height and variance.
@@ -37,8 +37,6 @@ class ElevationMap
   virtual ~ElevationMap();
 
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
-
-  void timerCallback(const ros::TimerEvent& timerEvent);
 
   bool resize(double length, double width);
 
@@ -55,7 +53,7 @@ class ElevationMap
 
   bool publishElevationMap();
 
-  bool broadcastElevationMapTransform();
+  bool broadcastElevationMapTransform(ros::Time time);
 
   void setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate);
 
@@ -74,11 +72,11 @@ class ElevationMap
   //! Variance data of the cells in elevationData_.
   Eigen::MatrixXd varianceData_;
 
-  //! Map length (x-direction) [m].
-  double length_;
+  //! Map length in x-direction [m].
+  double lengthInX_;
 
-  //! Map width (y-direction) [m].
-  double width_;
+  //! Map length in y-direction [m].
+  double lengthInY_;
 
   //! Map resolution in xy plane [m/cell].
   double resolution_;
@@ -88,7 +86,7 @@ class ElevationMap
   std::string parentFrameId_;
   std::string elevationMapFrameId_;
 
-  std::string pointCloudTopic;
+  std::string pointCloudTopic_;
 
   double sensorCutoffDepth_;
 
@@ -111,4 +109,4 @@ class ElevationMap
 
 };
 
-} /* namespace starleth */
+} /* namespace starleth_elevation_map */

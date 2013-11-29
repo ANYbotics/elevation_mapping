@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle;
 
-  starleth::ElevationMap elevationMap(nodeHandle);
+  starleth_elevation_map::ElevationMap elevationMap(nodeHandle);
 
   // Spin
   ros::AsyncSpinner spinner(2); // Use 2 threads
