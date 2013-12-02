@@ -38,7 +38,7 @@ class ElevationMap
 
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
-  bool resize(double length, double width);
+  bool resize(double lengthInX, double lengthInY);
 
  private:
   bool readParameters();
