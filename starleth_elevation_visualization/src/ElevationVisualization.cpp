@@ -20,6 +20,7 @@ namespace starleth_elevation_visualization {
 ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
+  ROS_INFO("StarlETH elevation visualization node started.");
   readParameters();
   mapSubscriber_ = nodeHandle_.subscribe(mapTopic_, 1, &ElevationVisualization::elevationMapCallback, this);
   mapMarkerArrayPublisher_ = nodeHandle_.advertise<visualization_msgs::MarkerArray>("elevation_map_marker_array", 1, true);
@@ -85,9 +86,9 @@ bool ElevationVisualization::generateVisualization(
   elevationMarker.points.clear();
   elevationMarker.colors.clear();
 
-  for (unsigned int i = 0; i < (int) map.elevation.layout.dim.at(0).size; ++i)
+  for (unsigned int i = 0; i < starleth_elevation_msg::getRows(map.elevation); ++i)
   {
-    for (unsigned int j = 0; j < (int) map.elevation.layout.dim.at(1).size; ++j)
+    for (unsigned int j = 0; j < starleth_elevation_msg::getCols(map.elevation); ++j)
     {
       // Getting elevation value
       Vector2i cellIndex(i, j);
