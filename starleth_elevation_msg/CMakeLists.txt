@@ -13,7 +13,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-#find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen REQUIRED)
 
 
@@ -56,9 +56,9 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
     INCLUDE_DIRS include
-#  LIBRARIES starleth_elevation_map
+    LIBRARIES eigen_conversions elevation_map_transformations
     CATKIN_DEPENDS roscpp std_msgs message_runtime
-    DEPENDS Eigen
+    DEPENDS Eigen Boost
 )
 
 ###########
@@ -72,13 +72,18 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN_INCLUDE_DIRS}
-  #${Boost_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
-# add_library(starleth_elevation_map
-#   src/${PROJECT_NAME}/starleth_elevation_map.cpp
-# )
+add_library(eigen_conversions
+   src/EigenConversions.cpp
+   src/ElevationMapTransformations.cpp
+)
+
+add_library(elevation_map_transformations
+   src/ElevationMapTransformations.cpp
+)
 
 ## Declare a cpp executable
 #add_executable(

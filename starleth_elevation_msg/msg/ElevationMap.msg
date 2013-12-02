@@ -10,8 +10,8 @@ float64 lengthInX
 # Map width in y-direction [m].
 float64 lengthInY
 
-# Elevation height data.
+# Elevation height data [m].
 std_msgs/Float64MultiArray elevation
 
-# Variance data of the cells in elevationData.
+# Variance data [m].
 std_msgs/Float64MultiArray variance

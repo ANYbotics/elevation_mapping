@@ -16,22 +16,30 @@
 
 namespace starleth_elevation_msg {
 
-////! Converts an Eigen matrix into a Float64MultiArray message
-//template <class Derived>
-//void matrixEigenToMsg(const Eigen::MatrixBase<Derived>& e, std_msgs::Float64MultiArray& m)
-//{
-//  if (m.layout.dim.size() != 2)
-//    m.layout.dim.resize(2);
-//  m.layout.dim[0].stride = e.rows() * e.cols();
-//  m.layout.dim[0].size = e.rows();
-//  m.layout.dim[1].stride = e.cols();
-//  m.layout.dim[1].size = e.cols();
-//  if ((int)m.data.size() != e.size())
-//    m.data.resize(e.size());
-//  int ii = 0;
-//  for (int i = 0; i < e.rows(); ++i)
-//    for (int j = 0; j < e.cols(); ++j)
-//      m.data[ii++] = e.coeff(i, j);
-//}
+/*!
+ * Converts an Eigen matrix into a ROS Float64MultiArray message.
+ * Both column- and row-major matrices are allowed, and the type
+ * will be marked in the layout labels.
+ *
+ * Note: This function copies the data, because std::vector<> is not able
+ * to map external memory.
+ *
+ * @param [in] e the Eigen matrix to be converted.
+ * @param [out] m the ROS message to which the data will be converted.
+ * @return true if successful
+ */
+bool matrixEigenToMultiArrayMessage(const Eigen::MatrixXd& e, std_msgs::Float64MultiArray& m);
+
+/*!
+ * Converts a ROS Float64MultiArray message into an Eigen matrix.
+ * Both column- and row-major message types are allowed.
+ *
+ * TODO: Check if this actually works.
+ *
+ * @param [in] m the ROS message to be converted.
+ * @param [in] e the Eigen matrix to which the data will be converted.
+ * @return true if successful
+ */
+bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::MatrixXd& e);
 
 } // namespace
