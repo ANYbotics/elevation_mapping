@@ -38,12 +38,13 @@ class ElevationMap
 
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
-  bool resize(double lengthInX, double lengthInY);
+  bool resize(Eigen::Array2d length);
+
+  bool reset();
 
  private:
   bool readParameters();
 
-  //! This makes the point cloud also dense (no NaN points).
   bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
   bool transformPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
@@ -60,7 +61,6 @@ class ElevationMap
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
   ros::Publisher elevationMapPublisher_;
-  ros::Timer timer_;
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
 
@@ -72,11 +72,8 @@ class ElevationMap
   //! Variance data of the cells in elevationData_.
   Eigen::MatrixXd varianceData_;
 
-  //! Map length in x-direction [m].
-  double lengthInX_;
-
-  //! Map length in y-direction [m].
-  double lengthInY_;
+  //! Map size in x, and y-direction [m].
+  Eigen::Array2d length_;
 
   //! Map resolution in xy plane [m/cell].
   double resolution_;

@@ -10,6 +10,7 @@
 // StarlETH Navigation
 #include <starleth_elevation_msg/ElevationMap.h>
 #include <EigenConversions.hpp>
+#include <TransformationMath.hpp>
 
 // PCL
 #include <pcl/common/transforms.h>
@@ -33,7 +34,8 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  resize(lengthInX_, lengthInY_);
+  resize(length_);
+  reset();
 }
 
 ElevationMap::~ElevationMap()
@@ -47,11 +49,12 @@ bool ElevationMap::readParameters()
   nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
   nodeHandle_.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle_.param("sensor_cutoff_depth", sensorCutoffDepth_, 3.0);
-  nodeHandle_.param("elevation_map_length_in_x", lengthInX_, 1.25);
-  nodeHandle_.param("elevation_map_length_in_y", lengthInY_, 0.75);
-  nodeHandle_.param("elevation_map_resolution", resolution_, 0.25);
+  nodeHandle_.param("elevation_map_length_in_x", length_(0), 1.6);
+  nodeHandle_.param("elevation_map_length_in_y", length_(1), 1.0);
+  nodeHandle_.param("elevation_map_resolution", resolution_, 0.01);
   ROS_ASSERT(resolution_ > 0.0);
   elevationMapToParentTransform_.setIdentity();
+  elevationMapToParentTransform_.translation().x() = 0.8;//(Vector3d(0.5, 0.0, 0.0));
 
   return true;
 }
@@ -105,6 +108,7 @@ bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud
   passThroughFilter.setInputCloud(pointCloud);
   passThroughFilter.setFilterFieldName("z");
   passThroughFilter.setFilterLimits(0.0, sensorCutoffDepth_);
+  //! This makes the point cloud also dense (no NaN points).
   passThroughFilter.filter(tempPointCloud);
   tempPointCloud.is_dense = true;
   pointCloud->swap(tempPointCloud);
@@ -144,18 +148,18 @@ bool ElevationMap::transformPointCloud(
 
 bool ElevationMap::publishElevationMap()
 {
-  starleth_elevation_msg::ElevationMap elevationMapMessage_;
+  starleth_elevation_msg::ElevationMap elevationMapMessage;
 
-  elevationMapMessage_.header.stamp = timeOfLastUpdate_;
-  elevationMapMessage_.header.frame_id = elevationMapFrameId_;
-  elevationMapMessage_.resolution = resolution_;
-  elevationMapMessage_.lengthInX = lengthInX_;
-  elevationMapMessage_.lengthInY = lengthInY_;
+  elevationMapMessage.header.stamp = timeOfLastUpdate_;
+  elevationMapMessage.header.frame_id = elevationMapFrameId_;
+  elevationMapMessage.resolution = resolution_;
+  elevationMapMessage.lengthInX = length_(0);
+  elevationMapMessage.lengthInY = length_(1);
 
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage_.elevation);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage_.variance);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
 
-  elevationMapPublisher_.publish(elevationMapMessage_);
+  elevationMapPublisher_.publish(elevationMapMessage);
 
   return true;
 }
@@ -172,17 +176,30 @@ bool ElevationMap::broadcastElevationMapTransform(ros::Time time)
 bool ElevationMap::addToElevationMap(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-elevationData_.setZero();
-//  elevationData_ *= 0.05;
-//
-////  elevationData_(0,0) = 0.1;
-//  elevationData_.bottomRightCorner(1,1).setConstant(0.2);
-//
-//  elevationData_.topRightCorner(1,1).setConstant(-0.2);
+  int pointCloudSize = pointCloud->width * pointCloud->height;
 
-  elevationData_.bottomRightCorner(1,1).setConstant(NAN);
+  for (unsigned int i = 0; i < pointCloudSize; ++i)
+  {
+    Array2i index;
+    Vector2d position(pointCloud->points[i].x, pointCloud->points[i].y);
 
-  cout << elevationData_ << endl;
+    if(!starleth_elevation_msg::getIndexFromPosition(index, position, length_, resolution_)) continue;
+    double& elevation = elevationData_(index(0), index(1));
+    double& variance = varianceData_(index(0), index(1));
+
+    double measurementVariance = 0.3;
+
+    if (std::isnan(elevation))
+    {
+      elevation = pointCloud->points[i].z;
+      variance = measurementVariance;
+    }
+    else
+    {
+      elevation = (variance * elevation + measurementVariance * pointCloud->points[i].z) / (variance + measurementVariance);
+      variance = (measurementVariance * variance) / (measurementVariance + variance);
+    }
+  }
 
 //  bool local_map_is_subscribed = (pub_local_map.getNumSubscribers () > 0);
 //  bool global_map_is_subscribed = (pub_global_map.getNumSubscribers () > 0);
@@ -304,17 +321,24 @@ elevationData_.setZero();
   return true;
 }
 
-bool ElevationMap::resize(double lengthInX, double lengthInY)
+bool ElevationMap::resize(Eigen::Array2d length)
 {
-  lengthInX_ = lengthInX;
-  lengthInY_ = lengthInY;
+  length_ = length;
 
-  int nRows = static_cast<int>(lengthInX_ / resolution_);
-  int nCols = static_cast<int>(lengthInY_ / resolution_);
+  // TODO Check if there is a remainder.
+  // TODO make this complaint with any format.
+  int nRows = static_cast<int>(length_(0) / resolution_);
+  int nCols = static_cast<int>(length_(1) / resolution_);
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
 
   ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
+}
+
+bool ElevationMap::reset()
+{
+  elevationData_.setConstant(NAN);
+  varianceData_.setConstant(NAN);
 }
 
 void ElevationMap::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)
