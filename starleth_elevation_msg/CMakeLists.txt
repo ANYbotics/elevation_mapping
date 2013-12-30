@@ -56,7 +56,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
     INCLUDE_DIRS include
-    LIBRARIES eigen_conversions elevation_map_transformations
+    LIBRARIES transformation_math eigen_conversions elevation_map_helpers
     CATKIN_DEPENDS roscpp std_msgs message_runtime
     DEPENDS Eigen Boost
 )
@@ -76,13 +76,17 @@ include_directories(
 )
 
 ## Declare a cpp library
-add_library(eigen_conversions
-   src/EigenConversions.cpp
-   src/ElevationMapTransformations.cpp
+
+add_library(transformation_math
+   src/TransformationMath.cpp
 )
 
-add_library(elevation_map_transformations
-   src/ElevationMapTransformations.cpp
+add_library(eigen_conversions
+   src/EigenConversions.cpp
+)
+
+add_library(elevation_map_helpers
+   src/ElevationMapHelpers.cpp
 )
 
 ## Declare a cpp executable
@@ -95,12 +99,13 @@ add_library(elevation_map_transformations
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
 # add_dependencies(starleth_elevation_map_node starleth_elevation_map_generate_messages_cpp)
+add_dependencies(elevation_map_helpers transformation_math)
 
 ## Specify libraries to link a library or executable target against
-#target_link_libraries(
-#  starleth_elevation_map
-#  ${catkin_LIBRARIES}
-#)
+target_link_libraries(
+  elevation_map_helpers
+  transformation_math
+)
 
 #############
 ## Install ##

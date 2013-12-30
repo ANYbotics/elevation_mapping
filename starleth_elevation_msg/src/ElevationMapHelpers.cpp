@@ -1,12 +1,15 @@
 /*
- * ElevationMapTransformations.cpp
+ * ElevationMapHelpers.cpp
  *
  *  Created on: Nov 27, 2013
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "ElevationMapTransformations.hpp"
+#include "ElevationMapHelpers.hpp"
+
+// StarlETH Elevation Map
+#include "TransformationMath.hpp"
 
 // ROS
 #include <ros/ros.h>
@@ -41,20 +44,8 @@ unsigned int getRows(const std_msgs::Float64MultiArray& messageData)
   return messageData.layout.dim.at(1).size;
 }
 
-void getDistanceOfFirstCellFromCenter(Eigen::Vector2d& distance, const starleth_elevation_msg::ElevationMap& map)
-{
-  // Distance of center of cell
-  distance.x() = 0.5 * map.lengthInX - 0.5 * map.resolution;
-  distance.y() = 0.5 * map.lengthInY - 0.5 * map.resolution;
-}
-
-Matrix2i getIndexToPositionDirectionTransformation()
-{
-  return -Matrix2i::Identity();
-}
-
 unsigned int get1dIndexFrom2dIndex(
-    const Eigen::Vector2i& index,
+    const Eigen::Array2i& index,
     const starleth_elevation_msg::ElevationMap& map)
 {
   unsigned int n;
@@ -65,24 +56,21 @@ unsigned int get1dIndexFrom2dIndex(
   return n;
 }
 
-Eigen::Vector2i get2dIndexFrom1dIndex(
-    unsigned int n, const starleth_elevation_msg::ElevationMap& map)
-{
-  Eigen::Vector2i index;
-  index(1) = n - map.elevation.layout.data_offset % map.elevation.layout.dim[1].stride;
-  index(0) = (int)((n - map.elevation.layout.data_offset - index(1)) / map.elevation.layout.dim[1].stride);
-  return index;
-}
+//Eigen::Array2i get2dIndexFrom1dIndex(
+//    unsigned int n, const starleth_elevation_msg::ElevationMap& map)
+//{
+//  Eigen::Vector2i index;
+//  index(1) = n - map.elevation.layout.data_offset % map.elevation.layout.dim[1].stride;
+//  index(0) = (int)((n - map.elevation.layout.data_offset - index(1)) / map.elevation.layout.dim[1].stride);
+//  return index;
+//}
 
 bool getPositionFromIndex(Eigen::Vector2d& position,
-                          const Eigen::Vector2i& index,
+                          const Eigen::Array2i& index,
                           const starleth_elevation_msg::ElevationMap& map)
 {
-  Vector2d offset;
-  getDistanceOfFirstCellFromCenter(offset, map);
-  position = offset + map.resolution *
-            (getIndexToPositionDirectionTransformation() * index).cast<double>();
-  return true;
+  Array2d mapLength(map.lengthInX, map.lengthInY);
+  return getPositionFromIndex(position, index, mapLength, map.resolution);
 }
 
 } // namespace

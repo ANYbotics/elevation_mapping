@@ -7,7 +7,9 @@
  */
 
 #include "EigenConversions.hpp"
-#include "ElevationMapTransformations.hpp"
+
+// StarlETH Elevation Map
+#include "ElevationMapHelpers.hpp"
 
 // ROS
 #include <ros/ros.h>
@@ -16,7 +18,7 @@ namespace starleth_elevation_msg {
 
 bool matrixEigenToMultiArrayMessage(const Eigen::MatrixXd& e, std_msgs::Float64MultiArray& m)
 {
-  m.layout.dim.resize(2);
+  m.layout.dim.resize(nDimensions());
   m.layout.dim[0].stride = e.size();
   m.layout.dim[0].size = e.outerSize();
   m.layout.dim[1].stride = e.innerSize();
@@ -49,6 +51,8 @@ bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::Matri
   e.resize(starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
 
   e = Eigen::Map<MatrixXd>(m.data.data(), starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
+
+  return true;
 }
 
 } // namespace
