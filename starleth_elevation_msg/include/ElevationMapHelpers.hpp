@@ -73,4 +73,15 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
                           const Eigen::Array2i& index,
                           const starleth_elevation_msg::ElevationMap& map);
 
+/*!
+ * Gets the index of the cell which contains a position in the map frame.
+ * @param [out] index of the cell.
+ * @param [in] position the position in the map frame.
+ * @param [in] map the reference to the map.
+ * @return true if successful, false if position outside of map.
+ */
+bool getIndexfromPosition(Eigen::Array2i& index,
+                          const Eigen::Vector2d& position,
+                          const starleth_elevation_msg::ElevationMap& map);
+
 } // namespace

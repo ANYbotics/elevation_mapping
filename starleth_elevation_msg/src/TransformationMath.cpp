@@ -12,6 +12,13 @@ using namespace Eigen;
 
 namespace starleth_elevation_msg {
 
+inline bool getDistanceOfOrigin(Eigen::Vector2d& distance,
+                                          const Eigen::Array2d& mapLength)
+{
+  distance = (0.5 * mapLength).matrix();
+  return true;
+}
+
 /*!
  * Gets the distance from the center of the map for the center
  * of the first cell of the map data.
@@ -20,13 +27,15 @@ namespace starleth_elevation_msg {
  * @param [in] resolution the resolution of the map.
  * @return true if successful.
  */
-
-inline bool getDistanceOfFirstCellFromCenter(Eigen::Vector2d& distance,
-                                      const Eigen::Array2d& mapLength,
-                                      const double& resolution)
+inline bool getDistanceOfFirstCell(Eigen::Vector2d& distance,
+                                             const Eigen::Array2d& mapLength,
+                                             const double& resolution)
 {
+  Eigen::Vector2d distanceOfOrigin;
+  getDistanceOfOrigin(distanceOfOrigin, mapLength);
+
   // Distance of center of cell
-  distance = (0.5 * mapLength - 0.5 * resolution).matrix();
+  distance = (distanceOfOrigin.array() - 0.5 * resolution).matrix();
   return true;
 }
 
@@ -45,9 +54,9 @@ inline Eigen::Vector2d getIndexVectorFromIndexArray(const Eigen::Array2i& index)
   return (getMatrixDataOrderToMapFrameTransformation() * index.matrix()).cast<double>();
 }
 
-inline Eigen::Array2i getIndexArrayFromIndexVector(const Eigen::Vector2d& index)
+inline Eigen::Array2i getIndexArrayFromIndexVector(const Eigen::Vector2d& indexVector)
 {
-  return (getMapFrameToMatrixDataOrderTransformation() * index.cast<int>()).array();
+  return (getMapFrameToMatrixDataOrderTransformation() * indexVector.cast<int>()).array();
 }
 
 bool getPositionFromIndex(Eigen::Vector2d& position,
@@ -56,7 +65,7 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
                           const double& resolution)
 {
   Vector2d offset;
-  getDistanceOfFirstCellFromCenter(offset, mapLength, resolution);
+  getDistanceOfFirstCell(offset, mapLength, resolution);
   position = offset + resolution * getIndexVectorFromIndexArray(index);
   return true;
 }
@@ -66,20 +75,19 @@ bool getIndexFromPosition(Eigen::Array2i& index,
                           const Eigen::Array2d& mapLength,
                           const double& resolution)
 {
-  if (!checkIfPositionWithinMap(position, mapLength, resolution)) return false;
+  if (!checkIfPositionWithinMap(position, mapLength)) return false;
   Vector2d offset;
-  getDistanceOfFirstCellFromCenter(offset, mapLength, resolution);
+  getDistanceOfOrigin(offset, mapLength);
   Vector2d indexVector = ((position - offset).array() / resolution).matrix();
   index = getIndexArrayFromIndexVector(indexVector);
   return true;
 }
 
 bool checkIfPositionWithinMap(const Eigen::Vector2d& position,
-                              const Eigen::Array2d& mapLength,
-                              const double& resolution)
+                              const Eigen::Array2d& mapLength)
 {
   Vector2d offset;
-  getDistanceOfFirstCellFromCenter(offset, mapLength, resolution);
+  getDistanceOfOrigin(offset, mapLength);
   Vector2d positionTransformed = getMapFrameToMatrixDataOrderTransformation().cast<double>() * (position - offset);
 
   if(positionTransformed.x() >= 0.0 && positionTransformed.y() >= 0.0

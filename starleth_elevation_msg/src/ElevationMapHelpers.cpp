@@ -73,4 +73,12 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
   return getPositionFromIndex(position, index, mapLength, map.resolution);
 }
 
+bool getIndexFromPosition(Eigen::Array2i& index,
+                          const Eigen::Vector2d& position,
+                          const starleth_elevation_msg::ElevationMap& map)
+{
+  Array2d mapLength(map.lengthInX, map.lengthInY);
+  return getIndexFromPosition(index, position, mapLength, map.resolution);
+}
+
 } // namespace

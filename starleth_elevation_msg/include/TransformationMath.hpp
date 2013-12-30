@@ -32,7 +32,7 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
  * @param [in] position the position in the map frame.
  * @param [in] mapLength the lengths in x and y direction.
  * @param [in] resolution the resolution of the map.
- * @return true if successful.
+ * @return true if successful, false if position outside of map.
  */
 bool getIndexFromPosition(Eigen::Array2i& index,
                           const Eigen::Vector2d& position,
@@ -40,7 +40,6 @@ bool getIndexFromPosition(Eigen::Array2i& index,
                           const double& resolution);
 
 bool checkIfPositionWithinMap(const Eigen::Vector2d& position,
-                              const Eigen::Array2d& mapLength,
-                              const double& resolution);
+                              const Eigen::Array2d& mapLength);
 
 } // namespace
