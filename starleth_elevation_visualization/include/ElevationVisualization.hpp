@@ -34,6 +34,8 @@ class ElevationVisualization
   bool readParameters();
   bool initializeVisualization();
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
+  bool setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance);
+  bool setColorFromVariance(std_msgs::ColorRGBA& color, const double& variance);
 
   enum class MarkerTypes
   {
@@ -45,8 +47,13 @@ class ElevationVisualization
   ros::Subscriber mapSubscriber_;
   ros::Publisher mapMarkerArrayPublisher_;
   visualization_msgs::MarkerArray mapMarkerArrayMessage_;
+
   std::string mapTopic_;
   double markerHeight_;
+  double minMarkerAlpha_;
+  double maxMarkerAlpha_;
+  double varianceLowerValue_;
+  double varianceUpperValue_;
 };
 
 } /* namespace starleth_elevation_visualization */
