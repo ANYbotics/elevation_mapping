@@ -9,7 +9,7 @@
 #include "ElevationVisualization.hpp"
 
 // StarlETH Navigation
-#include <ElevationMapTransformations.hpp>
+#include <ElevationMapHelpers.hpp>
 
 using namespace std;
 using namespace ros;
@@ -103,7 +103,7 @@ bool ElevationVisualization::generateVisualization(
 
       // Getting position of cell
       Vector2d position;
-      starleth_elevation_msg::getPositionFromIndex(position, Vector2i(i, j), map);
+      starleth_elevation_msg::getPositionFromIndex(position, Array2i(i, j), map);
 
       // Add marker point
       geometry_msgs::Point point;
