@@ -4,12 +4,10 @@ Panels:
     Name: Displays
     Property Tree Widget:
       Expanded:
-        - /Global Options1
         - /Elevation map1/Namespaces1
-        - /TF1
         - /TF1/Frames1
         - /TF1/Tree1
-      Splitter Ratio: 0.492462
+      Splitter Ratio: 0.55082
     Tree Height: 495
   - Class: rviz/Selection
     Name: Selection
@@ -29,7 +27,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud global
+    SyncSource: PointCloud raw
 Visualization Manager:
   Class: ""
   Displays:
@@ -72,10 +70,10 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 3
+      Size (Pixels): 2.5
       Size (m): 0.003
       Style: Points
-      Topic: /depth_registered/points_throttled
+      Topic: /point_map
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -100,10 +98,10 @@ Visualization Manager:
       Position Transformer: XYZ
       Queue Size: 10
       Selectable: true
-      Size (Pixels): 1
+      Size (Pixels): 3
       Size (m): 0.003
       Style: Points
-      Topic: /point_map
+      Topic: /depth_registered/points
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
@@ -112,20 +110,22 @@ Visualization Manager:
       Marker Topic: /elevation_map_marker_array
       Name: Elevation map
       Namespaces:
-        elevation_map: true
+        {}
       Queue Size: 100
       Value: true
     - Class: rviz/TF
       Enabled: true
       Frame Timeout: 15
       Frames:
-        /elevation_map:
-          Value: true
         /kinect:
           Value: true
         /map:
           Value: true
+        /odom:
+          Value: true
         /openni_rgb_optical_frame:
+          Value: true
+        /robot_base:
           Value: true
         All Enabled: false
       Marker Scale: 0.2
@@ -135,11 +135,11 @@ Visualization Manager:
       Show Names: true
       Tree:
         /map:
-          /elevation_map:
-            {}
-          /kinect:
-            /openni_rgb_optical_frame:
-              {}
+          /odom:
+            /robot_base:
+              /kinect:
+                /openni_rgb_optical_frame:
+                  {}
       Update Interval: 0
       Value: true
   Enabled: true
@@ -165,17 +165,17 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 1.74589
+      Distance: 2.40512
       Focal Point:
-        X: 0.013673
-        Y: 0.0362458
-        Z: 0.219206
+        X: 0.995084
+        Y: -0.194685
+        Z: 0.159544
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 1.2348
+      Pitch: 0.404801
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.71063
+      Yaw: 4.45381
     Saved: ~
 Window Geometry:
   Displays:
