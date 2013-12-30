@@ -86,6 +86,8 @@ bool ElevationVisualization::generateVisualization(
   elevationMarker.points.clear();
   elevationMarker.colors.clear();
 
+  double markerHeightOffset = markerHeight_/2.0;
+
   for (unsigned int i = 0; i < starleth_elevation_msg::getRows(map.elevation); ++i)
   {
     for (unsigned int j = 0; j < starleth_elevation_msg::getCols(map.elevation); ++j)
@@ -109,7 +111,7 @@ bool ElevationVisualization::generateVisualization(
       geometry_msgs::Point point;
       point.x = position.x();
       point.y = position.y();
-      point.z = elevation;
+      point.z = elevation - markerHeightOffset;
       elevationMarker.points.push_back(point);
 
       // Add marker color
