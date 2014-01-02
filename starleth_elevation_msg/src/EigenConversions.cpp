@@ -16,30 +16,6 @@
 
 namespace starleth_elevation_msg {
 
-bool matrixEigenToMultiArrayMessage(const Eigen::MatrixXd& e, std_msgs::Float64MultiArray& m)
-{
-  m.layout.dim.resize(nDimensions());
-  m.layout.dim[0].stride = e.size();
-  m.layout.dim[0].size = e.outerSize();
-  m.layout.dim[1].stride = e.innerSize();
-  m.layout.dim[1].size = e.innerSize();
-
-  if(e.IsRowMajor)
-  {
-    m.layout.dim[0].label = storageIndexNames[StorageIndices::Row];
-    m.layout.dim[1].label = storageIndexNames[StorageIndices::Column];
-  }
-  else
-  {
-    m.layout.dim[0].label = storageIndexNames[StorageIndices::Column];
-    m.layout.dim[1].label = storageIndexNames[StorageIndices::Row];
-  }
-
-  m.data.insert(m.data.begin() + m.layout.data_offset, e.data(), e.data() + e.size());
-
-  return true;
-}
-
 bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::MatrixXd& e)
 {
   if (e.IsRowMajor != starleth_elevation_msg::isRowMajor(m))
@@ -54,5 +30,6 @@ bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::Matri
 
   return true;
 }
+
 
 } // namespace

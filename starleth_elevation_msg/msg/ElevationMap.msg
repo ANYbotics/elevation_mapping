@@ -15,3 +15,6 @@ std_msgs/Float64MultiArray elevation
 
 # Variance data [m].
 std_msgs/Float64MultiArray variance
+
+# Color data [rgb] (optional).
+std_msgs/Int32MultiArray color

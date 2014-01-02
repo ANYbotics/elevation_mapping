@@ -72,6 +72,9 @@ class ElevationMap
   //! Variance data of the cells in elevationData_.
   Eigen::MatrixXd varianceData_;
 
+  //! Color data.
+  Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
+
   //! Map size in x, and y-direction [m].
   Eigen::Array2d length_;
 

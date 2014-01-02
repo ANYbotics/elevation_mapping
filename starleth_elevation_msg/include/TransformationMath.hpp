@@ -41,5 +41,4 @@ bool getIndexFromPosition(Eigen::Array2i& index,
 
 bool checkIfPositionWithinMap(const Eigen::Vector2d& position,
                               const Eigen::Array2d& mapLength);
-
 } // namespace

@@ -16,6 +16,9 @@
 #include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
 
+// Eigen
+#include <Eigen/Core>
+
 namespace starleth_elevation_visualization {
 
 /*
@@ -34,8 +37,10 @@ class ElevationVisualization
   bool readParameters();
   bool initializeVisualization();
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
+  bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
   bool setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance);
-  bool setColorFromVariance(std_msgs::ColorRGBA& color, const double& variance);
+  bool setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance);
+  double getValueFromVariance(const double& minValue, const double& maxValue, const double& variance);
 
   enum class MarkerTypes
   {
@@ -50,10 +55,12 @@ class ElevationVisualization
 
   std::string mapTopic_;
   double markerHeight_;
-  double minMarkerAlpha_;
-  double maxMarkerAlpha_;
   double varianceLowerValue_;
   double varianceUpperValue_;
+  double minMarkerSaturation_;
+  double maxMarkerSaturation_;
+  double minMarkerAlpha_;
+  double maxMarkerAlpha_;
 };
 
 } /* namespace starleth_elevation_visualization */

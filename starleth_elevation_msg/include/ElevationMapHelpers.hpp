@@ -24,10 +24,7 @@ using namespace Eigen;
 
 namespace starleth_elevation_msg {
 
-const int nDimensions()
-{
-  return 2;
-}
+const int nDimensions();
 
 enum class StorageIndices {
     Column,
@@ -83,5 +80,29 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
 bool getIndexfromPosition(Eigen::Array2i& index,
                           const Eigen::Vector2d& position,
                           const starleth_elevation_msg::ElevationMap& map);
+
+/*!
+ * Gets the color vector (RGB from 0-255) from a color value (concatenated RGB values).
+ * @param [out] colorVector the color vector in RGB from 0-255.
+ * @param [in] colorValue the concatenated RGB color value.
+ * @return true if successful.
+ */
+bool getColorVectorFromColorValue(Eigen::Vector3i& colorVector, const unsigned long& colorValue);
+
+/*!
+ * Gets the color vector (RGB from 0.0-1.0) from a color value (concatenated RGB values).
+ * @param [out] colorVector the color vector in RGB from 0.0-1.0.
+ * @param [in] colorValue the concatenated RGB color value.
+ * @return true if successful.
+ */
+bool getColorVectorFromColorValue(Eigen::Vector3f& colorVector, const unsigned long& colorValue);
+
+/*!
+ * Gets the concatenated RGB color value from a color vector (RGB from 0-255).
+ * @param [out] colorValue the concatenated RGB color value.
+ * @param [in] colorVector the color vector in RGB from 0-255.
+ * @return true if successful.
+ */
+bool getColorValueFromColorVector(unsigned long& colorValue, const Eigen::Vector3i& colorVector);
 
 } // namespace

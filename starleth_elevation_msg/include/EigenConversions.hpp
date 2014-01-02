@@ -8,8 +8,12 @@
 
 #pragma once
 
+// StarlETH Elevation Map
+#include "ElevationMapHelpers.hpp"
+
 // ROS
 #include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/UInt32MultiArray.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -28,7 +32,31 @@ namespace starleth_elevation_msg {
  * @param [out] m the ROS message to which the data will be converted.
  * @return true if successful
  */
-bool matrixEigenToMultiArrayMessage(const Eigen::MatrixXd& e, std_msgs::Float64MultiArray& m);
+template<typename EigenType_, typename MessageType_>
+bool matrixEigenToMultiArrayMessage(const EigenType_& e, MessageType_& m)
+{
+  m.layout.dim.resize(nDimensions());
+  m.layout.dim[0].stride = e.size();
+  m.layout.dim[0].size = e.outerSize();
+  m.layout.dim[1].stride = e.innerSize();
+  m.layout.dim[1].size = e.innerSize();
+
+  if(e.IsRowMajor)
+  {
+    m.layout.dim[0].label = storageIndexNames[StorageIndices::Row];
+    m.layout.dim[1].label = storageIndexNames[StorageIndices::Column];
+  }
+  else
+  {
+    m.layout.dim[0].label = storageIndexNames[StorageIndices::Column];
+    m.layout.dim[1].label = storageIndexNames[StorageIndices::Row];
+  }
+
+  m.data.insert(m.data.begin() + m.layout.data_offset, e.data(), e.data() + e.size());
+
+  return true;
+}
+
 
 /*!
  * Converts a ROS Float64MultiArray message into an Eigen matrix.

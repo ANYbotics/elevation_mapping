@@ -158,6 +158,7 @@ bool ElevationMap::publishElevationMap()
 
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, elevationMapMessage.color);
 
   elevationMapPublisher_.publish(elevationMapMessage);
 
@@ -180,25 +181,30 @@ bool ElevationMap::addToElevationMap(
 
   for (unsigned int i = 0; i < pointCloudSize; ++i)
   {
-    Array2i index;
-    Vector2d position(pointCloud->points[i].x, pointCloud->points[i].y);
+    auto& point = pointCloud->points[i];
 
+    Array2i index;
+    Vector2d position(point.x, point.y);
     if(!starleth_elevation_msg::getIndexFromPosition(index, position, length_, resolution_)) continue;
-    double& elevation = elevationData_(index(0), index(1));
-    double& variance = varianceData_(index(0), index(1));
+
+    auto& elevation = elevationData_(index(0), index(1));
+    auto& variance = varianceData_(index(0), index(1));
+    auto& color = colorData_(index(0), index(1));
 
     double measurementVariance = 0.3;
 
     if (std::isnan(elevation))
     {
-      elevation = pointCloud->points[i].z;
+      elevation = point.z;
       variance = measurementVariance;
     }
     else
     {
-      elevation = (variance * elevation + measurementVariance * pointCloud->points[i].z) / (variance + measurementVariance);
+      elevation = (variance * point.z + measurementVariance * elevation) / (variance + measurementVariance);
       variance = (measurementVariance * variance) / (measurementVariance + variance);
     }
+
+    color = ((int)point.r) << 16 | ((int)point.g) << 8 | ((int)point.b);
   }
 
 //  bool local_map_is_subscribed = (pub_local_map.getNumSubscribers () > 0);
@@ -331,6 +337,7 @@ bool ElevationMap::resize(Eigen::Array2d length)
   int nCols = static_cast<int>(length_(1) / resolution_);
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
+  colorData_.resize(nRows, nCols);
 
   ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
 }
@@ -339,6 +346,7 @@ bool ElevationMap::reset()
 {
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(NAN);
+  colorData_.setConstant(0);
 }
 
 void ElevationMap::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)

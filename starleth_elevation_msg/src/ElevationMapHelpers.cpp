@@ -19,6 +19,11 @@
 
 namespace starleth_elevation_msg {
 
+const int nDimensions()
+{
+  return 2;
+}
+
 std::map<StorageIndices, std::string> storageIndexNames = boost::assign::map_list_of
     (StorageIndices::Column,  "column_index")
     (StorageIndices::Row, "row_index");
@@ -79,6 +84,31 @@ bool getIndexFromPosition(Eigen::Array2i& index,
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
   return getIndexFromPosition(index, position, mapLength, map.resolution);
+}
+
+bool getColorVectorFromColorValue(Eigen::Vector3i& colorVector,
+                                  const unsigned long& colorValue)
+{
+  colorVector(0) = (colorValue >> 16) & 0x0000ff;
+  colorVector(1) = (colorValue >> 8) & 0x0000ff;
+  colorVector(2) =  colorValue & 0x0000ff;
+  return true;
+}
+
+bool getColorVectorFromColorValue(Eigen::Vector3f& colorVector,
+                                  const unsigned long& colorValue)
+{
+  Vector3i tempColorVector;
+  getColorVectorFromColorValue(tempColorVector, colorValue);
+  colorVector = ((tempColorVector.cast<float>()).array() / 255.0).matrix();
+  return true;
+}
+
+bool getColorValueFromColorVector(unsigned long& colorValue,
+                                  const Eigen::Vector3i& colorVector)
+{
+  colorValue = ((int)colorVector(0)) << 16 | ((int)colorVector(1)) << 8 | ((int)colorVector(2));
+  return true;
 }
 
 } // namespace

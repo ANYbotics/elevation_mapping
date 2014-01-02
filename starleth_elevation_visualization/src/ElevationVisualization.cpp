@@ -20,6 +20,18 @@ using namespace Eigen;
 
 namespace starleth_elevation_visualization {
 
+inline void getColorMessageFromColorVector(std_msgs::ColorRGBA& colorMessage, const Eigen::Vector3f& colorVector)
+{
+  colorMessage.r = colorVector(0);
+  colorMessage.g = colorVector(1);
+  colorMessage.b = colorVector(2);
+}
+
+inline void getColorVectorFromColorMessage(Eigen::Vector3f& colorVector, const std_msgs::ColorRGBA& colorMessage)
+{
+  colorVector << colorMessage.r, colorMessage.g, colorMessage.b;
+}
+
 ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
@@ -39,10 +51,13 @@ bool ElevationVisualization::readParameters()
 {
   nodeHandle_.param("elevation_map_topic", mapTopic_, string("/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
-  nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
-  nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_,1.0);
   nodeHandle_.param("variance_lower_value_", varianceLowerValue_, 0.01);
   nodeHandle_.param("variance_upper_value_", varianceUpperValue_, 0.2);
+  nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
+  nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_, 1.0);
+  nodeHandle_.param("min_marker_saturation", minMarkerSaturation_, 0.0);
+  nodeHandle_.param("max_marker_saturation", maxMarkerSaturation_, 1.0);
+
   return true;
 }
 
@@ -102,8 +117,9 @@ bool ElevationVisualization::generateVisualization(
       // Getting elevation value
       Vector2i cellIndex(i, j);
       unsigned int dataIndex = starleth_elevation_msg::get1dIndexFrom2dIndex(cellIndex, map);
-      double elevation = map.elevation.data[dataIndex];
-      double variance = map.variance.data[dataIndex];
+      const auto& elevation = map.elevation.data[dataIndex];
+      const auto& variance = map.variance.data[dataIndex];
+      const auto& color = map.color.data[dataIndex];
 
       // Do not continue for nan values
       if (std::isnan(elevation)) continue;
@@ -120,39 +136,55 @@ bool ElevationVisualization::generateVisualization(
       elevationMarker.points.push_back(point);
 
       // Add marker color
-      std_msgs::ColorRGBA color;
-      color.r = 0.0;
-      color.g = 0.3;
-      color.b = 1.0;
-      color.a = 1.0;
-
-      setColorFromVariance(color, variance);
-
-      elevationMarker.colors.push_back(color);
+      std_msgs::ColorRGBA markerColor;
+      markerColor.b = 1.0;
+      markerColor.a = 1.0;
+      setColorFromMap(markerColor, color);
+      setSaturationFromVariance(markerColor, variance);
+//      setAlphaFromVariance(markerColor, variance); // This looks bad in Rviz
+      elevationMarker.colors.push_back(markerColor);
     }
   }
 
   return true;
 }
 
-bool ElevationVisualization::setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance)
+bool ElevationVisualization::setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue)
 {
-  double m = (maxMarkerAlpha_ - minMarkerAlpha_) / (varianceLowerValue_ - varianceUpperValue_);
-  double b = minMarkerAlpha_ - m * varianceUpperValue_;
-  double alpha = m * variance + b;
-  alpha = min(alpha, maxMarkerAlpha_);
-  alpha = max(alpha, minMarkerAlpha_);
-  color.a = alpha;
+  Vector3f colorVector;
+  starleth_elevation_msg::getColorVectorFromColorValue(colorVector, colorValue);
+  getColorMessageFromColorVector(color, colorVector);
+  return true;
 }
 
-bool ElevationVisualization::setColorFromVariance(std_msgs::ColorRGBA& color, const double& variance)
+bool ElevationVisualization::setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance)
 {
-  double m = (maxMarkerAlpha_ - minMarkerAlpha_) / (varianceLowerValue_ - varianceUpperValue_);
-  double b = minMarkerAlpha_ - m * varianceUpperValue_;
-  double blue = m * variance + b;
-  blue = min(blue, maxMarkerAlpha_);
-  blue = max(blue, minMarkerAlpha_);
-  color.b = blue;
+  color.a = getValueFromVariance(minMarkerAlpha_, maxMarkerAlpha_, variance);
+  return true;
+}
+
+// Based on "changeSaturation" function by Darel Rex Finley
+bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
+{
+  const Eigen::Array3f HspFactors(.299, .587, .114); // see http://alienryderflex.com/hsp.html
+  float saturationChange = static_cast<float>(getValueFromVariance(minMarkerSaturation_, maxMarkerSaturation_, variance));
+  Vector3f colorVector;
+  getColorVectorFromColorMessage(colorVector, color);
+  float perceivedBrightness = sqrt((colorVector.array().square() * HspFactors).sum());
+  colorVector = perceivedBrightness + saturationChange * (colorVector.array() - perceivedBrightness);
+  colorVector = (colorVector.array().min(Array3f::Ones())).matrix();
+  getColorMessageFromColorVector(color, colorVector);
+  return true;
+}
+
+double ElevationVisualization::getValueFromVariance(const double& minValue, const double& maxValue, const double& variance)
+{
+  double m = (maxValue - minValue) / (varianceLowerValue_ - varianceUpperValue_);
+  double b = minValue - m * varianceUpperValue_;
+  double value = m * variance + b;
+  value = min(value, maxValue);
+  value = max(value, minValue);
+  return value;
 }
 
 } /* namespace starleth_elevation_visualization */
