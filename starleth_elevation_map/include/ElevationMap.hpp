@@ -41,10 +41,12 @@ class ElevationMap
 
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
-
+  void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
  private:
   bool readParameters();
+
+  bool initialize();
 
   bool broadcastElevationMapTransform(const ros::Time& time);
 
@@ -77,6 +79,7 @@ class ElevationMap
   ros::Publisher elevationMapPublisher_;
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
+  ros::Timer mapUpdateTimer_;
 
   ros::Time timeOfLastUpdate_;
 
@@ -99,6 +102,8 @@ class ElevationMap
 
   double minVariance_;
   double maxVariance_;
+
+  ros::Duration maxNoUpdateDuration_;
 
   //! Origin of the map.
   Eigen::Affine3d elevationMapToParentTransform_;

@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   starleth_elevation_map::ElevationMap elevationMap(nodeHandle);
 
   // Spin
-  ros::AsyncSpinner spinner(2); // Use 2 threads
+  ros::AsyncSpinner spinner(2); // Use n threads
   spinner.start();
   ros::waitForShutdown();
   return 0;

@@ -166,7 +166,6 @@ bool ElevationVisualization::setAlphaFromVariance(std_msgs::ColorRGBA& color, co
   return true;
 }
 
-// Based on "changeSaturation" function by Darel Rex Finley
 bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
 {
   const Eigen::Array3f HspFactors(.299, .587, .114); // see http://alienryderflex.com/hsp.html

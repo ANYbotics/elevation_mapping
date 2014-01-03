@@ -34,8 +34,8 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  resize(length_);
-  reset();
+  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_ * 0.5, &ElevationMap::mapUpdateTimerCallback, this); // Need to check at double rate.
+  initialize();
 }
 
 ElevationMap::~ElevationMap()
@@ -54,9 +54,24 @@ bool ElevationMap::readParameters()
   nodeHandle_.param("resolution", resolution_, 0.01); ROS_ASSERT(resolution_ > 0.0);
   nodeHandle_.param("min_variance", minVariance_, 0.001); ROS_ASSERT(minVariance_ > 0.0);
   nodeHandle_.param("max_variance", maxVariance_, 0.5); ROS_ASSERT(maxVariance_ > 0.0);
+
+  double minUpdateRate;
+  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0); ROS_ASSERT(minUpdateRate > 0.0);
+  maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+
   elevationMapToParentTransform_.setIdentity();
   elevationMapToParentTransform_.translation().x() = 0.8;
 
+  return true;
+}
+
+bool ElevationMap::initialize()
+{
+  resize(length_);
+  reset();
+  broadcastElevationMapTransform(Time::now());
+  Duration(1.0).sleep(); // Need this to get the TF caches fill up.
+  ROS_INFO("StarlETH elevation map node initialized.");
   return true;
 }
 
@@ -69,14 +84,26 @@ void ElevationMap::pointCloudCallback(
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", pointCloud->width * pointCloud->height);
 
   // Callback procedure
-  ros::Time& time = pointCloud->header.stamp;
+  Time& time = pointCloud->header.stamp;
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   setTimeOfLastUpdate(time);
   cleanPointCloud(pointCloud);
-  if (!transformPointCloud(pointCloud, elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed.");
+  if (!transformPointCloud(pointCloud, elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
   else if (!addToElevationMap(pointCloud)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
+}
+
+void ElevationMap::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
+{
+  if (Time::now() - timeOfLastUpdate_ < maxNoUpdateDuration_) return;
+
+  ROS_DEBUG("Elevation map is updated without data from the sensor.");
+
+  // Callback procedure
+  Time time = Time::now();
+  if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
+
 }
 
 bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
@@ -98,14 +125,6 @@ bool ElevationMap::updateProcessNoise(const ros::Time& time)
   return true;
 }
 
-double ElevationMap::replaceWithNanAtMaxVariance(double x)
-{
-  if (x > maxVariance_)
-    return NAN;
-  else
-    return x;
-}
-
 bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud)
 {
   PassThrough<PointXYZRGB> passThroughFilter;
@@ -120,7 +139,7 @@ bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud
   pointCloud->swap(tempPointCloud);
 
   int pointCloudSize = pointCloud->width * pointCloud->height;
-  ROS_DEBUG("ElevationMap cleanPointCloud() reduced point cloud to %i points.", pointCloudSize);
+  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", pointCloudSize);
   return true;
 }
 
@@ -136,7 +155,7 @@ bool ElevationMap::transformPointCloud(
 
   try
   {
-    transformListener_.waitForTransform(targetFrame, sourceFrame, timeStamp, ros::Duration(1.0));
+    transformListener_.waitForTransform(targetFrame, sourceFrame, timeStamp, ros::Duration(maxNoUpdateDuration_));
     transformListener_.lookupTransform(targetFrame, sourceFrame, timeStamp, transformTf);
     Affine3d transform;
     poseTFToEigen(transformTf, transform);
@@ -144,6 +163,7 @@ bool ElevationMap::transformPointCloud(
     pointCloud->swap(*pointCloudTransformed);
     pointCloud->header.frame_id = targetFrame;
 //    pointCloud->header.stamp = timeStamp;
+    ROS_DEBUG("ElevationMap: Point cloud transformed for time stamp %f.", timeStamp.toSec());
     return true;
   }
   catch (TransformException &ex)
@@ -332,6 +352,8 @@ bool ElevationMap::publishElevationMap()
 
   elevationMapPublisher_.publish(elevationMapMessage);
 
+  ROS_DEBUG("Elevation map has been published.");
+
   return true;
 }
 
@@ -360,6 +382,7 @@ bool ElevationMap::reset()
   varianceDataX_.setConstant(NAN);
   varianceDataY_.setConstant(NAN);
   colorData_.setConstant(0);
+  return true;
 }
 
 void ElevationMap::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)

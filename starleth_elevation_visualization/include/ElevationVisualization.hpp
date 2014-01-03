@@ -39,7 +39,15 @@ class ElevationVisualization
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
   bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
   bool setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance);
+
+  /*!
+   * @note Based on "changeSaturation" function by Darel Rex Finley.
+   * @param color
+   * @param variance
+   * @return
+   */
   bool setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance);
+
   double getValueFromVariance(const double& minValue, const double& maxValue, const double& variance);
 
   enum class MarkerTypes
