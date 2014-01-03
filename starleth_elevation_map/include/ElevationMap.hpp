@@ -24,6 +24,9 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 
+// STD
+#include <limits>
+
 namespace starleth_elevation_map {
 
 /*
@@ -38,12 +41,21 @@ class ElevationMap
 
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
-  bool resize(Eigen::Array2d length);
 
-  bool reset();
 
  private:
   bool readParameters();
+
+  bool broadcastElevationMapTransform(const ros::Time& time);
+
+  /*!
+   * Update the process noise of the elevation map up to a certain time.
+   * @param time to which the map is updated to.
+   * @return true if successful.
+   */
+  bool updateProcessNoise(const ros::Time& time);
+
+  double replaceWithNanAtMaxVariance(double x);
 
   bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
@@ -54,7 +66,9 @@ class ElevationMap
 
   bool publishElevationMap();
 
-  bool broadcastElevationMapTransform(ros::Time time);
+  bool resize(const Eigen::Array2d& length);
+
+  bool reset();
 
   void setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate);
 
@@ -71,6 +85,8 @@ class ElevationMap
 
   //! Variance data of the cells in elevationData_.
   Eigen::MatrixXd varianceData_;
+  Eigen::MatrixXd varianceDataX_;
+  Eigen::MatrixXd varianceDataY_;
 
   //! Color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
@@ -81,6 +97,9 @@ class ElevationMap
   //! Map resolution in xy plane [m/cell].
   double resolution_;
 
+  double minVariance_;
+  double maxVariance_;
+
   //! Origin of the map.
   Eigen::Affine3d elevationMapToParentTransform_;
   std::string parentFrameId_;
@@ -90,23 +109,21 @@ class ElevationMap
 
   double sensorCutoffDepth_;
 
+};
 
-//  //! Values are in the range [0, 32768]. 0 belongs to max negative elevation,
-//  //! 32767 to max positive elevation, elevationZeroLevel_ corresponds to zero level,
-//  //! -elevationZeroLevel_ to unknown elevation.
-//
-//  //! Map resolution in height [m/cell].
-//  double resolutionHeight_;
-//
-//  //! Minimal observed height [m].
-//  double minElevation_;
-//
-//  //! Maximal observed height [m].
-//  double maxElevation_;
-//
-//  //! Value of the zero height (for example 16384).
-//  int elevationZeroLevel_;
-
+template<typename Scalar>
+struct VarianceClampOperator
+{
+  VarianceClampOperator(const Scalar& minVariance, const Scalar& maxVariance)
+      : minVariance_(minVariance),
+        maxVariance_(maxVariance)
+  {
+  }
+  const Scalar operator()(const Scalar& x) const
+  {
+    return x < minVariance_ ? minVariance_ : (x > maxVariance_ ? std::numeric_limits<double>::infinity() : x);
+  }
+  Scalar minVariance_, maxVariance_;
 };
 
 } /* namespace starleth_elevation_map */

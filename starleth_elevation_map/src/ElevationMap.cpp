@@ -49,12 +49,13 @@ bool ElevationMap::readParameters()
   nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
   nodeHandle_.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle_.param("sensor_cutoff_depth", sensorCutoffDepth_, 3.0);
-  nodeHandle_.param("elevation_map_length_in_x", length_(0), 1.6);
-  nodeHandle_.param("elevation_map_length_in_y", length_(1), 1.0);
-  nodeHandle_.param("elevation_map_resolution", resolution_, 0.01);
-  ROS_ASSERT(resolution_ > 0.0);
+  nodeHandle_.param("length_in_x", length_(0), 3.0);
+  nodeHandle_.param("length_in_y", length_(1), 3.0);
+  nodeHandle_.param("resolution", resolution_, 0.01); ROS_ASSERT(resolution_ > 0.0);
+  nodeHandle_.param("min_variance", minVariance_, 0.001); ROS_ASSERT(minVariance_ > 0.0);
+  nodeHandle_.param("max_variance", maxVariance_, 0.5); ROS_ASSERT(maxVariance_ > 0.0);
   elevationMapToParentTransform_.setIdentity();
-  elevationMapToParentTransform_.translation().x() = 0.8;//(Vector3d(0.5, 0.0, 0.0));
+  elevationMapToParentTransform_.translation().x() = 0.8;
 
   return true;
 }
@@ -62,42 +63,47 @@ bool ElevationMap::readParameters()
 void ElevationMap::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
-  if (elevationMapPublisher_.getNumSubscribers () < 1) return;
-
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
+  ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", pointCloud->width * pointCloud->height);
 
-  int pointCloudSize = pointCloud->width * pointCloud->height;
-  ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", pointCloudSize);
-
-  if (!broadcastElevationMapTransform(pointCloud->header.stamp))
-  {
-    ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
-    return;
-  }
-
+  // Callback procedure
+  ros::Time& time = pointCloud->header.stamp;
+  if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
+  if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
+  setTimeOfLastUpdate(time);
   cleanPointCloud(pointCloud);
+  if (!transformPointCloud(pointCloud, elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed.");
+  else if (!addToElevationMap(pointCloud)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
+  if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
+}
 
-  if (!transformPointCloud(pointCloud, elevationMapFrameId_))
-  {
-    ROS_ERROR("ElevationMap: Point cloud transform failed.");
-    return;
-  }
+bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
+{
+  tf::Transform tfTransform;
+  poseEigenToTF(elevationMapToParentTransform_, tfTransform);
+  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
+  ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
+  return true;
+}
 
-  if (!addToElevationMap(pointCloud))
-  {
-    ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
-    return;
-  }
+bool ElevationMap::updateProcessNoise(const ros::Time& time)
+{
+  // TODO Add variance depending on movement from previous update time
+  varianceData_ = (varianceData_.array() + 0.005).matrix();
+  varianceDataX_ = (varianceDataX_.array() + 0.005).matrix();
+  varianceDataY_ = (varianceDataY_.array() + 0.005).matrix();
+  varianceData_ = varianceData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
+  return true;
+}
 
-  if (!publishElevationMap())
-  {
-    ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
-    return;
-  }
-
-  setTimeOfLastUpdate(pointCloud->header.stamp);
+double ElevationMap::replaceWithNanAtMaxVariance(double x)
+{
+  if (x > maxVariance_)
+    return NAN;
+  else
+    return x;
 }
 
 bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud)
@@ -115,6 +121,7 @@ bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud
 
   int pointCloudSize = pointCloud->width * pointCloud->height;
   ROS_DEBUG("ElevationMap cleanPointCloud() reduced point cloud to %i points.", pointCloudSize);
+  return true;
 }
 
 bool ElevationMap::transformPointCloud(
@@ -146,34 +153,6 @@ bool ElevationMap::transformPointCloud(
   }
 }
 
-bool ElevationMap::publishElevationMap()
-{
-  starleth_elevation_msg::ElevationMap elevationMapMessage;
-
-  elevationMapMessage.header.stamp = timeOfLastUpdate_;
-  elevationMapMessage.header.frame_id = elevationMapFrameId_;
-  elevationMapMessage.resolution = resolution_;
-  elevationMapMessage.lengthInX = length_(0);
-  elevationMapMessage.lengthInY = length_(1);
-
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, elevationMapMessage.color);
-
-  elevationMapPublisher_.publish(elevationMapMessage);
-
-  return true;
-}
-
-bool ElevationMap::broadcastElevationMapTransform(ros::Time time)
-{
-  tf::Transform tfTransform;
-  poseEigenToTF(elevationMapToParentTransform_, tfTransform);
-  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
-  ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
-  return true;
-}
-
 bool ElevationMap::addToElevationMap(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
@@ -189,6 +168,8 @@ bool ElevationMap::addToElevationMap(
 
     auto& elevation = elevationData_(index(0), index(1));
     auto& variance = varianceData_(index(0), index(1));
+    auto& varianceX = varianceDataX_(index(0), index(1));
+    auto& varianceY = varianceDataY_(index(0), index(1));
     auto& color = colorData_(index(0), index(1));
 
     double measurementVariance = 0.3;
@@ -197,11 +178,15 @@ bool ElevationMap::addToElevationMap(
     {
       elevation = point.z;
       variance = measurementVariance;
+      varianceX = measurementVariance;
+      varianceY = measurementVariance;
     }
     else
     {
       elevation = (variance * point.z + measurementVariance * elevation) / (variance + measurementVariance);
       variance = (measurementVariance * variance) / (measurementVariance + variance);
+      varianceX = (measurementVariance * variance) / (measurementVariance + variance);
+      varianceY = (measurementVariance * variance) / (measurementVariance + variance);
     }
 
     color = ((int)point.r) << 16 | ((int)point.g) << 8 | ((int)point.b);
@@ -327,25 +312,53 @@ bool ElevationMap::addToElevationMap(
   return true;
 }
 
-bool ElevationMap::resize(Eigen::Array2d length)
+bool ElevationMap::publishElevationMap()
 {
-  length_ = length;
+  if (elevationMapPublisher_.getNumSubscribers () < 1) return false;
 
+  starleth_elevation_msg::ElevationMap elevationMapMessage;
+
+  elevationMapMessage.header.stamp = timeOfLastUpdate_;
+  elevationMapMessage.header.frame_id = elevationMapFrameId_;
+  elevationMapMessage.resolution = resolution_;
+  elevationMapMessage.lengthInX = length_(0);
+  elevationMapMessage.lengthInY = length_(1);
+
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceDataX_, elevationMapMessage.varianceX);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceDataY_, elevationMapMessage.varianceY);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, elevationMapMessage.color);
+
+  elevationMapPublisher_.publish(elevationMapMessage);
+
+  return true;
+}
+
+bool ElevationMap::resize(const Eigen::Array2d& length)
+{
   // TODO Check if there is a remainder.
   // TODO make this complaint with any format.
+
+  length_ = length;
   int nRows = static_cast<int>(length_(0) / resolution_);
   int nCols = static_cast<int>(length_(1) / resolution_);
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
+  varianceDataX_.resize(nRows, nCols);
+  varianceDataY_.resize(nRows, nCols);
   colorData_.resize(nRows, nCols);
 
   ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
+  return true;
 }
 
 bool ElevationMap::reset()
 {
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(NAN);
+  varianceDataX_.setConstant(NAN);
+  varianceDataY_.setConstant(NAN);
   colorData_.setConstant(0);
 }
 

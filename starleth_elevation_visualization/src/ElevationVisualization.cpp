@@ -14,6 +14,9 @@
 // std::min, std::max
 #include <algorithm>
 
+// STD
+#include <limits>
+
 using namespace std;
 using namespace ros;
 using namespace Eigen;
@@ -51,7 +54,7 @@ bool ElevationVisualization::readParameters()
 {
   nodeHandle_.param("elevation_map_topic", mapTopic_, string("/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
-  nodeHandle_.param("variance_lower_value_", varianceLowerValue_, 0.01);
+  nodeHandle_.param("variance_lower_value_", varianceLowerValue_, 0.001);
   nodeHandle_.param("variance_upper_value_", varianceUpperValue_, 0.2);
   nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
   nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_, 1.0);
@@ -121,8 +124,8 @@ bool ElevationVisualization::generateVisualization(
       const auto& variance = map.variance.data[dataIndex];
       const auto& color = map.color.data[dataIndex];
 
-      // Do not continue for nan values
-      if (std::isnan(elevation)) continue;
+      // Do not continue for nan and inf values
+      if (std::isnan(elevation) || std::isinf(variance)) continue;
 
       // Getting position of cell
       Vector2d position;
