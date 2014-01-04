@@ -68,11 +68,15 @@ class ElevationMap
 
   bool publishElevationMap();
 
-  bool resize(const Eigen::Array2d& length);
+  bool resizeMap(const Eigen::Array2d& length);
 
-  bool reset();
+  bool resetMap();
 
   void setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate);
+
+  void resetMapUpdateTimer();
+
+  void stopMapUpdateTimer();
 
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;

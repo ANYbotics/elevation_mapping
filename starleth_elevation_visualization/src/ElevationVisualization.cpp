@@ -76,6 +76,7 @@ bool ElevationVisualization::initializeVisualization()
   elevationMarker.scale.z = markerHeight_;
   elevationMarker.action = visualization_msgs::Marker::ADD;
 
+  ROS_INFO("StarlETH elevation visualization initialized.");
   return true;
 }
 

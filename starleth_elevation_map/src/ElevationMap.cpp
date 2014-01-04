@@ -34,7 +34,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_ * 0.5, &ElevationMap::mapUpdateTimerCallback, this); // Need to check at double rate.
+  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMap::mapUpdateTimerCallback, this, true, false);
   initialize();
 }
 
@@ -67,10 +67,11 @@ bool ElevationMap::readParameters()
 
 bool ElevationMap::initialize()
 {
-  resize(length_);
-  reset();
+  resizeMap(length_);
+  resetMap();
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
+  resetMapUpdateTimer();
   ROS_INFO("StarlETH elevation map node initialized.");
   return true;
 }
@@ -78,12 +79,13 @@ bool ElevationMap::initialize()
 void ElevationMap::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
+  stopMapUpdateTimer();
+
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", pointCloud->width * pointCloud->height);
 
-  // Callback procedure
   Time& time = pointCloud->header.stamp;
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
@@ -92,18 +94,20 @@ void ElevationMap::pointCloudCallback(
   if (!transformPointCloud(pointCloud, elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
   else if (!addToElevationMap(pointCloud)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
+  resetMapUpdateTimer();
 }
 
 void ElevationMap::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
 {
-  if (Time::now() - timeOfLastUpdate_ < maxNoUpdateDuration_) return;
+  ROS_WARN("Elevation map is updated without data from the sensor.");
 
-  ROS_DEBUG("Elevation map is updated without data from the sensor.");
-
-  // Callback procedure
+  stopMapUpdateTimer();
   Time time = Time::now();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
-
+  if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
+  setTimeOfLastUpdate(time);
+  if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
+  resetMapUpdateTimer();
 }
 
 bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
@@ -357,7 +361,7 @@ bool ElevationMap::publishElevationMap()
   return true;
 }
 
-bool ElevationMap::resize(const Eigen::Array2d& length)
+bool ElevationMap::resizeMap(const Eigen::Array2d& length)
 {
   // TODO Check if there is a remainder.
   // TODO make this complaint with any format.
@@ -375,7 +379,7 @@ bool ElevationMap::resize(const Eigen::Array2d& length)
   return true;
 }
 
-bool ElevationMap::reset()
+bool ElevationMap::resetMap()
 {
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(NAN);
@@ -388,6 +392,18 @@ bool ElevationMap::reset()
 void ElevationMap::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)
 {
   timeOfLastUpdate_ = timeOfLastUpdate;
+}
+
+void ElevationMap::resetMapUpdateTimer()
+{
+  mapUpdateTimer_.stop();
+  mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - (Time::now() - timeOfLastUpdate_));
+  mapUpdateTimer_.start();
+}
+
+void ElevationMap::stopMapUpdateTimer()
+{
+  mapUpdateTimer_.stop();
 }
 
 } /* namespace starleth_elevation_map */

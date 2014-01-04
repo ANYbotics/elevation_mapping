@@ -22,7 +22,7 @@ int main(int argc, char** argv)
   starleth_elevation_map::ElevationMap elevationMap(nodeHandle);
 
   // Spin
-  ros::AsyncSpinner spinner(2); // Use n threads
+  ros::AsyncSpinner spinner(1); // Use n threads, TODO why are there 2 threads?
   spinner.start();
   ros::waitForShutdown();
   return 0;
