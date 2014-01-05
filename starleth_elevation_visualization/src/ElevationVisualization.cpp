@@ -43,8 +43,8 @@ bool ElevationVisualization::readParameters()
 {
   nodeHandle_.param("elevation_map_topic", mapTopic_, string("/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
-  nodeHandle_.param("variance_lower_value_", varianceLowerValue_, 0.001);
-  nodeHandle_.param("variance_upper_value_", varianceUpperValue_, 0.2);
+  nodeHandle_.param("variance_lower_value_", varianceLowerValue_, pow(0.003, 2));
+  nodeHandle_.param("variance_upper_value_", varianceUpperValue_, pow(0.02, 2));
   nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
   nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_, 1.0);
   nodeHandle_.param("min_marker_saturation", minMarkerSaturation_, 0.0);
@@ -101,7 +101,7 @@ bool ElevationVisualization::generateVisualization(
   elevationMarker.points.clear();
   elevationMarker.colors.clear();
 
-  double markerHeightOffset = markerHeight_/2.0;
+  float markerHeightOffset = static_cast<float>(markerHeight_/2.0);
 
   for (unsigned int i = 0; i < starleth_elevation_msg::getRows(map.elevation); ++i)
   {

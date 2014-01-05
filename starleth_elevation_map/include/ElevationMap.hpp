@@ -57,10 +57,12 @@ class ElevationMap
 
   bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
+  bool getMeasurementDistances(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& measurementDistances);
+
   bool transformPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
                            const std::string& targetFrame);
 
-  bool addToElevationMap(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  bool addToElevationMap(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& measurementDistances);
 
   bool cleanElevationMap();
 
@@ -86,12 +88,10 @@ class ElevationMap
   ros::Time timeOfLastUpdate_;
 
   //! Elevation height data.
-  Eigen::MatrixXd elevationData_;
+  Eigen::MatrixXf elevationData_;
 
   //! Variance data of the cells in elevationData_.
-  Eigen::MatrixXd varianceData_;
-  Eigen::MatrixXd varianceDataX_;
-  Eigen::MatrixXd varianceDataY_;
+  Eigen::MatrixXf varianceData_;
 
   //! Color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
@@ -121,7 +121,8 @@ class ElevationMap
     std::string elevationMapFrameId_;
     std::string pointCloudTopic_;
 
-    double sensorCutoffDepth_;
+    double sensorCutoffMinDepth_;
+    double sensorCutoffMaxDepth_;
 
     bool read(ros::NodeHandle& nodeHandle);
     bool checkValidity();

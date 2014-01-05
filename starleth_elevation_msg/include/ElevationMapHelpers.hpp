@@ -15,7 +15,7 @@
 #include <Eigen/Core>
 
 // ROS
-#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float32MultiArray.h>
 
 // STL
 #include <map>
@@ -33,11 +33,11 @@ enum class StorageIndices {
 
 extern std::map<StorageIndices, std::string> storageIndexNames;
 
-bool isRowMajor(const std_msgs::Float64MultiArray& messageData);
+bool isRowMajor(const std_msgs::Float32MultiArray& messageData);
 
-unsigned int getCols(const std_msgs::Float64MultiArray& messageData);
+unsigned int getCols(const std_msgs::Float32MultiArray& messageData);
 
-unsigned int getRows(const std_msgs::Float64MultiArray& messageData);
+unsigned int getRows(const std_msgs::Float32MultiArray& messageData);
 
 /*!
  * Returns the 1d array index to access the map data based on the 2d matrix indeces.

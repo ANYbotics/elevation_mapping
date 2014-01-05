@@ -2,21 +2,19 @@
 Header header
 
 # Map resolution in xy plane [m/cell].
-float64 resolution
+float32 resolution
 
 # Map length in x-direction [m].
-float64 lengthInX
+float32 lengthInX
   
 # Map width in y-direction [m].
-float64 lengthInY
+float32 lengthInY
 
 # Elevation height data [m].
-std_msgs/Float64MultiArray elevation
+std_msgs/Float32MultiArray elevation
 
 # Variance data [m].
-std_msgs/Float64MultiArray variance
-std_msgs/Float64MultiArray varianceX
-std_msgs/Float64MultiArray varianceY
+std_msgs/Float32MultiArray variance
 
 # Color data [rgb] (optional).
 std_msgs/Int32MultiArray color

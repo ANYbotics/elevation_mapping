@@ -55,15 +55,16 @@ bool ElevationMap::ElevationMapParameters::read(ros::NodeHandle& nodeHandle)
   nodeHandle.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
   nodeHandle.param("map_frame_id", parentFrameId_, string("/map"));
   nodeHandle.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
-  nodeHandle.param("sensor_cutoff_depth", sensorCutoffDepth_, 3.0);
+  nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
+  nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
   nodeHandle.param("length_in_x", length_(0), 3.0);
   nodeHandle.param("length_in_y", length_(1), 3.0);
   nodeHandle.param("resolution", resolution_, 0.01);
-  nodeHandle.param("min_variance", minVariance_, 0.001);
-  nodeHandle.param("max_variance", maxVariance_, 0.2);
-  nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 1.0);
-  nodeHandle.param("time_process_noise", timeProcessNoise_, 0.001);
-  nodeHandle.param("multi_height_process_noise", multiHeightProcessNoise_, 0.002);
+  nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
+  nodeHandle.param("max_variance", maxVariance_, pow(0.075, 2));
+  nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.0);
+  nodeHandle.param("time_process_noise", timeProcessNoise_, pow(0.0, 2));
+  nodeHandle.param("multi_height_process_noise", multiHeightProcessNoise_, pow(0.01, 2));
 
   double minUpdateRate;
   nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
@@ -74,7 +75,8 @@ bool ElevationMap::ElevationMapParameters::read(ros::NodeHandle& nodeHandle)
 
 bool ElevationMap::ElevationMapParameters::checkValidity()
 {
-  ROS_ASSERT(sensorCutoffDepth_ >= 0.0);
+  ROS_ASSERT(sensorCutoffMinDepth_ >= 0.0);
+  ROS_ASSERT(sensorCutoffMaxDepth_ > sensorCutoffMinDepth_);
   ROS_ASSERT(length_(0) > 0.0);
   ROS_ASSERT(length_(1) > 0.0);
   ROS_ASSERT(resolution_ > 0.0);
@@ -118,11 +120,12 @@ void ElevationMap::pointCloudCallback(
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   setTimeOfLastUpdate(time);
   cleanPointCloud(pointCloud);
-  // TODO Add sensor model
+  VectorXf measurementDistances;
+  getMeasurementDistances(pointCloud, measurementDistances);
   if (!transformPointCloud(pointCloud, parameters_.elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
-  else if (!addToElevationMap(pointCloud)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
+  else if (!addToElevationMap(pointCloud, measurementDistances)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
   cleanElevationMap();
-  if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
+  if (!publishElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
 }
 
@@ -136,7 +139,7 @@ void ElevationMap::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   setTimeOfLastUpdate(time);
   cleanElevationMap();
-  if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
+  if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
 }
 
@@ -151,31 +154,43 @@ bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
 
 bool ElevationMap::updateProcessNoise(const ros::Time& time)
 {
-  // TODO Add variance depending on movement from previous update time
-
   if (time < timeOfLastUpdate_) return false;
 
-  double timeProcessNoise = (time - timeOfLastUpdate_).toSec() * parameters_.timeProcessNoise_;
+  // TODO Add variance depending on movement from previous update time
+
+  float timeProcessNoise = static_cast<float>((time - timeOfLastUpdate_).toSec() * parameters_.timeProcessNoise_);
   if (timeProcessNoise != 0.0) varianceData_ = (varianceData_.array() + timeProcessNoise).matrix();
-//  varianceDataX_ = (varianceDataX_.array() + 0.005).matrix();
-//  varianceDataY_ = (varianceDataY_.array() + 0.005).matrix();
   return true;
 }
 
-bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud)
+bool ElevationMap::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
   PassThrough<PointXYZRGB> passThroughFilter;
   PointCloud<PointXYZRGB> tempPointCloud;
 
   passThroughFilter.setInputCloud(pointCloud);
   passThroughFilter.setFilterFieldName("z");
-  passThroughFilter.setFilterLimits(0.0, parameters_.sensorCutoffDepth_);
-  //! This makes the point cloud also dense (no NaN points).
+  passThroughFilter.setFilterLimits(parameters_.sensorCutoffMinDepth_, parameters_.sensorCutoffMaxDepth_);
+  // This makes the point cloud also dense (no NaN points).
   passThroughFilter.filter(tempPointCloud);
   tempPointCloud.is_dense = true;
   pointCloud->swap(tempPointCloud);
 
   ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  return true;
+}
+
+bool ElevationMap::getMeasurementDistances(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& measurementDistances)
+{
+  // TODO Measurement distances should be added to the point cloud.
+  measurementDistances.resize(pointCloud->size());
+
+  for (unsigned int i = 0; i < pointCloud->size(); ++i)
+  {
+    auto& point = pointCloud->points[i];
+    measurementDistances[i] = Vector3f(point.x, point.y, point.z).norm();
+  }
+
   return true;
 }
 
@@ -210,7 +225,7 @@ bool ElevationMap::transformPointCloud(
 }
 
 bool ElevationMap::addToElevationMap(
-    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& measurementDistances)
 {
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
@@ -223,19 +238,33 @@ bool ElevationMap::addToElevationMap(
 
     auto& elevation = elevationData_(index(0), index(1));
     auto& variance = varianceData_(index(0), index(1));
-    auto& varianceX = varianceDataX_(index(0), index(1));
-    auto& varianceY = varianceDataY_(index(0), index(1));
     auto& color = colorData_(index(0), index(1));
+    auto& measurementDistance = measurementDistances[i];
 
-    double measurementVariance = 0.03;
+    // Kinect (short-range mode) taken from:
+    // Nguyen, C. V., Izadi, S., & Lovell, D. (2012).
+    // Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking.
+//    float measurementStandardDeviation = 0.0012 + 0.0019 * pow(measurementDistance - 0.4, 2);
+
+    // Manual tuned for PrimeSense Carmine 1.09.
+    // Also includes uncertainties with non perpedicular surfaces and
+    // biases/warp at further distances.
+    float measurementStandardDeviation = 0.003 + 0.015 * pow(measurementDistance - 0.25, 2);
+
+    // Approximation of datasheet for Carmine 1.09 from:
+    // http://www.openni.org/rd1-09-specifications/
+    // Coefficients computed with least squares regression.
+//    float measurementStandardDeviation = 0.000181 + 0.00166 * pow(measurementDistance - 0.1, 2);
+
+    float measurementVariance = pow(measurementStandardDeviation, 2);
+
+//    cout << "Sensor: " << measurementStandardDeviation << ", Map: "  << sqrt(variance) << endl;
 
     if (std::isnan(elevation) || std::isinf(variance))
     {
       // No prior information in elevation map, use measurement.
       elevation = point.z;
       variance = measurementVariance;
-      varianceX = measurementVariance;
-      varianceY = measurementVariance;
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
@@ -247,8 +276,6 @@ bool ElevationMap::addToElevationMap(
       // Fuse measurement with elevation map data.
       elevation = (variance * point.z + measurementVariance * elevation) / (variance + measurementVariance);
       variance =  (measurementVariance * variance) / (measurementVariance + variance);
-      varianceX = (measurementVariance * variance) / (measurementVariance + variance);
-      varianceY = (measurementVariance * variance) / (measurementVariance + variance);
       // TODO add color fusion
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
@@ -259,8 +286,6 @@ bool ElevationMap::addToElevationMap(
       // Overwrite elevation map information with measurement data
       elevation = point.z;
       variance = measurementVariance;
-      varianceX = measurementVariance;
-      varianceY = measurementVariance;
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
@@ -295,8 +320,6 @@ bool ElevationMap::publishElevationMap()
 
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceDataX_, elevationMapMessage.varianceX);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceDataY_, elevationMapMessage.varianceY);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, elevationMapMessage.color);
 
   elevationMapPublisher_.publish(elevationMapMessage);
@@ -314,8 +337,6 @@ bool ElevationMap::resizeMap(const Eigen::Array2d& length)
 
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
-  varianceDataX_.resize(nRows, nCols);
-  varianceDataY_.resize(nRows, nCols);
   colorData_.resize(nRows, nCols);
 
   ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
@@ -326,8 +347,6 @@ bool ElevationMap::resetMap()
 {
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(NAN);
-  varianceDataX_.setConstant(NAN);
-  varianceDataY_.setConstant(NAN);
   colorData_.setConstant(0);
   return true;
 }

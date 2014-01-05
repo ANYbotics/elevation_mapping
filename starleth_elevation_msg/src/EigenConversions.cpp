@@ -16,7 +16,7 @@
 
 namespace starleth_elevation_msg {
 
-bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::MatrixXd& e)
+bool multiArrayMessageToMatrixEigen(std_msgs::Float32MultiArray& m, Eigen::MatrixXf& e)
 {
   if (e.IsRowMajor != starleth_elevation_msg::isRowMajor(m))
   {
@@ -26,7 +26,7 @@ bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::Matri
 
   e.resize(starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
 
-  e = Eigen::Map<MatrixXd>(m.data.data(), starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
+  e = Eigen::Map<MatrixXf>(m.data.data(), starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
 
   return true;
 }

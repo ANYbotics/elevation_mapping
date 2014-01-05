@@ -28,7 +28,7 @@ std::map<StorageIndices, std::string> storageIndexNames = boost::assign::map_lis
     (StorageIndices::Column,  "column_index")
     (StorageIndices::Row, "row_index");
 
-bool isRowMajor(const std_msgs::Float64MultiArray& messageData)
+bool isRowMajor(const std_msgs::Float32MultiArray& messageData)
 {
   if (messageData.layout.dim[0].label == storageIndexNames[StorageIndices::Column]) return false;
   else if (messageData.layout.dim[0].label == storageIndexNames[StorageIndices::Row]) return true;
@@ -37,13 +37,13 @@ bool isRowMajor(const std_msgs::Float64MultiArray& messageData)
   return false;
 }
 
-unsigned int getCols(const std_msgs::Float64MultiArray& messageData)
+unsigned int getCols(const std_msgs::Float32MultiArray& messageData)
 {
   if (isRowMajor(messageData)) return messageData.layout.dim.at(1).size;
   return messageData.layout.dim.at(0).size;
 }
 
-unsigned int getRows(const std_msgs::Float64MultiArray& messageData)
+unsigned int getRows(const std_msgs::Float32MultiArray& messageData)
 {
   if (isRowMajor(messageData)) return messageData.layout.dim.at(0).size;
   return messageData.layout.dim.at(1).size;

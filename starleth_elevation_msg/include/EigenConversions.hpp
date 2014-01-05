@@ -12,7 +12,7 @@
 #include "ElevationMapHelpers.hpp"
 
 // ROS
-#include <std_msgs/Float64MultiArray.h>
+#include <std_msgs/Float32MultiArray.h>
 #include <std_msgs/UInt32MultiArray.h>
 
 // Eigen
@@ -21,7 +21,7 @@
 namespace starleth_elevation_msg {
 
 /*!
- * Converts an Eigen matrix into a ROS Float64MultiArray message.
+ * Converts an Eigen matrix into a ROS MultiArray message.
  * Both column- and row-major matrices are allowed, and the type
  * will be marked in the layout labels.
  *
@@ -68,6 +68,6 @@ bool matrixEigenToMultiArrayMessage(const EigenType_& e, MessageType_& m)
  * @param [in] e the Eigen matrix to which the data will be converted.
  * @return true if successful
  */
-bool multiArrayMessageToMatrixEigen(std_msgs::Float64MultiArray& m, Eigen::MatrixXd& e);
+bool multiArrayMessageToMatrixEigen(std_msgs::Float32MultiArray& m, Eigen::MatrixXf& e);
 
 } // namespace
