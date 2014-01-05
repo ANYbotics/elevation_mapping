@@ -8,6 +8,8 @@
 #include "ElevationMap.hpp"
 
 // StarlETH Navigation
+#include "ElevationMappingHelpers.hpp"
+#include <ElevationMapHelpers.hpp>
 #include <starleth_elevation_msg/ElevationMap.h>
 #include <EigenConversions.hpp>
 #include <TransformationMath.hpp>
@@ -19,6 +21,9 @@
 // ROS
 #include <tf_conversions/tf_eigen.h>
 
+// Math
+#include <math.h>
+
 using namespace std;
 using namespace Eigen;
 using namespace pcl;
@@ -27,14 +32,16 @@ using namespace tf;
 
 namespace starleth_elevation_map {
 
+// TODO Rename this class?
+
 ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
   ROS_INFO("StarlETH elevation map node started.");
-  readParameters();
-  pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
+  parameters_.read(nodeHandle_);
+  pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMap::mapUpdateTimerCallback, this, true, false);
+  mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMap::mapUpdateTimerCallback, this, true, false);
   initialize();
 }
 
@@ -43,34 +50,54 @@ ElevationMap::~ElevationMap()
 
 }
 
-bool ElevationMap::readParameters()
+bool ElevationMap::ElevationMapParameters::read(ros::NodeHandle& nodeHandle)
 {
-  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
-  nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
-  nodeHandle_.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
-  nodeHandle_.param("sensor_cutoff_depth", sensorCutoffDepth_, 3.0);
-  nodeHandle_.param("length_in_x", length_(0), 3.0);
-  nodeHandle_.param("length_in_y", length_(1), 3.0);
-  nodeHandle_.param("resolution", resolution_, 0.01); ROS_ASSERT(resolution_ > 0.0);
-  nodeHandle_.param("min_variance", minVariance_, 0.001); ROS_ASSERT(minVariance_ > 0.0);
-  nodeHandle_.param("max_variance", maxVariance_, 0.5); ROS_ASSERT(maxVariance_ > 0.0);
+  nodeHandle.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
+  nodeHandle.param("map_frame_id", parentFrameId_, string("/map"));
+  nodeHandle.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
+  nodeHandle.param("sensor_cutoff_depth", sensorCutoffDepth_, 3.0);
+  nodeHandle.param("length_in_x", length_(0), 3.0);
+  nodeHandle.param("length_in_y", length_(1), 3.0);
+  nodeHandle.param("resolution", resolution_, 0.01);
+  nodeHandle.param("min_variance", minVariance_, 0.001);
+  nodeHandle.param("max_variance", maxVariance_, 0.2);
+  nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 1.0);
+  nodeHandle.param("time_process_noise", timeProcessNoise_, 0.001);
+  nodeHandle.param("multi_height_process_noise", multiHeightProcessNoise_, 0.002);
 
   double minUpdateRate;
-  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0); ROS_ASSERT(minUpdateRate > 0.0);
+  nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
 
-  elevationMapToParentTransform_.setIdentity();
-  elevationMapToParentTransform_.translation().x() = 0.8;
+  return checkValidity();
+}
+
+bool ElevationMap::ElevationMapParameters::checkValidity()
+{
+  ROS_ASSERT(sensorCutoffDepth_ >= 0.0);
+  ROS_ASSERT(length_(0) > 0.0);
+  ROS_ASSERT(length_(1) > 0.0);
+  ROS_ASSERT(resolution_ > 0.0);
+  ROS_ASSERT(minVariance_ >= 0.0);
+  ROS_ASSERT(maxVariance_ > minVariance_);
+  ROS_ASSERT(mahalanobisDistanceThreshold_ >= 0.0);
+  ROS_ASSERT(timeProcessNoise_ >= 0.0);
+  ROS_ASSERT(multiHeightProcessNoise_ >= 0.0);
 
   return true;
 }
 
 bool ElevationMap::initialize()
 {
-  resizeMap(length_);
+  // TODO
+  elevationMapToParentTransform_.setIdentity();
+  elevationMapToParentTransform_.translation().x() = 1.0;
+
+  resizeMap(parameters_.length_);
   resetMap();
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
+  setTimeOfLastUpdate(Time::now());
   resetMapUpdateTimer();
   ROS_INFO("StarlETH elevation map node initialized.");
   return true;
@@ -84,15 +111,17 @@ void ElevationMap::pointCloudCallback(
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
-  ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", pointCloud->width * pointCloud->height);
+  ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
   Time& time = pointCloud->header.stamp;
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   setTimeOfLastUpdate(time);
   cleanPointCloud(pointCloud);
-  if (!transformPointCloud(pointCloud, elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
+  // TODO Add sensor model
+  if (!transformPointCloud(pointCloud, parameters_.elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
   else if (!addToElevationMap(pointCloud)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
+  cleanElevationMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
   resetMapUpdateTimer();
 }
@@ -106,6 +135,7 @@ void ElevationMap::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   setTimeOfLastUpdate(time);
+  cleanElevationMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Broadcasting elevation map failed.");
   resetMapUpdateTimer();
 }
@@ -114,7 +144,7 @@ bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
 {
   tf::Transform tfTransform;
   poseEigenToTF(elevationMapToParentTransform_, tfTransform);
-  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
+  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parameters_.parentFrameId_, parameters_.elevationMapFrameId_));
   ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
 }
@@ -122,10 +152,13 @@ bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
 bool ElevationMap::updateProcessNoise(const ros::Time& time)
 {
   // TODO Add variance depending on movement from previous update time
-  varianceData_ = (varianceData_.array() + 0.005).matrix();
-  varianceDataX_ = (varianceDataX_.array() + 0.005).matrix();
-  varianceDataY_ = (varianceDataY_.array() + 0.005).matrix();
-  varianceData_ = varianceData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
+
+  if (time < timeOfLastUpdate_) return false;
+
+  double timeProcessNoise = (time - timeOfLastUpdate_).toSec() * parameters_.timeProcessNoise_;
+  if (timeProcessNoise != 0.0) varianceData_ = (varianceData_.array() + timeProcessNoise).matrix();
+//  varianceDataX_ = (varianceDataX_.array() + 0.005).matrix();
+//  varianceDataY_ = (varianceDataY_.array() + 0.005).matrix();
   return true;
 }
 
@@ -136,14 +169,13 @@ bool ElevationMap::cleanPointCloud(const PointCloud<PointXYZRGB>::Ptr pointCloud
 
   passThroughFilter.setInputCloud(pointCloud);
   passThroughFilter.setFilterFieldName("z");
-  passThroughFilter.setFilterLimits(0.0, sensorCutoffDepth_);
+  passThroughFilter.setFilterLimits(0.0, parameters_.sensorCutoffDepth_);
   //! This makes the point cloud also dense (no NaN points).
   passThroughFilter.filter(tempPointCloud);
   tempPointCloud.is_dense = true;
   pointCloud->swap(tempPointCloud);
 
-  int pointCloudSize = pointCloud->width * pointCloud->height;
-  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", pointCloudSize);
+  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
   return true;
 }
 
@@ -159,7 +191,7 @@ bool ElevationMap::transformPointCloud(
 
   try
   {
-    transformListener_.waitForTransform(targetFrame, sourceFrame, timeStamp, ros::Duration(maxNoUpdateDuration_));
+    transformListener_.waitForTransform(targetFrame, sourceFrame, timeStamp, ros::Duration(parameters_.maxNoUpdateDuration_));
     transformListener_.lookupTransform(targetFrame, sourceFrame, timeStamp, transformTf);
     Affine3d transform;
     poseTFToEigen(transformTf, transform);
@@ -180,15 +212,14 @@ bool ElevationMap::transformPointCloud(
 bool ElevationMap::addToElevationMap(
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-  int pointCloudSize = pointCloud->width * pointCloud->height;
-
-  for (unsigned int i = 0; i < pointCloudSize; ++i)
+  for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
     auto& point = pointCloud->points[i];
 
     Array2i index;
-    Vector2d position(point.x, point.y);
-    if(!starleth_elevation_msg::getIndexFromPosition(index, position, length_, resolution_)) continue;
+    if (!starleth_elevation_msg::getIndexFromPosition(
+        index, Vector2d(point.x, point.y), parameters_.length_, parameters_.resolution_))
+      continue; // Skip this point if it does not lie within the elevation map
 
     auto& elevation = elevationData_(index(0), index(1));
     auto& variance = varianceData_(index(0), index(1));
@@ -196,143 +227,57 @@ bool ElevationMap::addToElevationMap(
     auto& varianceY = varianceDataY_(index(0), index(1));
     auto& color = colorData_(index(0), index(1));
 
-    double measurementVariance = 0.3;
+    double measurementVariance = 0.03;
 
-    if (std::isnan(elevation))
+    if (std::isnan(elevation) || std::isinf(variance))
     {
+      // No prior information in elevation map, use measurement.
       elevation = point.z;
       variance = measurementVariance;
       varianceX = measurementVariance;
       varianceY = measurementVariance;
+      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      continue;
     }
-    else
+
+    double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
+
+    if (mahalanobisDistance < parameters_.mahalanobisDistanceThreshold_)
     {
+      // Fuse measurement with elevation map data.
       elevation = (variance * point.z + measurementVariance * elevation) / (variance + measurementVariance);
-      variance = (measurementVariance * variance) / (measurementVariance + variance);
+      variance =  (measurementVariance * variance) / (measurementVariance + variance);
       varianceX = (measurementVariance * variance) / (measurementVariance + variance);
       varianceY = (measurementVariance * variance) / (measurementVariance + variance);
+      // TODO add color fusion
+      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      continue;
     }
 
-    color = ((int)point.r) << 16 | ((int)point.g) << 8 | ((int)point.b);
+    if (point.z > elevation)
+    {
+      // Overwrite elevation map information with measurement data
+      elevation = point.z;
+      variance = measurementVariance;
+      varianceX = measurementVariance;
+      varianceY = measurementVariance;
+      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      continue;
+    }
+
+    // TODO Add label to cells which are potentially multi-level
+
+    // Add noise to cells which have ignored lower values,
+    // such we outliers and moving objects are removed
+    variance += parameters_.multiHeightProcessNoise_;
   }
 
-//  bool local_map_is_subscribed = (pub_local_map.getNumSubscribers () > 0);
-//  bool global_map_is_subscribed = (pub_global_map.getNumSubscribers () > 0);
-//
-//  if(local_map_is_subscribed)
-//      local_elevation_map.data = std::vector<int16_t>(elevation_map_meta.width * elevation_map_meta.height,(int16_t)-elevation_map_meta.zero_elevation);
-//
-//  unsigned int size = (unsigned int)pointcloud2_map_pcl->points.size();
-//
-//  // iterate trough all points
-//  for (unsigned int k = 0; k < size; ++k)
-//  {
-//      const pcl::PointXYZ& pt_cloud = pointcloud2_map_pcl->points[k];
-//
-//      double measurement_distance = pointcloud2_sensor_pcl->points[k].z;
-//
-//      // check for invalid measurements
-//      if (isnan(pt_cloud.x) || isnan(pt_cloud.y) || isnan(pt_cloud.z))
-//          continue;
-//
-//      // check max distance (manhatten norm)
-//      if(max_observable_distance < measurement_distance)
-//          continue;
-//
-//      // check min/max height
-//      if(elevation_map_meta.min_elevation+local_map_transform.getOrigin().z() > pt_cloud.z || elevation_map_meta.max_elevation+local_map_transform.getOrigin().z() < pt_cloud.z)
-//          continue;
-//
-//      // allign grid points
-//      Eigen::Vector2f index_world(pt_cloud.x, pt_cloud.y);
-//      Eigen::Vector2f index_map (world_map_transform.getC2Coords(index_world));
-//
-//      unsigned int cell_index = MAP_IDX(elevation_map_meta.width, (int)round(index_map(0)), (int)round(index_map(1)));
-//
-//      int16_t* pt_local_map = &local_elevation_map.data[cell_index];
-//      int16_t* pt_global_map = &global_elevation_map.data[cell_index];
-//      double*  pt_var = &cell_variance[cell_index];
-//
-//
-//      if(local_map_is_subscribed)
-//      {
-//          // elevation in current cell in meter
-//          double cell_elevation = elevation_map_meta.resolution_z*(*pt_local_map-elevation_map_meta.zero_elevation);
-//
-//          // store maximum of each cell
-//          if(pt_cloud.z > cell_elevation)
-//              *pt_local_map = (int16_t)(round(pt_cloud.z/elevation_map_meta.resolution_z) + (int16_t)elevation_map_meta.zero_elevation);
-//
-//          // filter each cell localy
-////            double measurement_variance = sensor_variance*(measurement_distance*measurement_distance);
-////            if(*pt_local_map == (int16_t)-elevation_map_meta.zero_elevation)
-////            {
-////                // unknown cell -> use current measurement
-////                *pt_local_map = (int16_t)(round(pt_cloud.z/elevation_map_meta.resolution_z) + (int16_t)elevation_map_meta.zero_elevation);
-////                *pt_var = measurement_variance;
-////            }
-////            else
-////            {
-////                // fuse cell_elevation with measurement
-////                *pt_local_map = (int16_t) (round(((measurement_variance * cell_elevation + *pt_var * pt_cloud.z)/(*pt_var + measurement_variance))/elevation_map_meta.resolution_z) + (int16_t)elevation_map_meta.zero_elevation);
-////                *pt_var = (measurement_variance * *pt_var)/(measurement_variance + *pt_var);
-////            }
-//      }
-//
-//      if(publish_poseupdate || global_map_is_subscribed)
-//      {
-//          // fuse new measurements with existing map
-//
-//          // elevation in current cell in meter
-//          double cell_elevation = elevation_map_meta.resolution_z*(*pt_global_map-elevation_map_meta.zero_elevation);
-//
-//          // measurement variance
-//          double measurement_variance = sensor_variance*(measurement_distance*measurement_distance);
-//
-//          // mahalanobis distance
-//          double mahalanobis_distance = sqrt((pt_cloud.z - cell_elevation)*(pt_cloud.z - cell_elevation)/(measurement_variance*measurement_variance));
-//
-//          if(pt_cloud.z > cell_elevation && (mahalanobis_distance > 5.0))
-//          {
-//              *pt_global_map = (int16_t)(round(pt_cloud.z/elevation_map_meta.resolution_z) + (int16_t)elevation_map_meta.zero_elevation);
-//              *pt_var = measurement_variance;
-//              continue;
-//          }
-//
-//          if((pt_cloud.z < cell_elevation) && (mahalanobis_distance > 5.0))
-//          {
-//              *pt_global_map = (int16_t) (round(((measurement_variance * cell_elevation + *pt_var * pt_cloud.z)/(*pt_var + measurement_variance))/elevation_map_meta.resolution_z) + (int16_t)elevation_map_meta.zero_elevation);
-//              //*pt_var = (measurement_variance * *pt_var)/(measurement_variance + *pt_var);
-//              *pt_var = measurement_variance;
-//              continue;
-//          }
-//
-//          *pt_global_map = (int16_t) (round(((measurement_variance * cell_elevation + *pt_var * pt_cloud.z)/(*pt_var + measurement_variance))/elevation_map_meta.resolution_z) + (int16_t)elevation_map_meta.zero_elevation);
-//          *pt_var = (measurement_variance * *pt_var)/(measurement_variance + *pt_var);
-//      }
-//  }
-//
-//
-//  if(local_map_is_subscribed)
-//  {
-//      // set the header information on the map
-//      local_elevation_map.header.stamp = pointcloud2_sensor_msg->header.stamp;
-//      local_elevation_map.header.frame_id = map_frame_id;
-//
-//      pub_local_map.publish(local_elevation_map);
-//  }
-//
-//  if(global_map_is_subscribed)
-//  {
-//      // set the header information on the map
-//      global_elevation_map.header.stamp = pointcloud2_sensor_msg->header.stamp;
-//      global_elevation_map.header.frame_id = map_frame_id;
-//
-//      pub_global_map.publish(global_elevation_map);
-//  }
+  return true;
+}
 
-
-
+bool ElevationMap::cleanElevationMap()
+{
+  varianceData_ = varianceData_.unaryExpr(VarianceClampOperator<double>(parameters_.minVariance_, parameters_.maxVariance_));
   return true;
 }
 
@@ -343,10 +288,10 @@ bool ElevationMap::publishElevationMap()
   starleth_elevation_msg::ElevationMap elevationMapMessage;
 
   elevationMapMessage.header.stamp = timeOfLastUpdate_;
-  elevationMapMessage.header.frame_id = elevationMapFrameId_;
-  elevationMapMessage.resolution = resolution_;
-  elevationMapMessage.lengthInX = length_(0);
-  elevationMapMessage.lengthInY = length_(1);
+  elevationMapMessage.header.frame_id = parameters_.elevationMapFrameId_;
+  elevationMapMessage.resolution = parameters_.resolution_;
+  elevationMapMessage.lengthInX = parameters_.length_(0);
+  elevationMapMessage.lengthInY = parameters_.length_(1);
 
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
@@ -363,12 +308,10 @@ bool ElevationMap::publishElevationMap()
 
 bool ElevationMap::resizeMap(const Eigen::Array2d& length)
 {
-  // TODO Check if there is a remainder.
-  // TODO make this complaint with any format.
+  int nRows = static_cast<int>(round(length(0) / parameters_.resolution_));
+  int nCols = static_cast<int>(round(length(1) / parameters_.resolution_));
+  parameters_.length_ = (Array2i(nRows, nCols).cast<double>() * parameters_.resolution_).matrix();
 
-  length_ = length;
-  int nRows = static_cast<int>(length_(0) / resolution_);
-  int nCols = static_cast<int>(length_(1) / resolution_);
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
   varianceDataX_.resize(nRows, nCols);
@@ -397,7 +340,7 @@ void ElevationMap::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)
 void ElevationMap::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
-  mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - (Time::now() - timeOfLastUpdate_));
+  mapUpdateTimer_.setPeriod(parameters_.maxNoUpdateDuration_ - (Time::now() - timeOfLastUpdate_));
   mapUpdateTimer_.start();
 }
 

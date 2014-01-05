@@ -9,6 +9,7 @@
 #include "ElevationVisualization.hpp"
 
 // StarlETH Navigation
+#include "ElevationVisualizationHelpers.hpp"
 #include <ElevationMapHelpers.hpp>
 
 // std::min, std::max
@@ -22,18 +23,6 @@ using namespace ros;
 using namespace Eigen;
 
 namespace starleth_elevation_visualization {
-
-inline void getColorMessageFromColorVector(std_msgs::ColorRGBA& colorMessage, const Eigen::Vector3f& colorVector)
-{
-  colorMessage.r = colorVector(0);
-  colorMessage.g = colorVector(1);
-  colorMessage.b = colorVector(2);
-}
-
-inline void getColorVectorFromColorMessage(Eigen::Vector3f& colorVector, const std_msgs::ColorRGBA& colorMessage)
-{
-  colorVector << colorMessage.r, colorMessage.g, colorMessage.b;
-}
 
 ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
@@ -144,8 +133,10 @@ bool ElevationVisualization::generateVisualization(
       markerColor.b = 1.0;
       markerColor.a = 1.0;
       setColorFromMap(markerColor, color);
+//      setColorChannelFromVariance(markerColor.r, variance);
+//      setColorChannelFromVariance(markerColor.b, variance, true);
       setSaturationFromVariance(markerColor, variance);
-//      setAlphaFromVariance(markerColor, variance); // This looks bad in Rviz
+//      setColorChannelFromVariance(markerColor.a, variance); // This looks bad in Rviz
       elevationMarker.colors.push_back(markerColor);
     }
   }
@@ -156,21 +147,31 @@ bool ElevationVisualization::generateVisualization(
 bool ElevationVisualization::setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue)
 {
   Vector3f colorVector;
-  starleth_elevation_msg::getColorVectorFromColorValue(colorVector, colorValue);
+  starleth_elevation_msg::copyColorValueToVector(colorValue, colorVector);
   getColorMessageFromColorVector(color, colorVector);
   return true;
 }
 
-bool ElevationVisualization::setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance)
+bool ElevationVisualization::setColorChannelFromVariance(float& colorChannel, const double& variance, bool invert)
 {
-  color.a = getValueFromVariance(minMarkerAlpha_, maxMarkerAlpha_, variance);
+  double lowestVarianceValue = 0.0;
+  double highestVarianceValue = 1.0;
+
+  if (invert)
+  {
+    double tempValue = lowestVarianceValue;
+    lowestVarianceValue = highestVarianceValue;
+    highestVarianceValue = tempValue;
+  }
+
+  colorChannel = static_cast<float>(getValueFromVariance(lowestVarianceValue, highestVarianceValue, variance));
   return true;
 }
 
 bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
 {
   const Eigen::Array3f HspFactors(.299, .587, .114); // see http://alienryderflex.com/hsp.html
-  float saturationChange = static_cast<float>(getValueFromVariance(minMarkerSaturation_, maxMarkerSaturation_, variance));
+  float saturationChange = static_cast<float>(getValueFromVariance(maxMarkerSaturation_, minMarkerSaturation_, variance));
   Vector3f colorVector;
   getColorVectorFromColorMessage(colorVector, color);
   float perceivedBrightness = sqrt((colorVector.array().square() * HspFactors).sum());
@@ -180,13 +181,21 @@ bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& colo
   return true;
 }
 
-double ElevationVisualization::getValueFromVariance(const double& minValue, const double& maxValue, const double& variance)
+double ElevationVisualization::getValueFromVariance(const double& lowestVarianceValue, const double& highestVarianceValue, const double& variance)
 {
-  double m = (maxValue - minValue) / (varianceLowerValue_ - varianceUpperValue_);
-  double b = minValue - m * varianceUpperValue_;
+  double m = (lowestVarianceValue - highestVarianceValue) / (varianceLowerValue_ - varianceUpperValue_);
+  double b = highestVarianceValue - m * varianceUpperValue_;
   double value = m * variance + b;
-  value = min(value, maxValue);
-  value = max(value, minValue);
+  if (lowestVarianceValue < highestVarianceValue)
+  {
+    value = max(value, lowestVarianceValue);
+    value = min(value, highestVarianceValue);
+  }
+  else
+  {
+    value = min(value, lowestVarianceValue);
+    value = max(value, highestVarianceValue);
+  }
   return value;
 }
 

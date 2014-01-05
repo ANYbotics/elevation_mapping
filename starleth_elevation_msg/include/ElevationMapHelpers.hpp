@@ -83,26 +83,26 @@ bool getIndexfromPosition(Eigen::Array2i& index,
 
 /*!
  * Gets the color vector (RGB from 0-255) from a color value (concatenated RGB values).
- * @param [out] colorVector the color vector in RGB from 0-255.
  * @param [in] colorValue the concatenated RGB color value.
+ * @param [out] colorVector the color vector in RGB from 0-255.
  * @return true if successful.
  */
-bool getColorVectorFromColorValue(Eigen::Vector3i& colorVector, const unsigned long& colorValue);
+bool copyColorValueToVector(const unsigned long& colorValue, Eigen::Vector3i& colorVector);
 
 /*!
  * Gets the color vector (RGB from 0.0-1.0) from a color value (concatenated RGB values).
- * @param [out] colorVector the color vector in RGB from 0.0-1.0.
  * @param [in] colorValue the concatenated RGB color value.
+ * @param [out] colorVector the color vector in RGB from 0.0-1.0.
  * @return true if successful.
  */
-bool getColorVectorFromColorValue(Eigen::Vector3f& colorVector, const unsigned long& colorValue);
+bool copyColorValueToVector(const unsigned long& colorValue, Eigen::Vector3f& colorVector);
 
 /*!
  * Gets the concatenated RGB color value from a color vector (RGB from 0-255).
- * @param [out] colorValue the concatenated RGB color value.
  * @param [in] colorVector the color vector in RGB from 0-255.
+ * @param [out] colorValue the concatenated RGB color value.
  * @return true if successful.
  */
-bool getColorValueFromColorVector(unsigned long& colorValue, const Eigen::Vector3i& colorVector);
+bool copyColorVectorToValue(const Eigen::Vector3i& colorVector, unsigned long& colorValue);
 
 } // namespace

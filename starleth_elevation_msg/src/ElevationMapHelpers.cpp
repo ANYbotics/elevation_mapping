@@ -86,8 +86,8 @@ bool getIndexFromPosition(Eigen::Array2i& index,
   return getIndexFromPosition(index, position, mapLength, map.resolution);
 }
 
-bool getColorVectorFromColorValue(Eigen::Vector3i& colorVector,
-                                  const unsigned long& colorValue)
+bool copyColorValueToVector(const unsigned long& colorValue,
+                            Eigen::Vector3i& colorVector)
 {
   colorVector(0) = (colorValue >> 16) & 0x0000ff;
   colorVector(1) = (colorValue >> 8) & 0x0000ff;
@@ -95,17 +95,17 @@ bool getColorVectorFromColorValue(Eigen::Vector3i& colorVector,
   return true;
 }
 
-bool getColorVectorFromColorValue(Eigen::Vector3f& colorVector,
-                                  const unsigned long& colorValue)
+bool copyColorValueToVector(const unsigned long& colorValue,
+                            Eigen::Vector3f& colorVector)
 {
   Vector3i tempColorVector;
-  getColorVectorFromColorValue(tempColorVector, colorValue);
+  copyColorValueToVector(colorValue, tempColorVector);
   colorVector = ((tempColorVector.cast<float>()).array() / 255.0).matrix();
   return true;
 }
 
-bool getColorValueFromColorVector(unsigned long& colorValue,
-                                  const Eigen::Vector3i& colorVector)
+bool copyColorVectorToValue(const Eigen::Vector3i& colorVector,
+                            unsigned long& colorValue)
 {
   colorValue = ((int)colorVector(0)) << 16 | ((int)colorVector(1)) << 8 | ((int)colorVector(2));
   return true;

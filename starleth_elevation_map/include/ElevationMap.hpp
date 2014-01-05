@@ -44,8 +44,6 @@ class ElevationMap
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
  private:
-  bool readParameters();
-
   bool initialize();
 
   bool broadcastElevationMapTransform(const ros::Time& time);
@@ -57,14 +55,14 @@ class ElevationMap
    */
   bool updateProcessNoise(const ros::Time& time);
 
-  double replaceWithNanAtMaxVariance(double x);
-
   bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
   bool transformPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
                            const std::string& targetFrame);
 
   bool addToElevationMap(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+
+  bool cleanElevationMap();
 
   bool publishElevationMap();
 
@@ -98,41 +96,39 @@ class ElevationMap
   //! Color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
-  //! Map size in x, and y-direction [m].
-  Eigen::Array2d length_;
-
-  //! Map resolution in xy plane [m/cell].
-  double resolution_;
-
-  double minVariance_;
-  double maxVariance_;
-
-  ros::Duration maxNoUpdateDuration_;
-
-  //! Origin of the map.
   Eigen::Affine3d elevationMapToParentTransform_;
-  std::string parentFrameId_;
-  std::string elevationMapFrameId_;
 
-  std::string pointCloudTopic_;
+  struct ElevationMapParameters {
+    //! Map size in x, and y-direction [m].
+    Eigen::Array2d length_;
 
-  double sensorCutoffDepth_;
+    //! Map resolution in xy plane [m/cell].
+    double resolution_;
 
-};
+    double minVariance_;
+    double maxVariance_;
 
-template<typename Scalar>
-struct VarianceClampOperator
-{
-  VarianceClampOperator(const Scalar& minVariance, const Scalar& maxVariance)
-      : minVariance_(minVariance),
-        maxVariance_(maxVariance)
-  {
-  }
-  const Scalar operator()(const Scalar& x) const
-  {
-    return x < minVariance_ ? minVariance_ : (x > maxVariance_ ? std::numeric_limits<double>::infinity() : x);
-  }
-  Scalar minVariance_, maxVariance_;
+    double mahalanobisDistanceThreshold_;
+
+    double timeProcessNoise_;
+    double multiHeightProcessNoise_;
+
+    ros::Duration maxNoUpdateDuration_;
+
+    //! Origin of the map.
+
+    std::string parentFrameId_;
+    std::string elevationMapFrameId_;
+    std::string pointCloudTopic_;
+
+    double sensorCutoffDepth_;
+
+    bool read(ros::NodeHandle& nodeHandle);
+    bool checkValidity();
+  };
+
+  ElevationMapParameters parameters_;
+
 };
 
 } /* namespace starleth_elevation_map */

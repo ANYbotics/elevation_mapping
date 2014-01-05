@@ -38,7 +38,7 @@ class ElevationVisualization
   bool initializeVisualization();
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
   bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
-  bool setAlphaFromVariance(std_msgs::ColorRGBA& color, const double& variance);
+  bool setColorChannelFromVariance(float& color, const double& variance, bool invert = false);
 
   /*!
    * @note Based on "changeSaturation" function by Darel Rex Finley.
@@ -61,6 +61,7 @@ class ElevationVisualization
   ros::Publisher mapMarkerArrayPublisher_;
   visualization_msgs::MarkerArray mapMarkerArrayMessage_;
 
+  // TODO Add struct for parameters
   std::string mapTopic_;
   double markerHeight_;
   double varianceLowerValue_;
