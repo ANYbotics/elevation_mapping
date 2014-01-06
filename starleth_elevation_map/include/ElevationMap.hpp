@@ -9,6 +9,7 @@
 #pragma once
 
 // StarlETH Navigation
+#include <starleth_elevation_msg/ElevationSubmap.h>
 #include <EigenConversions.hpp>
 
 // Eigen
@@ -72,6 +73,8 @@ class ElevationMap
 
   bool resetMap();
 
+  bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
+
   void setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate);
 
   void resetMapUpdateTimer();
@@ -84,6 +87,7 @@ class ElevationMap
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
+  ros::ServiceServer submapService_;
 
   ros::Time timeOfLastUpdate_;
 

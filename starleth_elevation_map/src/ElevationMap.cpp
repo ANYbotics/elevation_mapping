@@ -42,6 +42,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
   mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMap::mapUpdateTimerCallback, this, true, false);
+  submapService_ = nodeHandle_.advertiseService("get_subpart_of_elevation_map", &ElevationMap::getSubmap, this);
   initialize();
 }
 
@@ -348,6 +349,14 @@ bool ElevationMap::resetMap()
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(NAN);
   colorData_.setConstant(0);
+  return true;
+}
+
+bool ElevationMap::getSubmap(starleth_elevation_msg::ElevationSubmap::Request  &request, starleth_elevation_msg::ElevationSubmap::Response &response)
+{
+//  res.sum = req.a + req.b;
+//  ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
+//  ROS_INFO("sending back response: [%ld]", (long int)res.sum);
   return true;
 }
 

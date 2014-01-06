@@ -1,0 +1,12 @@
+# Map length in x-direction [m].
+float32 lengthInX
+  
+# Map width in y-direction [m].
+float32 lengthInY
+
+---
+
+# Position of submap
+
+# Elevation map
+ElevationMap elevation_map
