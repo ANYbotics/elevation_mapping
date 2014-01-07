@@ -42,6 +42,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMap::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
   mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMap::mapUpdateTimerCallback, this, true, false);
+  mapRelocateTimer_ = nodeHandle_.createTimer(parameters_.mapRelocateTimerDuration_, &ElevationMap::mapRelocateTimerCallback, this, false, !parameters_.mapRelocateTimerDuration_.isZero());
   submapService_ = nodeHandle_.advertiseService("get_subpart_of_elevation_map", &ElevationMap::getSubmap, this);
   initialize();
 }
@@ -58,8 +59,8 @@ bool ElevationMap::ElevationMapParameters::read(ros::NodeHandle& nodeHandle)
   nodeHandle.param("elevation_map_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
   nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
-  nodeHandle.param("length_in_x", length_(0), 3.0);
-  nodeHandle.param("length_in_y", length_(1), 3.0);
+  nodeHandle.param("length_in_x", length_(0), 2.0);
+  nodeHandle.param("length_in_y", length_(1), 2.0);
   nodeHandle.param("resolution", resolution_, 0.01);
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
   nodeHandle.param("max_variance", maxVariance_, pow(0.075, 2));
@@ -70,6 +71,15 @@ bool ElevationMap::ElevationMapParameters::read(ros::NodeHandle& nodeHandle)
   double minUpdateRate;
   nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+
+  double minRelocateRate;
+  nodeHandle.param("min_relocate_rate", minRelocateRate, 0.3);
+  if (minRelocateRate > 0.0)
+    mapRelocateTimerDuration_.fromSec(1.0 / minRelocateRate);
+  else
+  {
+    mapRelocateTimerDuration_.fromSec(0.0);
+  }
 
   return checkValidity();
 }
@@ -86,7 +96,7 @@ bool ElevationMap::ElevationMapParameters::checkValidity()
   ROS_ASSERT(mahalanobisDistanceThreshold_ >= 0.0);
   ROS_ASSERT(timeProcessNoise_ >= 0.0);
   ROS_ASSERT(multiHeightProcessNoise_ >= 0.0);
-
+  ROS_ASSERT(!maxNoUpdateDuration_.isZero());
   return true;
 }
 
@@ -142,6 +152,12 @@ void ElevationMap::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   cleanElevationMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
+}
+
+void ElevationMap::mapRelocateTimerCallback(const ros::TimerEvent& timerEvent)
+{
+  ROS_DEBUG("Elevation map is checked for relocalization.");
+
 }
 
 bool ElevationMap::broadcastElevationMapTransform(const ros::Time& time)
@@ -247,19 +263,17 @@ bool ElevationMap::addToElevationMap(
     // Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking.
 //    float measurementStandardDeviation = 0.0012 + 0.0019 * pow(measurementDistance - 0.4, 2);
 
-    // Manual tuned for PrimeSense Carmine 1.09.
-    // Also includes uncertainties with non perpedicular surfaces and
-    // biases/warp at further distances.
-    float measurementStandardDeviation = 0.003 + 0.015 * pow(measurementDistance - 0.25, 2);
-
     // Approximation of datasheet for Carmine 1.09 from:
     // http://www.openni.org/rd1-09-specifications/
     // Coefficients computed with least squares regression.
 //    float measurementStandardDeviation = 0.000181 + 0.00166 * pow(measurementDistance - 0.1, 2);
 
-    float measurementVariance = pow(measurementStandardDeviation, 2);
+    // Manual tuned for PrimeSense Carmine 1.09.
+    // Also includes uncertainties with non perpedicular surfaces and
+    // biases/warp at further distances.
+    float measurementStandardDeviation = 0.003 + 0.015 * pow(measurementDistance - 0.25, 2);
 
-//    cout << "Sensor: " << measurementStandardDeviation << ", Map: "  << sqrt(variance) << endl;
+    float measurementVariance = pow(measurementStandardDeviation, 2);
 
     if (std::isnan(elevation) || std::isinf(variance))
     {
@@ -352,7 +366,7 @@ bool ElevationMap::resetMap()
   return true;
 }
 
-bool ElevationMap::getSubmap(starleth_elevation_msg::ElevationSubmap::Request  &request, starleth_elevation_msg::ElevationSubmap::Response &response)
+bool ElevationMap::getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response)
 {
 //  res.sum = req.a + req.b;
 //  ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);

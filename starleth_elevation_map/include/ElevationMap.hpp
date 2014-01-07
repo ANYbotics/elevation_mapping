@@ -44,6 +44,8 @@ class ElevationMap
 
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
+  void mapRelocateTimerCallback(const ros::TimerEvent& timerEvent);
+
  private:
   bool initialize();
 
@@ -87,6 +89,7 @@ class ElevationMap
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
+  ros::Timer mapRelocateTimer_;
   ros::ServiceServer submapService_;
 
   ros::Time timeOfLastUpdate_;
@@ -117,7 +120,11 @@ class ElevationMap
     double timeProcessNoise_;
     double multiHeightProcessNoise_;
 
+    //! Maximum time that the map will not be updated.
     ros::Duration maxNoUpdateDuration_;
+
+    //! Duration in which interval the map is checked for relocation.
+    ros::Duration mapRelocateTimerDuration_;
 
     //! Origin of the map.
 
