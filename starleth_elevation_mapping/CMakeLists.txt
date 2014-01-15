@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(starleth_elevation_map)
+project(starleth_elevation_mapping)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 
@@ -87,7 +87,7 @@ include_directories(
 add_executable(
 	starleth_elevation_map
 	src/starleth_elevation_map_node.cpp
-	src/ElevationMap.cpp
+	src/ElevationMapping.cpp
 )
 
 ## Add cmake target dependencies of the executable/library

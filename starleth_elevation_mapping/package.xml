@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package>
-  <name>starleth_elevation_map</name>
+  <name>starleth_elevation_mapping</name>
   <version>0.0.0</version>
-  <description>The starleth_elevation_map package</description>
+  <description>The starleth_elevation_mapping package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag --> 
   <!-- Example:  -->

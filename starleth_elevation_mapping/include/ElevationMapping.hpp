@@ -28,17 +28,17 @@
 // STD
 #include <limits>
 
-namespace starleth_elevation_map {
+namespace starleth_elevation_mapping {
 
 /*
  * Elevation map stored as planar grid holding elevation height and variance.
  */
-class ElevationMap
+class ElevationMapping
 {
  public:
-  ElevationMap(ros::NodeHandle& nodeHandle);
+  ElevationMapping(ros::NodeHandle& nodeHandle);
 
-  virtual ~ElevationMap();
+  virtual ~ElevationMapping();
 
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
@@ -75,6 +75,8 @@ class ElevationMap
 
   bool resetMap();
 
+  bool relocateMap(const Eigen::Vector3d& position);
+
   bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
 
   void setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate);
@@ -103,9 +105,12 @@ class ElevationMap
   //! Color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
+  //! Label data.
+  Eigen::Matrix<unsigned int, Eigen::Dynamic, Eigen::Dynamic> labelData_;
+
   Eigen::Affine3d elevationMapToParentTransform_;
 
-  struct ElevationMapParameters {
+  struct ElevationMappingParameters {
     //! Map size in x, and y-direction [m].
     Eigen::Array2d length_;
 
@@ -118,7 +123,9 @@ class ElevationMap
     double mahalanobisDistanceThreshold_;
 
     double timeProcessNoise_;
-    double multiHeightProcessNoise_;
+    double multiHeightNoise_;
+    double biggerHeightThresholdFactor_;
+    double biggerHeightNoiseFactor_;
 
     //! Maximum time that the map will not be updated.
     ros::Duration maxNoUpdateDuration_;
@@ -126,11 +133,13 @@ class ElevationMap
     //! Duration in which interval the map is checked for relocation.
     ros::Duration mapRelocateTimerDuration_;
 
-    //! Origin of the map.
-
     std::string parentFrameId_;
     std::string elevationMapFrameId_;
+    std::string trackPointFrameId_;
+    std::string trackPointId_;
     std::string pointCloudTopic_;
+
+    Eigen::Vector3d trackPoint_;
 
     double sensorCutoffMinDepth_;
     double sensorCutoffMaxDepth_;
@@ -139,7 +148,7 @@ class ElevationMap
     bool checkValidity();
   };
 
-  ElevationMapParameters parameters_;
+  ElevationMappingParameters parameters_;
 
 };
 

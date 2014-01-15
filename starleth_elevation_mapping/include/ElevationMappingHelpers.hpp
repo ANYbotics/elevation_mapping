@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace starleth_elevation_map {
+namespace starleth_elevation_mapping {
 
 template<typename Scalar>
 struct VarianceClampOperator

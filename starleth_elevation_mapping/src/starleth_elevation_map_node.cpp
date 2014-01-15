@@ -7,7 +7,7 @@
  */
 
 #include <ros/ros.h>
-#include "ElevationMap.hpp"
+#include "ElevationMapping.hpp"
 
 int main(int argc, char** argv)
 {
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle;
 
-  starleth_elevation_map::ElevationMap elevationMap(nodeHandle);
+  starleth_elevation_mapping::ElevationMapping elevationMap(nodeHandle);
 
   // Spin
   ros::AsyncSpinner spinner(1); // Use n threads, TODO why are there 2 threads?
