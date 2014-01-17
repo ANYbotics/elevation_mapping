@@ -10,7 +10,7 @@
 
 // StarlETH Navigation
 #include "ElevationVisualizationHelpers.hpp"
-#include <ElevationMapHelpers.hpp>
+#include <ElevationMessageHelpers.hpp>
 
 // std::min, std::max
 #include <algorithm>

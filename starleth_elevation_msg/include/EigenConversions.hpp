@@ -9,7 +9,7 @@
 #pragma once
 
 // StarlETH Elevation Map
-#include "ElevationMapHelpers.hpp"
+#include "ElevationMessageHelpers.hpp"
 
 // ROS
 #include <std_msgs/Float32MultiArray.h>

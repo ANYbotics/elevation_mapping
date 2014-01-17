@@ -9,7 +9,7 @@
 
 // StarlETH Navigation
 #include "ElevationMappingHelpers.hpp"
-#include <ElevationMapHelpers.hpp>
+#include <ElevationMessageHelpers.hpp>
 #include <starleth_elevation_msg/ElevationMap.h>
 #include <EigenConversions.hpp>
 #include <TransformationMath.hpp>
@@ -32,8 +32,6 @@ using namespace tf;
 
 namespace starleth_elevation_mapping {
 
-// TODO Rename this class?
-
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
@@ -42,7 +40,6 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
   mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
-  mapRelocateTimer_ = nodeHandle_.createTimer(parameters_.mapRelocateTimerDuration_, &ElevationMapping::mapRelocateTimerCallback, this, false, !parameters_.mapRelocateTimerDuration_.isZero());
   submapService_ = nodeHandle_.advertiseService("get_subpart_of_elevation_map", &ElevationMapping::getSubmap, this);
   initialize();
 }
@@ -63,8 +60,8 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("track_point_z", trackPoint_.z(), 0.0);
   nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
   nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
-  nodeHandle.param("length_in_x", length_(0), 3.0);
-  nodeHandle.param("length_in_y", length_(1), 3.0);
+  nodeHandle.param("length_in_x", length_(0), 0.5);
+  nodeHandle.param("length_in_y", length_(1), 1.0);
   nodeHandle.param("resolution", resolution_, 0.01);
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
   nodeHandle.param("max_variance", maxVariance_, pow(0.04, 2));
@@ -79,7 +76,7 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
 
   double relocateRate;
-  nodeHandle.param("relocate_rate", relocateRate, 0.3);
+  nodeHandle.param("relocate_rate", relocateRate, 3.0);
   if (relocateRate > 0.0)
     mapRelocateTimerDuration_.fromSec(1.0 / relocateRate);
   else
@@ -108,6 +105,7 @@ bool ElevationMapping::ElevationMappingParameters::checkValidity()
 
 bool ElevationMapping::initialize()
 {
+  elevationMapToParentTransform_.setIdentity();
   resizeMap(parameters_.length_);
   resetMap();
   broadcastElevationMapTransform(Time::now());
@@ -129,6 +127,7 @@ void ElevationMapping::pointCloudCallback(
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
   Time& time = pointCloud->header.stamp;
+  updateMapLocation();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   setTimeOfLastUpdate(time);
@@ -154,36 +153,6 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   cleanElevationMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
-}
-
-void ElevationMapping::mapRelocateTimerCallback(const ros::TimerEvent& timerEvent)
-{
-  ROS_DEBUG("Elevation map is checked for relocalization.");
-
-  elevationMapToParentTransform_.setIdentity();
-
-  geometry_msgs::PointStamped trackPoint;
-  trackPoint.header.frame_id = parameters_.trackPointFrameId_;
-  trackPoint.header.stamp = Time(0);
-  trackPoint.point.x = parameters_.trackPoint_.x();
-
-  geometry_msgs::PointStamped trackPointTransformed;
-
-  try
-  {
-    transformListener_.transformPoint(parameters_.parentFrameId_, trackPoint, trackPointTransformed);
-  }
-  catch (TransformException &ex)
-  {
-    ROS_ERROR("%s", ex.what());
-    return;
-  }
-
-  Vector3d position = Vector3d(trackPointTransformed.point.x,
-                                  trackPointTransformed.point.y,
-                                  trackPointTransformed.point.z);
-
-  relocateMap(position);
 }
 
 bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
@@ -280,7 +249,7 @@ bool ElevationMapping::addToElevationMap(
 
     Array2i index;
     if (!starleth_elevation_msg::getIndexFromPosition(
-        index, Vector2d(point.x, point.y), parameters_.length_, parameters_.resolution_))
+        index, Vector2d(point.x, point.y), parameters_.length_, parameters_.resolution_, getMapBufferSize(), circularBufferStartIndex_))
       continue; // Skip this point if it does not lie within the elevation map
 
     auto& elevation = elevationData_(index(0), index(1));
@@ -368,6 +337,8 @@ bool ElevationMapping::publishElevationMap()
   elevationMapMessage.resolution = parameters_.resolution_;
   elevationMapMessage.lengthInX = parameters_.length_(0);
   elevationMapMessage.lengthInY = parameters_.length_(1);
+  elevationMapMessage.outerStartIndex = circularBufferStartIndex_(0);
+  elevationMapMessage.innerStartIndex = circularBufferStartIndex_(1);
 
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
@@ -395,39 +366,113 @@ bool ElevationMapping::resizeMap(const Eigen::Array2d& length)
   return true;
 }
 
+Eigen::Vector2i ElevationMapping::getMapBufferSize()
+{
+  return Vector2i(elevationData_.rows(), elevationData_.cols());
+}
+
 bool ElevationMapping::resetMap()
 {
   elevationMapToParentTransform_.setIdentity();
   elevationData_.setConstant(NAN);
-  varianceData_.setConstant(NAN);
+  varianceData_.setConstant(numeric_limits<float>::infinity());
   colorData_.setConstant(0);
   labelData_.setConstant(false);
+  circularBufferStartIndex_.setZero();
   return true;
+}
+
+bool ElevationMapping::updateMapLocation()
+{
+  ROS_DEBUG("Elevation map is checked for relocalization.");
+
+  geometry_msgs::PointStamped trackPoint;
+  trackPoint.header.frame_id = parameters_.trackPointFrameId_;
+  trackPoint.header.stamp = Time(0);
+  trackPoint.point.x = parameters_.trackPoint_.x();
+  trackPoint.point.y = parameters_.trackPoint_.y();
+  trackPoint.point.z = parameters_.trackPoint_.z();
+
+  geometry_msgs::PointStamped trackPointTransformed;
+
+  try
+  {
+    transformListener_.transformPoint(parameters_.parentFrameId_, trackPoint, trackPointTransformed);
+  }
+  catch (TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    return false;
+  }
+
+  Vector3d position = Vector3d(trackPointTransformed.point.x,
+                               trackPointTransformed.point.y,
+                               trackPointTransformed.point.z);
+
+  return relocateMap(position);
 }
 
 bool ElevationMapping::relocateMap(const Eigen::Vector3d& position)
 {
-//  Vector2d alignedPosition;
-//  starleth_elevation_msg::alignPosition(Vector2d(position.x(), position.y()),
-//                                        alignedPosition, parameters_.length_,
-//                                        parameters_.resolution_);
-//
-//  Vector2d positionShift = alignedPosition - elevationMapToParentTransform_.translation().head(2);
-//  Array2i indexShift;
-//  starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, parameters_.resolution_);
-//
-//  MatrixXf oldElevationData(elevationData_);
-////  MatrixXf oldVarianceData(varianceData_);
-////  Matrix<unsigned long, Dynamic, Dynamic> oldColorData(colorData_);
-////  Matrix<unsigned int, Dynamic, Dynamic> oldLabelData_(labelData_);
-//
-//  Array2i indexPosition = indexShift.max(0)
-//
-//  resetMap();
-//
-//  elevationData_.block(i,j,rows,cols)
-//
-//  elevationMapToParentTransform_.translation().head(2) = alignedPosition;
+  Vector2d alignedPosition;
+  starleth_elevation_msg::getAlignedPosition(position.head(2),
+                                        alignedPosition, parameters_.length_,
+                                        parameters_.resolution_);
+
+  Vector2d positionShift = alignedPosition - elevationMapToParentTransform_.translation().head(2);
+
+  Array2i indexShift;
+  starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, parameters_.resolution_);
+
+  // Delete fields that fall out of map (and become empty cells)
+  for (int i = 0; i < indexShift.size(); i++)
+  {
+    if (indexShift[i] != 0)
+    {
+      if (abs(indexShift[i]) >= getMapBufferSize()(i))
+      {
+        // Entire map is dropped
+        elevationData_.setConstant(NAN);
+      }
+      else
+      {
+        // Drop cells out of map
+        int sign = (indexShift[i] > 0 ? 1 : -1);
+        int startIndex = circularBufferStartIndex_[i] - (sign < 0 ? 1 : 0);
+        int endIndex = startIndex - sign + indexShift[i];
+        int nCells = abs(indexShift[i]);
+
+        int index = (sign > 0 ? startIndex : endIndex);
+        starleth_elevation_msg::mapIndexWithinRange(index, getMapBufferSize()[i]);
+
+        if (index + nCells <= getMapBufferSize()[i])
+        {
+          // One region to drop
+          if (i == 0) elevationData_.block(index, 0, nCells, getMapBufferSize()[1]).setConstant(NAN);
+          if (i == 1) elevationData_.block(0, index, getMapBufferSize()[0], nCells).setConstant(NAN);
+        }
+        else
+        {
+          // Two regions to drop
+          int firstIndex = index;
+          int firstNCells = getMapBufferSize()[i] - firstIndex;
+          if (i == 0) elevationData_.block(firstIndex, 0, firstNCells, getMapBufferSize()[1]).setConstant(NAN);
+          if (i == 1) elevationData_.block(0, firstIndex, getMapBufferSize()[0], firstNCells).setConstant(NAN);
+
+          int secondIndex = 0;
+          int secondNCells = nCells - firstNCells;
+          if (i == 0) elevationData_.block(secondIndex, 0, secondNCells, getMapBufferSize()[1]).setConstant(NAN);
+          if (i == 1) elevationData_.block(0, secondIndex, getMapBufferSize()[0], secondNCells).setConstant(NAN);
+        }
+      }
+    }
+  }
+
+  // Udpate information
+  circularBufferStartIndex_ += indexShift;
+  starleth_elevation_msg::mapIndexWithinRange(circularBufferStartIndex_, getMapBufferSize());
+
+  elevationMapToParentTransform_.translation().head(2) = alignedPosition;
 
   return true;
 }

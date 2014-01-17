@@ -6,7 +6,7 @@
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "ElevationMapHelpers.hpp"
+#include "ElevationMessageHelpers.hpp"
 
 // StarlETH Elevation Map
 #include "TransformationMath.hpp"
@@ -75,7 +75,9 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
                           const starleth_elevation_msg::ElevationMap& map)
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
-  return getPositionFromIndex(position, index, mapLength, map.resolution);
+  Array2i bufferSize = (getBufferOrderToMapFrameAlignment() * Vector2i(getRows(map.elevation), getCols(map.elevation))).array();
+  Array2i bufferStartIndex = (getBufferOrderToMapFrameAlignment() * Vector2i(map.outerStartIndex, map.innerStartIndex)).array();
+  return getPositionFromIndex(position, index, mapLength, map.resolution, bufferSize, bufferStartIndex);
 }
 
 bool getIndexFromPosition(Eigen::Array2i& index,
@@ -83,7 +85,9 @@ bool getIndexFromPosition(Eigen::Array2i& index,
                           const starleth_elevation_msg::ElevationMap& map)
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
-  return getIndexFromPosition(index, position, mapLength, map.resolution);
+  Array2i bufferSize = (getBufferOrderToMapFrameAlignment() * Vector2i(getRows(map.elevation), getCols(map.elevation))).array();
+  Array2i bufferStartIndex = (getBufferOrderToMapFrameAlignment() * Vector2i(map.outerStartIndex, map.innerStartIndex)).array();
+  return getIndexFromPosition(index, position, mapLength, map.resolution, bufferSize, bufferStartIndex);
 }
 
 bool copyColorValueToVector(const unsigned long& colorValue,

@@ -20,7 +20,7 @@ struct VarianceClampOperator
   }
   const Scalar operator()(const Scalar& x) const
   {
-    return x < minVariance_ ? minVariance_ : (x > maxVariance_ ? std::numeric_limits<double>::infinity() : x);
+    return x < minVariance_ ? minVariance_ : (x > maxVariance_ ? std::numeric_limits<float>::infinity() : x);
   }
   Scalar minVariance_, maxVariance_;
 };

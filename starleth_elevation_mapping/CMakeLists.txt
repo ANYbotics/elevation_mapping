@@ -85,8 +85,8 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(
-	starleth_elevation_map
-	src/starleth_elevation_map_node.cpp
+	starleth_elevation_mapping
+	src/starleth_elevation_mapping_node.cpp
 	src/ElevationMapping.cpp
 )
 
@@ -96,7 +96,7 @@ add_executable(
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
-  starleth_elevation_map
+  starleth_elevation_mapping
   ${catkin_LIBRARIES}
 )
 

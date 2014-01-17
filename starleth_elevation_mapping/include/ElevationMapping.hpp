@@ -44,8 +44,6 @@ class ElevationMapping
 
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
-  void mapRelocateTimerCallback(const ros::TimerEvent& timerEvent);
-
  private:
   bool initialize();
 
@@ -73,7 +71,11 @@ class ElevationMapping
 
   bool resizeMap(const Eigen::Array2d& length);
 
+  Eigen::Vector2i getMapBufferSize();
+
   bool resetMap();
+
+  bool updateMapLocation();
 
   bool relocateMap(const Eigen::Vector3d& position);
 
@@ -91,7 +93,6 @@ class ElevationMapping
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
-  ros::Timer mapRelocateTimer_;
   ros::ServiceServer submapService_;
 
   ros::Time timeOfLastUpdate_;
@@ -109,6 +110,9 @@ class ElevationMapping
   Eigen::Matrix<unsigned int, Eigen::Dynamic, Eigen::Dynamic> labelData_;
 
   Eigen::Affine3d elevationMapToParentTransform_;
+
+  //! Circular buffer start indeces.
+  Eigen::Array2i circularBufferStartIndex_;
 
   struct ElevationMappingParameters {
     //! Map size in x, and y-direction [m].

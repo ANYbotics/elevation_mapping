@@ -8,9 +8,6 @@
 
 #include "EigenConversions.hpp"
 
-// StarlETH Elevation Map
-#include "ElevationMapHelpers.hpp"
-
 // ROS
 #include <ros/ros.h>
 

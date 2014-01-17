@@ -18,3 +18,9 @@ std_msgs/Float32MultiArray variance
 
 # Color data [rgb] (optional).
 std_msgs/Int32MultiArray color
+
+# Row start index (default 0).
+uint16 outerStartIndex
+
+# Column start index (default 0).
+uint16 innerStartIndex
