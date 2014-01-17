@@ -5,9 +5,10 @@ Panels:
     Property Tree Widget:
       Expanded:
         - /Elevation map1/Namespaces1
-        - /TF1/Status1
         - /TF1/Frames1
         - /TF1/Tree1
+        - /Polygon1
+        - /Polygon1/Status1
       Splitter Ratio: 0.55082
     Tree Height: 495
   - Class: rviz/Selection
@@ -28,7 +29,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: PointCloud raw
+    SyncSource: PointCloud throttled
 Visualization Manager:
   Class: ""
   Displays:
@@ -139,7 +140,7 @@ Visualization Manager:
       Marker Topic: /elevation_map_marker_array
       Name: Elevation map
       Namespaces:
-        {}
+        elevation_map: true
       Queue Size: 100
       Value: true
     - Class: rviz/TF
@@ -166,12 +167,21 @@ Visualization Manager:
       Show Names: true
       Tree:
         /map:
+          /elevation_map:
+            {}
           /odom:
             /robot_base:
               /kinect:
                 /openni_rgb_optical_frame:
                   {}
       Update Interval: 0
+      Value: true
+    - Alpha: 1
+      Class: rviz/Polygon
+      Color: 255; 255; 255
+      Enabled: true
+      Name: Polygon
+      Topic: /map_region_polygon
       Value: true
   Enabled: true
   Global Options:
@@ -196,17 +206,17 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.0003
+      Distance: 2.44744
       Focal Point:
-        X: 2.01805
-        Y: -0.104391
-        Z: -0.047661
+        X: 0.920824
+        Y: -0.256374
+        Z: -0.440443
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.684798
+      Pitch: 0.809798
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 4.24383
+      Yaw: 2.43382
     Saved: ~
 Window Geometry:
   Displays:
@@ -224,5 +234,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1231
-  X: 41
+  X: 49
   Y: 533

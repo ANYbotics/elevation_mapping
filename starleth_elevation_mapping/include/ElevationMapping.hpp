@@ -75,6 +75,10 @@ class ElevationMapping
 
   bool resetMap();
 
+  void resetCols(unsigned int index, unsigned int nCols);
+
+  void resetRows(unsigned int index, unsigned int nRows);
+
   bool updateMapLocation();
 
   bool relocateMap(const Eigen::Vector3d& position);

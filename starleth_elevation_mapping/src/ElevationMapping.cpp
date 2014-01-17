@@ -32,6 +32,8 @@ using namespace tf;
 
 namespace starleth_elevation_mapping {
 
+// TODO Split this class into classes: ElevationMap (ROS-independent), KinectSensor
+
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
 {
@@ -382,6 +384,16 @@ bool ElevationMapping::resetMap()
   return true;
 }
 
+void ElevationMapping::resetCols(unsigned int index, unsigned int nCols)
+{
+  elevationData_.block(index, 0, nCols, getMapBufferSize()[1]).setConstant(NAN);
+}
+
+void ElevationMapping::resetRows(unsigned int index, unsigned int nRows)
+{
+  elevationData_.block(0, index, getMapBufferSize()[0], nRows).setConstant(NAN);
+}
+
 bool ElevationMapping::updateMapLocation()
 {
   ROS_DEBUG("Elevation map is checked for relocalization.");
@@ -448,21 +460,21 @@ bool ElevationMapping::relocateMap(const Eigen::Vector3d& position)
         if (index + nCells <= getMapBufferSize()[i])
         {
           // One region to drop
-          if (i == 0) elevationData_.block(index, 0, nCells, getMapBufferSize()[1]).setConstant(NAN);
-          if (i == 1) elevationData_.block(0, index, getMapBufferSize()[0], nCells).setConstant(NAN);
+          if (i == 0) resetCols(index, nCells);
+          if (i == 1) resetRows(index, nCells);
         }
         else
         {
           // Two regions to drop
           int firstIndex = index;
           int firstNCells = getMapBufferSize()[i] - firstIndex;
-          if (i == 0) elevationData_.block(firstIndex, 0, firstNCells, getMapBufferSize()[1]).setConstant(NAN);
-          if (i == 1) elevationData_.block(0, firstIndex, getMapBufferSize()[0], firstNCells).setConstant(NAN);
+          if (i == 0) resetCols(firstIndex, firstNCells);
+          if (i == 1) resetRows(firstIndex, firstNCells);
 
           int secondIndex = 0;
           int secondNCells = nCells - firstNCells;
-          if (i == 0) elevationData_.block(secondIndex, 0, secondNCells, getMapBufferSize()[1]).setConstant(NAN);
-          if (i == 1) elevationData_.block(0, secondIndex, getMapBufferSize()[0], secondNCells).setConstant(NAN);
+          if (i == 0) resetCols(secondIndex, secondNCells);
+          if (i == 1) resetRows(secondIndex, secondNCells);
         }
       }
     }

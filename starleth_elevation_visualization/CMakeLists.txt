@@ -84,6 +84,7 @@ add_executable(
 	starleth_elevation_visualization
 	src/starleth_elevation_visualization_node.cpp
 	src/ElevationVisualization.cpp
+	src/MapRegionVisualization.cpp
 )
 
 ## Add cmake target dependencies of the executable/library

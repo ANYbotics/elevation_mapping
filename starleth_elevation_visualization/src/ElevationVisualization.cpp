@@ -12,11 +12,12 @@
 #include "ElevationVisualizationHelpers.hpp"
 #include <ElevationMessageHelpers.hpp>
 
-// std::min, std::max
-#include <algorithm>
+// ROS
+#include <geometry_msgs/Point.h>
 
 // STD
 #include <limits>
+#include <algorithm>
 
 using namespace std;
 using namespace ros;
@@ -25,7 +26,8 @@ using namespace Eigen;
 namespace starleth_elevation_visualization {
 
 ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)
-    : nodeHandle_(nodeHandle)
+    : nodeHandle_(nodeHandle),
+      mapRegionVisualization_(nodeHandle_)
 {
   ROS_INFO("StarlETH elevation visualization node started.");
   readParameters();
@@ -65,6 +67,8 @@ bool ElevationVisualization::initializeVisualization()
   elevationMarker.scale.z = markerHeight_;
   elevationMarker.action = visualization_msgs::Marker::ADD;
 
+  mapRegionVisualization_.initialize();
+
   ROS_INFO("StarlETH elevation visualization initialized.");
   return true;
 }
@@ -82,7 +86,14 @@ void ElevationVisualization::elevationMapCallback(
     return;
   }
 
+  if (!mapRegionVisualization_.update(map))
+  {
+    ROS_ERROR("ElevationVisualization: Generating map region visualization failed.");
+    return;
+  }
+
   mapMarkerArrayPublisher_.publish(mapMarkerArrayMessage_);
+  mapRegionVisualization_.publish();
 }
 
 bool ElevationVisualization::generateVisualization(

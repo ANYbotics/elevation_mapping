@@ -10,6 +10,7 @@
 #pragma once
 
 // StarlETH Navigation
+#include "MapRegionVisualization.hpp"
 #include <starleth_elevation_msg/ElevationMap.h>
 
 // ROS
@@ -60,6 +61,8 @@ class ElevationVisualization
   ros::Subscriber mapSubscriber_;
   ros::Publisher mapMarkerArrayPublisher_;
   visualization_msgs::MarkerArray mapMarkerArrayMessage_;
+
+  MapRegionVisualization mapRegionVisualization_;
 
   // TODO Add struct for parameters
   std::string mapTopic_;
