@@ -1,0 +1,8 @@
+# Manual tuned for PrimeSense Carmine 1.09.
+# Also includes uncertainties with non perpedicular surfaces and
+# biases/warp at further distances.
+sensor_cutoff_min_depth: 0.2
+sensor_cutoff_max_depth: 2.0
+sensor_model_factor_a: 0.003
+sensor_model_factor_b: 0.015
+sensor_model_factor_c: 0.25

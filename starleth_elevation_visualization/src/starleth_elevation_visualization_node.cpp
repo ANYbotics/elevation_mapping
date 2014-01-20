@@ -17,7 +17,7 @@ int main(int argc, char** argv)
   log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
   logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 
-  ros::NodeHandle nodeHandle;
+  ros::NodeHandle nodeHandle("~");
 
   starleth_elevation_visualization::ElevationVisualization elevationVisualization(nodeHandle);
 

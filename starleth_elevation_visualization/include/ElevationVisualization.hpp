@@ -38,6 +38,7 @@ class ElevationVisualization
   bool readParameters();
   bool initializeVisualization();
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
+  bool setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue);
   bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
   bool setColorChannelFromVariance(float& color, const double& variance, bool invert = false);
 
@@ -67,6 +68,11 @@ class ElevationVisualization
   // TODO Add struct for parameters
   std::string mapTopic_;
   double markerHeight_;
+  bool isSetColorFromMap_;
+  bool isSetColorFromVariance_;
+  bool isSetColorFromHeight_;
+  bool isSetSaturationFromVariance_;
+  bool isSetAlphaFromVariance_;
   double varianceLowerValue_;
   double varianceUpperValue_;
   double minMarkerSaturation_;

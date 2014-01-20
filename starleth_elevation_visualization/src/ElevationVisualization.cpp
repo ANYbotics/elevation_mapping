@@ -43,10 +43,15 @@ ElevationVisualization::~ElevationVisualization()
 
 bool ElevationVisualization::readParameters()
 {
-  nodeHandle_.param("elevation_map_topic", mapTopic_, string("/elevation_map"));
+  nodeHandle_.param("elevation_map_topic", mapTopic_, string("/starleth_elevation_mapping/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
+  nodeHandle_.param("set_color_from_map", isSetColorFromMap_, false);
+  nodeHandle_.param("set_color_from_variance", isSetColorFromVariance_, true);
+  nodeHandle_.param("set_color_from_height", isSetColorFromHeight_, false);
+  nodeHandle_.param("set_saturation_from_variance", isSetSaturationFromVariance_, false);
+  nodeHandle_.param("set_alpha_from_variance", isSetAlphaFromVariance_, false);  // This looks bad in Rviz
   nodeHandle_.param("variance_lower_value_", varianceLowerValue_, pow(0.003, 2));
-  nodeHandle_.param("variance_upper_value_", varianceUpperValue_, pow(0.02, 2));
+  nodeHandle_.param("variance_upper_value_", varianceUpperValue_, pow(0.01, 2));
   nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
   nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_, 1.0);
   nodeHandle_.param("min_marker_saturation", minMarkerSaturation_, 0.0);
@@ -141,16 +146,37 @@ bool ElevationVisualization::generateVisualization(
 
       // Add marker color
       std_msgs::ColorRGBA markerColor;
-      markerColor.b = 1.0;
-      markerColor.a = 1.0;
-      setColorFromMap(markerColor, color);
-//      setColorChannelFromVariance(markerColor.r, variance);
-//      setColorChannelFromVariance(markerColor.b, variance, true);
-      setSaturationFromVariance(markerColor, variance);
-//      setColorChannelFromVariance(markerColor.a, variance); // This looks bad in Rviz
+      setColor(markerColor, elevation, variance, color);
       elevationMarker.colors.push_back(markerColor);
     }
   }
+
+  return true;
+}
+
+bool ElevationVisualization::setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue)
+{
+  color.r = 0.0;
+  color.g = 0.0;
+  color.b = 1.0;
+  color.a = 1.0;
+
+  if (isSetColorFromMap_) setColorFromMap(color, colorValue);
+
+  if (isSetColorFromVariance_)
+  {
+    setColorChannelFromVariance(color.r, variance);
+    setColorChannelFromVariance(color.b, variance, true);
+  }
+
+  if (isSetColorFromHeight_)
+  {
+    setColorChannelFromVariance(color.r, variance);
+    setColorChannelFromVariance(color.b, variance, true);
+  }
+
+  if (isSetSaturationFromVariance_) setSaturationFromVariance(color, variance);
+  if (isSetAlphaFromVariance_) setColorChannelFromVariance(color.a, variance);
 
   return true;
 }

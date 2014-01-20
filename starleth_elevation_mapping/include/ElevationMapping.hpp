@@ -85,8 +85,6 @@ class ElevationMapping
 
   bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
 
-  void setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate);
-
   void resetMapUpdateTimer();
 
   void stopMapUpdateTimer();
@@ -151,6 +149,9 @@ class ElevationMapping
 
     double sensorCutoffMinDepth_;
     double sensorCutoffMaxDepth_;
+    double sensorModelFactorA_;
+    double sensorModelFactorB_;
+    double sensorModelFactorC_;
 
     bool read(ros::NodeHandle& nodeHandle);
     bool checkValidity();

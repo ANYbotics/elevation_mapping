@@ -62,8 +62,11 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("track_point_z", trackPoint_.z(), 0.0);
   nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
   nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
-  nodeHandle.param("length_in_x", length_(0), 0.5);
-  nodeHandle.param("length_in_y", length_(1), 1.0);
+  nodeHandle.param("sensor_model_factor_a", sensorModelFactorA_, 0.003);
+  nodeHandle.param("sensor_model_factor_b", sensorModelFactorB_, 0.015);
+  nodeHandle.param("sensor_model_factor_c", sensorModelFactorC_, 0.25);
+  nodeHandle.param("length_in_x", length_(0), 1.5);
+  nodeHandle.param("length_in_y", length_(1), 1.5);
   nodeHandle.param("resolution", resolution_, 0.01);
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
   nodeHandle.param("max_variance", maxVariance_, pow(0.04, 2));
@@ -110,9 +113,9 @@ bool ElevationMapping::initialize()
   elevationMapToParentTransform_.setIdentity();
   resizeMap(parameters_.length_);
   resetMap();
+  timeOfLastUpdate_ = Time::now();
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
-  setTimeOfLastUpdate(Time::now());
   resetMapUpdateTimer();
   ROS_INFO("StarlETH elevation map node initialized.");
   return true;
@@ -132,7 +135,7 @@ void ElevationMapping::pointCloudCallback(
   updateMapLocation();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
-  setTimeOfLastUpdate(time);
+  timeOfLastUpdate_ = time;
   cleanPointCloud(pointCloud);
   VectorXf measurementDistances;
   getMeasurementDistances(pointCloud, measurementDistances);
@@ -151,7 +154,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   Time time = Time::now();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
-  setTimeOfLastUpdate(time);
+  timeOfLastUpdate_ = time;
   cleanElevationMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
@@ -260,21 +263,8 @@ bool ElevationMapping::addToElevationMap(
     auto& multiHeightLabel = labelData_(index(0), index(1));
     auto& measurementDistance = measurementDistances[i];
 
-    // Kinect (short-range mode) taken from:
-    // Nguyen, C. V., Izadi, S., & Lovell, D. (2012).
-    // Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking.
-//    float measurementStandardDeviation = 0.0012 + 0.0019 * pow(measurementDistance - 0.4, 2);
-
-    // Approximation of datasheet for Carmine 1.09 from:
-    // http://www.openni.org/rd1-09-specifications/
-    // Coefficients computed with least squares regression.
-//    float measurementStandardDeviation = 0.000181 + 0.00166 * pow(measurementDistance - 0.1, 2);
-
-    // Manual tuned for PrimeSense Carmine 1.09.
-    // Also includes uncertainties with non perpedicular surfaces and
-    // biases/warp at further distances.
-    float measurementStandardDeviation = 0.003 + 0.015 * pow(measurementDistance - 0.25, 2);
-
+    float measurementStandardDeviation = parameters_.sensorModelFactorA_
+        + parameters_.sensorModelFactorB_ * pow(measurementDistance - parameters_.sensorModelFactorC_, 2);
     float measurementVariance = pow(measurementStandardDeviation, 2);
 
     if (std::isnan(elevation) || std::isinf(variance))
@@ -495,11 +485,6 @@ bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Reques
 //  ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
 //  ROS_INFO("sending back response: [%ld]", (long int)res.sum);
   return true;
-}
-
-void ElevationMapping::setTimeOfLastUpdate(const ros::Time& timeOfLastUpdate)
-{
-  timeOfLastUpdate_ = timeOfLastUpdate;
 }
 
 void ElevationMapping::resetMapUpdateTimer()

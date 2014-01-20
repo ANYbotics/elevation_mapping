@@ -1,3 +1,0 @@
-<launch>
- 	<node pkg="starleth_elevation_mapping" type="starleth_elevation_mapping_node" name="starleth_elevation_mapping" />
-</launch>

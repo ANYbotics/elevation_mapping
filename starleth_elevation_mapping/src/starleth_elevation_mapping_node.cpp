@@ -11,13 +11,13 @@
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "starleth_elevation_map");
+  ros::init(argc, argv, "starleth_elevation_mapping");
 
   // Logger
   log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
-  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
+  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
 
-  ros::NodeHandle nodeHandle;
+  ros::NodeHandle nodeHandle("~");
 
   starleth_elevation_mapping::ElevationMapping elevationMap(nodeHandle);
 
