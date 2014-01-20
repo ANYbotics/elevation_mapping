@@ -45,16 +45,16 @@ bool ElevationVisualization::readParameters()
 {
   nodeHandle_.param("elevation_map_topic", mapTopic_, string("/starleth_elevation_mapping/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
-  nodeHandle_.param("set_color_from_map", isSetColorFromMap_, false);
+  nodeHandle_.param("set_color_from_map", isSetColorFromMap_, true);
   nodeHandle_.param("set_color_from_variance", isSetColorFromVariance_, false);
-  nodeHandle_.param("set_color_from_height", isSetColorFromHeight_, true);
+  nodeHandle_.param("set_color_from_height", isSetColorFromHeight_, false);
   nodeHandle_.param("set_saturation_from_variance", isSetSaturationFromVariance_, true);
   nodeHandle_.param("set_alpha_from_variance", isSetAlphaFromVariance_, false);  // This looks bad in Rviz
   nodeHandle_.param("show_empty_cells", showEmptyCells_, false);
   nodeHandle_.param("variance_lower_value_", varianceLowerValue_, pow(0.003, 2));
   nodeHandle_.param("variance_upper_value_", varianceUpperValue_, pow(0.01, 2));
-  nodeHandle_.param("elevation_lower_value_", elevationLowerValue_, -0.2);
-  nodeHandle_.param("elevation_upper_value_", elevationUpperValue_, 0.5);
+  nodeHandle_.param("elevation_lower_value_", elevationLowerValue_, -0.1);
+  nodeHandle_.param("elevation_upper_value_", elevationUpperValue_, 0.25);
   nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
   nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_, 1.0);
   nodeHandle_.param("min_marker_saturation", minMarkerSaturation_, 0.0);
