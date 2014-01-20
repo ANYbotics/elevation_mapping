@@ -38,7 +38,7 @@ class ElevationVisualization
   bool readParameters();
   bool initializeVisualization();
   bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
-  bool setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue);
+  bool setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell);
   bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
   bool setColorChannelFromVariance(float& color, const double& variance, bool invert = false);
 
@@ -50,7 +50,12 @@ class ElevationVisualization
    */
   bool setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance);
 
-  double getValueFromVariance(const double& minValue, const double& maxValue, const double& variance);
+  bool setColorFromHeight(std_msgs::ColorRGBA& color, const double& height);
+
+  // TODO: Move this somewhere to a math library.
+  double computeLinearMapping(
+      const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
+      const double& mapLowerValue, const double& mapUpperValue);
 
   enum class MarkerTypes
   {
@@ -73,8 +78,11 @@ class ElevationVisualization
   bool isSetColorFromHeight_;
   bool isSetSaturationFromVariance_;
   bool isSetAlphaFromVariance_;
+  bool showEmptyCells_;
   double varianceLowerValue_;
   double varianceUpperValue_;
+  double elevationLowerValue_;
+  double elevationUpperValue_;
   double minMarkerSaturation_;
   double maxMarkerSaturation_;
   double minMarkerAlpha_;

@@ -46,12 +46,15 @@ bool ElevationVisualization::readParameters()
   nodeHandle_.param("elevation_map_topic", mapTopic_, string("/starleth_elevation_mapping/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
   nodeHandle_.param("set_color_from_map", isSetColorFromMap_, false);
-  nodeHandle_.param("set_color_from_variance", isSetColorFromVariance_, true);
-  nodeHandle_.param("set_color_from_height", isSetColorFromHeight_, false);
-  nodeHandle_.param("set_saturation_from_variance", isSetSaturationFromVariance_, false);
+  nodeHandle_.param("set_color_from_variance", isSetColorFromVariance_, false);
+  nodeHandle_.param("set_color_from_height", isSetColorFromHeight_, true);
+  nodeHandle_.param("set_saturation_from_variance", isSetSaturationFromVariance_, true);
   nodeHandle_.param("set_alpha_from_variance", isSetAlphaFromVariance_, false);  // This looks bad in Rviz
+  nodeHandle_.param("show_empty_cells", showEmptyCells_, false);
   nodeHandle_.param("variance_lower_value_", varianceLowerValue_, pow(0.003, 2));
   nodeHandle_.param("variance_upper_value_", varianceUpperValue_, pow(0.01, 2));
+  nodeHandle_.param("elevation_lower_value_", elevationLowerValue_, -0.2);
+  nodeHandle_.param("elevation_upper_value_", elevationUpperValue_, 0.5);
   nodeHandle_.param("min_marker_alpha", minMarkerAlpha_, 0.2);
   nodeHandle_.param("max_marker_alpha", maxMarkerAlpha_, 1.0);
   nodeHandle_.param("min_marker_saturation", minMarkerSaturation_, 0.0);
@@ -129,9 +132,15 @@ bool ElevationVisualization::generateVisualization(
       const auto& elevation = map.elevation.data[dataIndex];
       const auto& variance = map.variance.data[dataIndex];
       const auto& color = map.color.data[dataIndex];
+      bool isEmtpyCell = false;
 
-      // Do not continue for nan and inf values
-      if (std::isnan(elevation) || std::isinf(variance)) continue;
+
+      if (std::isnan(elevation) || std::isinf(variance))
+      {
+        // Do not continue for nan and inf values
+        if (!showEmptyCells_) continue;
+        isEmtpyCell = true;
+      }
 
       // Getting position of cell
       Vector2d position;
@@ -141,12 +150,12 @@ bool ElevationVisualization::generateVisualization(
       geometry_msgs::Point point;
       point.x = position.x();
       point.y = position.y();
-      point.z = elevation - markerHeightOffset;
+      point.z = !isEmtpyCell ? elevation - markerHeightOffset : 0;
       elevationMarker.points.push_back(point);
 
       // Add marker color
       std_msgs::ColorRGBA markerColor;
-      setColor(markerColor, elevation, variance, color);
+      setColor(markerColor, elevation, variance, color, isEmtpyCell);
       elevationMarker.colors.push_back(markerColor);
     }
   }
@@ -154,12 +163,20 @@ bool ElevationVisualization::generateVisualization(
   return true;
 }
 
-bool ElevationVisualization::setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue)
+bool ElevationVisualization::setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell)
 {
   color.r = 0.0;
   color.g = 0.0;
   color.b = 1.0;
   color.a = 1.0;
+
+  if (isEmtpyCell)
+  {
+    color.r = 0.6;
+    color.g = 0.0;
+    color.b = 0.0;
+    return true;
+  }
 
   if (isSetColorFromMap_) setColorFromMap(color, colorValue);
 
@@ -171,8 +188,7 @@ bool ElevationVisualization::setColor(std_msgs::ColorRGBA& color, const double& 
 
   if (isSetColorFromHeight_)
   {
-    setColorChannelFromVariance(color.r, variance);
-    setColorChannelFromVariance(color.b, variance, true);
+    setColorFromHeight(color, elevation);
   }
 
   if (isSetSaturationFromVariance_) setSaturationFromVariance(color, variance);
@@ -201,14 +217,16 @@ bool ElevationVisualization::setColorChannelFromVariance(float& colorChannel, co
     highestVarianceValue = tempValue;
   }
 
-  colorChannel = static_cast<float>(getValueFromVariance(lowestVarianceValue, highestVarianceValue, variance));
+  colorChannel = static_cast<float>(computeLinearMapping(variance, varianceLowerValue_, varianceUpperValue_, lowestVarianceValue, highestVarianceValue));
+
+
   return true;
 }
 
 bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
 {
   const Eigen::Array3f HspFactors(.299, .587, .114); // see http://alienryderflex.com/hsp.html
-  float saturationChange = static_cast<float>(getValueFromVariance(maxMarkerSaturation_, minMarkerSaturation_, variance));
+  float saturationChange = static_cast<float>(computeLinearMapping(variance, varianceLowerValue_, varianceUpperValue_, maxMarkerSaturation_, minMarkerSaturation_));
   Vector3f colorVector;
   getColorVectorFromColorMessage(colorVector, color);
   float perceivedBrightness = sqrt((colorVector.array().square() * HspFactors).sum());
@@ -218,22 +236,46 @@ bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& colo
   return true;
 }
 
-double ElevationVisualization::getValueFromVariance(const double& lowestVarianceValue, const double& highestVarianceValue, const double& variance)
+bool ElevationVisualization::setColorFromHeight(std_msgs::ColorRGBA& color, const double& height)
 {
-  double m = (lowestVarianceValue - highestVarianceValue) / (varianceLowerValue_ - varianceUpperValue_);
-  double b = highestVarianceValue - m * varianceUpperValue_;
-  double value = m * variance + b;
-  if (lowestVarianceValue < highestVarianceValue)
+  Vector3f hsl; // Hue: [0, 2 Pi], Saturation and Lightness: [0, 1]
+  Vector3f rgb;
+
+  hsl[0] = static_cast<float>(computeLinearMapping(height, elevationLowerValue_, elevationUpperValue_, 0.0, 2.0 * M_PI));
+  hsl[1] = 1.0;
+  hsl[2] = 1.0;
+
+  float offset = 2.0 / 3.0 * M_PI;
+  Array3f rgbOffset(0, -offset, offset);
+  rgb = ((rgbOffset + hsl[0]).cos() + 0.5).min(Array3f::Ones()).max(Array3f::Zero()) * hsl[2];
+  float white = Vector3f(0.3, 0.59, 0.11).transpose() * rgb;
+  float saturation = 1.0 - hsl[1];
+  rgb = rgb + ((-rgb.array() + white) * saturation).matrix();
+
+  getColorMessageFromColorVector(color, rgb);
+  return true;
+}
+
+double ElevationVisualization::computeLinearMapping(
+    const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
+    const double& mapLowerValue, const double& mapUpperValue)
+{
+  double m = (mapLowerValue - mapUpperValue) / (sourceLowerValue - sourceUpperValue);
+  double b = mapUpperValue - m * sourceUpperValue;
+  double mapValue = m * sourceValue + b;
+  if (mapLowerValue < mapUpperValue)
   {
-    value = max(value, lowestVarianceValue);
-    value = min(value, highestVarianceValue);
+    mapValue = max(mapValue, mapLowerValue);
+    mapValue = min(mapValue, mapUpperValue);
   }
   else
   {
-    value = min(value, lowestVarianceValue);
-    value = max(value, highestVarianceValue);
+    mapValue = min(mapValue, mapLowerValue);
+    mapValue = max(mapValue, mapUpperValue);
   }
-  return value;
+  return mapValue;
 }
+
+
 
 } /* namespace starleth_elevation_visualization */
