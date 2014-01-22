@@ -165,10 +165,6 @@ bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
   tf::Transform tfTransform;
   poseEigenToTF(elevationMapToParentTransform_, tfTransform);
   transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parameters_.parentFrameId_, parameters_.elevationMapFrameId_));
-
-  poseEigenToTF(elevationMapToParentTransform_, tfTransform);
-  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parameters_.parentFrameId_, parameters_.elevationMapFrameId_));
-
   ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
 }
