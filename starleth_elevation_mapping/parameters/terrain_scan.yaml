@@ -1,3 +1,4 @@
+track_point_frame_id: "/map"
 track_point_x: 0.9
 track_point_y: 0.0
 track_point_z: 0.0
