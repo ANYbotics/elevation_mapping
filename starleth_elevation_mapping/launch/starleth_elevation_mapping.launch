@@ -1,7 +1,7 @@
 <launch>
  	<node pkg="starleth_elevation_mapping" type="starleth_elevation_mapping" name="starleth_elevation_mapping" output="screen">
     	 <param name="point_cloud_topic" value="/depth_registered/points_throttled" />
-    	 <param name="map_frame_id" value="starleth/odometry" />
+    	 <param name="map_frame_id" value="/map" />
     	 <rosparam command="load" file="$(find starleth_elevation_mapping)/parameters/starleth.yaml" />
     	 <rosparam command="load" file="$(find starleth_elevation_mapping)/parameters/sensors/primesense_carmine_109_short_range_tuned.yaml" />
     </node>
