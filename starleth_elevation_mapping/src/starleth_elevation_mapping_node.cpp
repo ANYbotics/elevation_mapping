@@ -15,7 +15,7 @@ int main(int argc, char** argv)
 
   // Logger
   log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
-  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
+  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
 
   ros::NodeHandle nodeHandle("~");
 

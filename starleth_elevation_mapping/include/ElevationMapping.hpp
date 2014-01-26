@@ -22,8 +22,11 @@
 
 // ROS
 #include <ros/ros.h>
+#include <message_filters/cache.h>
+#include <message_filters/subscriber.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
+#include <geometry_msgs/TwistStamped.h>
 
 // STD
 #include <limits>
@@ -54,7 +57,7 @@ class ElevationMapping
    * @param time to which the map is updated to.
    * @return true if successful.
    */
-  bool updateProcessNoise(const ros::Time& time);
+  bool updatePrediction(const ros::Time& time);
 
   bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
@@ -92,6 +95,8 @@ class ElevationMapping
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
   ros::Publisher elevationMapPublisher_;
+  message_filters::Subscriber<geometry_msgs::TwistStamped> robotTwistSubscriber_;
+  message_filters::Cache<geometry_msgs::TwistStamped> robotTwistCache_;
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
@@ -128,7 +133,7 @@ class ElevationMapping
 
     double mahalanobisDistanceThreshold_;
 
-    double timeProcessNoise_;
+    double timeDependentNoise_;
     double multiHeightNoise_;
     double biggerHeightThresholdFactor_;
     double biggerHeightNoiseFactor_;
@@ -144,6 +149,7 @@ class ElevationMapping
     std::string trackPointFrameId_;
     std::string trackPointId_;
     std::string pointCloudTopic_;
+    std::string robotTwistTopic_;
 
     Eigen::Vector3d trackPoint_;
 
@@ -152,6 +158,8 @@ class ElevationMapping
     double sensorModelFactorA_;
     double sensorModelFactorB_;
     double sensorModelFactorC_;
+
+    int robotTwistCacheSize_;
 
     bool read(ros::NodeHandle& nodeHandle);
     bool checkValidity();

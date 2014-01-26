@@ -1,3 +1,4 @@
+robot_twist_topic: "/starleth/robot_state/twist"
 track_point_frame_id: "starleth/BASE"
 track_point_x: 0.8
 track_point_y: 0.0

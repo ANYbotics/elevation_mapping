@@ -10,6 +10,7 @@ find_package(catkin REQUIRED COMPONENTS
   starleth_elevation_msg
   pcl_ros
   roscpp
+  message_filters
   sensor_msgs
   std_msgs
   tf

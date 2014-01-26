@@ -32,7 +32,7 @@ using namespace tf;
 
 namespace starleth_elevation_mapping {
 
-// TODO Split this class into classes: ElevationMap (ROS-independent), KinectSensor
+// TODO Split this class into classes: ElevationMap (ROS-independent), KinectSensor, robotPredictionModel
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle)
@@ -41,6 +41,9 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   parameters_.read(nodeHandle_);
   pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
+  robotTwistSubscriber_.subscribe(nodeHandle_, parameters_.robotTwistTopic_, 1);
+  robotTwistCache_.connectInput(robotTwistSubscriber_);
+  robotTwistCache_.setCacheSize(parameters_.robotTwistCacheSize_);
   mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
   submapService_ = nodeHandle_.advertiseService("get_subpart_of_elevation_map", &ElevationMapping::getSubmap, this);
   initialize();
@@ -60,6 +63,8 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("track_point_x", trackPoint_.x(), 0.5);
   nodeHandle.param("track_point_y", trackPoint_.y(), 0.0);
   nodeHandle.param("track_point_z", trackPoint_.z(), 0.0);
+  nodeHandle.param("robot_twist_topic", robotTwistTopic_, string("/starleth/robot_state/twist"));
+  nodeHandle.param("robot_twist_cache_size", robotTwistCacheSize_, 100);
   nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
   nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
   nodeHandle.param("sensor_model_factor_a", sensorModelFactorA_, 0.003);
@@ -71,7 +76,7 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
   nodeHandle.param("max_variance", maxVariance_, pow(0.04, 2));
   nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.0);
-  nodeHandle.param("time_process_noise", timeProcessNoise_, pow(0.0001, 2));
+  nodeHandle.param("time_process_noise", timeDependentNoise_, pow(0.0001, 2));
   nodeHandle.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
   nodeHandle.param("bigger_height_threshold_factor", biggerHeightThresholdFactor_, 4.0);
   nodeHandle.param("bigger_height_noise_factor", biggerHeightNoiseFactor_, 2.0);
@@ -102,9 +107,10 @@ bool ElevationMapping::ElevationMappingParameters::checkValidity()
   ROS_ASSERT(minVariance_ >= 0.0);
   ROS_ASSERT(maxVariance_ > minVariance_);
   ROS_ASSERT(mahalanobisDistanceThreshold_ >= 0.0);
-  ROS_ASSERT(timeProcessNoise_ >= 0.0);
+  ROS_ASSERT(timeDependentNoise_ >= 0.0);
   ROS_ASSERT(multiHeightNoise_ >= 0.0);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
+  ROS_ASSERT(robotTwistCacheSize_ >= 0);
   return true;
 }
 
@@ -134,7 +140,7 @@ void ElevationMapping::pointCloudCallback(
   Time& time = pointCloud->header.stamp;
   updateMapLocation();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
-  if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
+  if (!updatePrediction(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   timeOfLastUpdate_ = time;
   cleanPointCloud(pointCloud);
   VectorXf measurementDistances;
@@ -153,7 +159,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   stopMapUpdateTimer();
   Time time = Time::now();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
-  if (!updateProcessNoise(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
+  if (!updatePrediction(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   timeOfLastUpdate_ = time;
   cleanElevationMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
@@ -169,14 +175,24 @@ bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
   return true;
 }
 
-bool ElevationMapping::updateProcessNoise(const ros::Time& time)
+bool ElevationMapping::updatePrediction(const ros::Time& time)
 {
+  ROS_DEBUG("Updating map with latest prediction from time %f.", robotTwistCache_.getLatestTime().toSec());
+
   if (time < timeOfLastUpdate_) return false;
+  double timeIntervall = (time - timeOfLastUpdate_).toSec();
 
-  // TODO Add variance depending on movement from previous update time
+  // Time dependent noise
+  float timeNoise = static_cast<float>(timeIntervall * parameters_.timeDependentNoise_);
 
-  float timeProcessNoise = static_cast<float>((time - timeOfLastUpdate_).toSec() * parameters_.timeProcessNoise_);
-  if (timeProcessNoise != 0.0) varianceData_ = (varianceData_.array() + timeProcessNoise).matrix();
+  // Variance from motion prediction
+  geometry_msgs::TwistStamped twistVariance = *robotTwistCache_.getElemBeforeTime(time);
+  float motionVariance = static_cast<float>(twistVariance.twist.linear.x);
+
+  float variancePrediction = timeNoise + motionVariance;
+
+  if (variancePrediction != 0.0) varianceData_ = (varianceData_.array() + variancePrediction).matrix();
+
   return true;
 }
 
@@ -316,7 +332,7 @@ bool ElevationMapping::cleanElevationMap()
 
 bool ElevationMapping::publishElevationMap()
 {
-  if (elevationMapPublisher_.getNumSubscribers () < 1) return false;
+  if (elevationMapPublisher_.getNumSubscribers()) return false;
 
   starleth_elevation_msg::ElevationMap elevationMapMessage;
 
