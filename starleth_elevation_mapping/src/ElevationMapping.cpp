@@ -179,19 +179,27 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 {
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotTwistCache_.getLatestTime().toSec());
 
-  if (time < timeOfLastUpdate_) return false;
+  if (time < timeOfLastUpdate_)
+  {
+    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), timeOfLastUpdate_.toSec());
+    return false;
+  }
   double timeIntervall = (time - timeOfLastUpdate_).toSec();
 
   // Time dependent noise
   float timeNoise = static_cast<float>(timeIntervall * parameters_.timeDependentNoise_);
 
   // Variance from motion prediction
-  geometry_msgs::TwistStamped twistVariance = *robotTwistCache_.getElemBeforeTime(time);
-  float motionVariance = static_cast<float>(twistVariance.twist.linear.x);
+  boost::shared_ptr<geometry_msgs::TwistStamped const> twistVariance = robotTwistCache_.getElemBeforeTime(time);
+  if (!twistVariance)
+  {
+    ROS_ERROR("Could not get twist information from robot for time %f. Buffer empty?", time.toSec());
+    return false;
+  }
+
+  float motionVariance = static_cast<float>(twistVariance->twist.linear.x);
 
   float variancePrediction = timeNoise + motionVariance;
-
-  ROS_DEBUG("Predicted Variance: %f.", variancePrediction);
 
   if (variancePrediction != 0.0) varianceData_ = (varianceData_.array() + variancePrediction).matrix();
 
