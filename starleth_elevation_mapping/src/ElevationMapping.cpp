@@ -80,6 +80,7 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
   nodeHandle.param("bigger_height_threshold_factor", biggerHeightThresholdFactor_, 4.0);
   nodeHandle.param("bigger_height_noise_factor", biggerHeightNoiseFactor_, 2.0);
+  nodeHandle.param("robot_twist_variance_factor", robotTwistVarianceFactor_, 0.05);
 
   double minUpdateRate;
   nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
@@ -197,7 +198,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-  float motionVariance = static_cast<float>(twistVariance->twist.linear.x);
+  float motionVariance = static_cast<float>(twistVariance->twist.linear.x * parameters_.robotTwistVarianceFactor_);
 
   float variancePrediction = timeNoise + motionVariance;
 

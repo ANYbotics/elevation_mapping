@@ -151,6 +151,8 @@ class ElevationMapping
     std::string pointCloudTopic_;
     std::string robotTwistTopic_;
 
+    double robotTwistVarianceFactor_;
+
     Eigen::Vector3d trackPoint_;
 
     double sensorCutoffMinDepth_;
