@@ -191,6 +191,8 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 
   float variancePrediction = timeNoise + motionVariance;
 
+  ROS_DEBUG("Predicted Variance: %f.", variancePrediction);
+
   if (variancePrediction != 0.0) varianceData_ = (varianceData_.array() + variancePrediction).matrix();
 
   return true;
@@ -332,7 +334,7 @@ bool ElevationMapping::cleanElevationMap()
 
 bool ElevationMapping::publishElevationMap()
 {
-  if (elevationMapPublisher_.getNumSubscribers()) return false;
+  if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
 
   starleth_elevation_msg::ElevationMap elevationMapMessage;
 
