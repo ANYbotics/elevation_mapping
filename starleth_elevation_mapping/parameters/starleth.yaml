@@ -1,9 +1,9 @@
 robot_twist_topic: "/starleth/robot_state/twist"
 track_point_frame_id: "starleth/BASE"
-track_point_x: 0.8
+track_point_x: 0.25
 track_point_y: 0.0
 track_point_z: 0.0
-length_in_x: 3.0
-length_in_y: 3.0
+length_in_x: 2.5
+length_in_y: 2.5
 resolution: 0.01
-robot_twist_variance_factor: 0.05
+robot_twist_variance_factor: 0.00001

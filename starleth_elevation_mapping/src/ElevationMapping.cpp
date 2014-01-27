@@ -198,7 +198,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-  float motionVariance = static_cast<float>(twistVariance->twist.linear.x * parameters_.robotTwistVarianceFactor_);
+  float motionVariance = static_cast<float>(abs(twistVariance->twist.linear.x) * parameters_.robotTwistVarianceFactor_);
 
   float variancePrediction = timeNoise + motionVariance;
 
