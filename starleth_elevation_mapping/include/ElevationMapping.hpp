@@ -26,7 +26,7 @@
 #include <message_filters/subscriber.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
-#include <geometry_msgs/TwistStamped.h>
+#include <geometry_msgs/TwistWithCovarianceStamped.h>
 
 // STD
 #include <limits>
@@ -95,8 +95,8 @@ class ElevationMapping
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
   ros::Publisher elevationMapPublisher_;
-  message_filters::Subscriber<geometry_msgs::TwistStamped> robotTwistSubscriber_;
-  message_filters::Cache<geometry_msgs::TwistStamped> robotTwistCache_;
+  message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped> robotTwistSubscriber_;
+  message_filters::Cache<geometry_msgs::TwistWithCovarianceStamped> robotTwistCache_;
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
@@ -133,7 +133,6 @@ class ElevationMapping
 
     double mahalanobisDistanceThreshold_;
 
-    double timeDependentNoise_;
     double multiHeightNoise_;
     double biggerHeightThresholdFactor_;
     double biggerHeightNoiseFactor_;

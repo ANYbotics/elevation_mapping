@@ -76,11 +76,10 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
   nodeHandle.param("max_variance", maxVariance_, pow(0.04, 2));
   nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.0);
-  nodeHandle.param("time_process_noise", timeDependentNoise_, pow(0.0001, 2));
   nodeHandle.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
   nodeHandle.param("bigger_height_threshold_factor", biggerHeightThresholdFactor_, 4.0);
   nodeHandle.param("bigger_height_noise_factor", biggerHeightNoiseFactor_, 2.0);
-  nodeHandle.param("robot_twist_variance_factor", robotTwistVarianceFactor_, 0.05);
+  nodeHandle.param("robot_twist_variance_factor", robotTwistVarianceFactor_, 1.0);
 
   double minUpdateRate;
   nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
@@ -187,21 +186,22 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   }
   double timeIntervall = (time - timeOfLastUpdate_).toSec();
 
-  // Time dependent noise
-  float timeNoise = static_cast<float>(timeIntervall * parameters_.timeDependentNoise_);
-
   // Variance from motion prediction
-  boost::shared_ptr<geometry_msgs::TwistStamped const> twistVariance = robotTwistCache_.getElemBeforeTime(time);
-  if (!twistVariance)
+  boost::shared_ptr<geometry_msgs::TwistWithCovarianceStamped const> twistMessage = robotTwistCache_.getElemBeforeTime(time);
+  if (!twistMessage)
   {
     ROS_ERROR("Could not get twist information from robot for time %f. Buffer empty?", time.toSec());
     return false;
   }
 
-  float motionVariance = static_cast<float>(twistVariance->twist.linear.x * parameters_.robotTwistVarianceFactor_);
+  Matrix<double, 6, 1> twistVariance = Map<const MatrixXd>(twistMessage->twist.covariance.data(), 6, 6).diagonal();
 
-  float variancePrediction = timeNoise + motionVariance;
+  float variancePrediction = static_cast<float>(timeIntervall * twistVariance.head(3).norm());
 
+  cout << twistVariance.transpose() << endl;
+  cout << timeIntervall << " --> " << variancePrediction << endl << endl;
+
+  // Update map
   if (variancePrediction != 0.0) varianceData_ = (varianceData_.array() + variancePrediction).matrix();
 
   return true;

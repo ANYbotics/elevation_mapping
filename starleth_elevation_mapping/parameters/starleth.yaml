@@ -6,4 +6,4 @@ track_point_z: 0.0
 length_in_x: 3.0
 length_in_y: 3.0
 resolution: 0.01
-robot_twist_variance_factor: 0.05
+robot_twist_variance_factor: 1.0
