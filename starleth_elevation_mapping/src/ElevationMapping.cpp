@@ -107,7 +107,6 @@ bool ElevationMapping::ElevationMappingParameters::checkValidity()
   ROS_ASSERT(minVariance_ >= 0.0);
   ROS_ASSERT(maxVariance_ > minVariance_);
   ROS_ASSERT(mahalanobisDistanceThreshold_ >= 0.0);
-  ROS_ASSERT(timeDependentNoise_ >= 0.0);
   ROS_ASSERT(multiHeightNoise_ >= 0.0);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
   ROS_ASSERT(robotTwistCacheSize_ >= 0);
@@ -194,13 +193,9 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-<<<<<<< HEAD
-  Matrix<double, 6, 1> twistVariance = Map<const MatrixXd>(twistMessage->twist.covariance.data(), 6, 6).diagonal();
 
-  float variancePrediction = static_cast<float>(timeIntervall * twistVariance.head(3).norm());
-=======
-  float motionVariance = static_cast<float>(abs(twistVariance->twist.linear.x) * parameters_.robotTwistVarianceFactor_);
->>>>>>> refs/remotes/origin/master
+  Matrix<double, 6, 1> twistVariance = Map<const MatrixXd>(twistMessage->twist.covariance.data(), 6, 6).diagonal();
+  float variancePrediction = static_cast<float>(timeIntervall * twistVariance.head(3).norm() * parameters_.robotTwistVarianceFactor_);
 
   cout << twistVariance.transpose() << endl;
   cout << timeIntervall << " --> " << variancePrediction << endl << endl;
