@@ -194,9 +194,13 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
+<<<<<<< HEAD
   Matrix<double, 6, 1> twistVariance = Map<const MatrixXd>(twistMessage->twist.covariance.data(), 6, 6).diagonal();
 
   float variancePrediction = static_cast<float>(timeIntervall * twistVariance.head(3).norm());
+=======
+  float motionVariance = static_cast<float>(abs(twistVariance->twist.linear.x) * parameters_.robotTwistVarianceFactor_);
+>>>>>>> refs/remotes/origin/master
 
   cout << twistVariance.transpose() << endl;
   cout << timeIntervall << " --> " << variancePrediction << endl << endl;
