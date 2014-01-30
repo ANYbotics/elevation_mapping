@@ -41,9 +41,9 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   parameters_.read(nodeHandle_);
   pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  robotTwistSubscriber_.subscribe(nodeHandle_, parameters_.robotTwistTopic_, 1);
-  robotTwistCache_.connectInput(robotTwistSubscriber_);
-  robotTwistCache_.setCacheSize(parameters_.robotTwistCacheSize_);
+  robotPoseSubscriber_.subscribe(nodeHandle_, parameters_.robotPoseTopic_, 1);
+  robotPoseCache_.connectInput(robotPoseSubscriber_);
+  robotPoseCache_.setCacheSize(parameters_.robotPoseCacheSize_);
   mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
   submapService_ = nodeHandle_.advertiseService("get_subpart_of_elevation_map", &ElevationMapping::getSubmap, this);
   initialize();
@@ -63,8 +63,8 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("track_point_x", trackPoint_.x(), 0.5);
   nodeHandle.param("track_point_y", trackPoint_.y(), 0.0);
   nodeHandle.param("track_point_z", trackPoint_.z(), 0.0);
-  nodeHandle.param("robot_twist_topic", robotTwistTopic_, string("/starleth/robot_state/twist"));
-  nodeHandle.param("robot_twist_cache_size", robotTwistCacheSize_, 100);
+  nodeHandle.param("robot_pose_topic", robotPoseTopic_, string("/starleth/robot_state/pose"));
+  nodeHandle.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
   nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
   nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
   nodeHandle.param("sensor_model_factor_a", sensorModelFactorA_, 0.003);
@@ -74,12 +74,11 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("length_in_y", length_(1), 1.5);
   nodeHandle.param("resolution", resolution_, 0.01);
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
-  nodeHandle.param("max_variance", maxVariance_, pow(0.04, 2));
+  nodeHandle.param("max_variance", maxVariance_, pow(0.03, 2));
   nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.0);
   nodeHandle.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
   nodeHandle.param("bigger_height_threshold_factor", biggerHeightThresholdFactor_, 4.0);
   nodeHandle.param("bigger_height_noise_factor", biggerHeightNoiseFactor_, 2.0);
-  nodeHandle.param("robot_twist_variance_factor", robotTwistVarianceFactor_, 1.0);
 
   double minUpdateRate;
   nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
@@ -109,13 +108,14 @@ bool ElevationMapping::ElevationMappingParameters::checkValidity()
   ROS_ASSERT(mahalanobisDistanceThreshold_ >= 0.0);
   ROS_ASSERT(multiHeightNoise_ >= 0.0);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
-  ROS_ASSERT(robotTwistCacheSize_ >= 0);
+  ROS_ASSERT(robotPoseCacheSize_ >= 0);
   return true;
 }
 
 bool ElevationMapping::initialize()
 {
   elevationMapToParentTransform_.setIdentity();
+  robotPoseCovariance_.setZero();
   resizeMap(parameters_.length_);
   resetMap();
   timeOfLastUpdate_ = Time::now();
@@ -176,32 +176,36 @@ bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
 
 bool ElevationMapping::updatePrediction(const ros::Time& time)
 {
-  ROS_DEBUG("Updating map with latest prediction from time %f.", robotTwistCache_.getLatestTime().toSec());
+  ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
 
   if (time < timeOfLastUpdate_)
   {
     ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), timeOfLastUpdate_.toSec());
     return false;
   }
-  double timeIntervall = (time - timeOfLastUpdate_).toSec();
 
   // Variance from motion prediction
-  boost::shared_ptr<geometry_msgs::TwistWithCovarianceStamped const> twistMessage = robotTwistCache_.getElemBeforeTime(time);
-  if (!twistMessage)
+  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
+  if (!poseMessage)
   {
-    ROS_ERROR("Could not get twist information from robot for time %f. Buffer empty?", time.toSec());
+    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
     return false;
   }
+  Matrix<double, 6, 6> newRobotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
 
+  Vector3d positionVariance = robotPoseCovariance_.diagonal().head(3);
+  Vector3d newPositionVariance = newRobotPoseCovariance.diagonal().head(3);
 
-  Matrix<double, 6, 1> twistVariance = Map<const MatrixXd>(twistMessage->twist.covariance.data(), 6, 6).diagonal();
-  float variancePrediction = static_cast<float>(timeIntervall * twistVariance.head(3).norm() * parameters_.robotTwistVarianceFactor_);
+  float variancePrediction = static_cast<float>((newPositionVariance - positionVariance).z());
 
-  cout << twistVariance.transpose() << endl;
-  cout << timeIntervall << " --> " << variancePrediction << endl << endl;
+  cout << positionVariance.transpose() << endl;
+  cout << newPositionVariance.transpose() << endl;
+  cout << " --> " << variancePrediction << endl << endl;
 
   // Update map
   if (variancePrediction != 0.0) varianceData_ = (varianceData_.array() + variancePrediction).matrix();
+
+  robotPoseCovariance_ = newRobotPoseCovariance;
 
   return true;
 }

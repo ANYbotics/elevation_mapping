@@ -5,6 +5,8 @@
     	 <param name="set_color_from_height" value="false" />    	 
     	 <param name="set_saturation_from_variance" value="false" />
     	 <param name="set_alpha_from_variance" value="false" />
-		 <param name="show_empty_cells" value="false" />   	 	
+		 <param name="show_empty_cells" value="false" />   	 
+		 <param name="variance_lower_value_" value="0.000009" /> 
+		 <param name="variance_upper_value_" value="0.0001" /> 
     </node>
 </launch>

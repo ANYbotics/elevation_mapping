@@ -26,7 +26,7 @@
 #include <message_filters/subscriber.h>
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
-#include <geometry_msgs/TwistWithCovarianceStamped.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 // STD
 #include <limits>
@@ -95,8 +95,8 @@ class ElevationMapping
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
   ros::Publisher elevationMapPublisher_;
-  message_filters::Subscriber<geometry_msgs::TwistWithCovarianceStamped> robotTwistSubscriber_;
-  message_filters::Cache<geometry_msgs::TwistWithCovarianceStamped> robotTwistCache_;
+  message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
+  message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
@@ -120,6 +120,8 @@ class ElevationMapping
 
   //! Circular buffer start indeces.
   Eigen::Array2i circularBufferStartIndex_;
+
+  Matrix<double, 6, 6> robotPoseCovariance_;
 
   struct ElevationMappingParameters {
     //! Map size in x, and y-direction [m].
@@ -148,7 +150,7 @@ class ElevationMapping
     std::string trackPointFrameId_;
     std::string trackPointId_;
     std::string pointCloudTopic_;
-    std::string robotTwistTopic_;
+    std::string robotPoseTopic_;
 
     double robotTwistVarianceFactor_;
 
@@ -160,7 +162,7 @@ class ElevationMapping
     double sensorModelFactorB_;
     double sensorModelFactorC_;
 
-    int robotTwistCacheSize_;
+    int robotPoseCacheSize_;
 
     bool read(ros::NodeHandle& nodeHandle);
     bool checkValidity();
