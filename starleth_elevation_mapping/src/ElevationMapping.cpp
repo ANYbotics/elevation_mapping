@@ -41,6 +41,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   parameters_.read(nodeHandle_);
   pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
+  fusedElevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map_fused", 1);
   robotPoseSubscriber_.subscribe(nodeHandle_, parameters_.robotPoseTopic_, 1);
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(parameters_.robotPoseCacheSize_);
@@ -72,7 +73,7 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
   nodeHandle.param("sensor_model_factor_c", sensorModelFactorC_, 0.25);
   nodeHandle.param("length_in_x", length_(0), 1.5);
   nodeHandle.param("length_in_y", length_(1), 1.5);
-  nodeHandle.param("resolution", resolution_, 0.01);
+  nodeHandle.param("resolution", resolution_, 0.1);
   nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
   nodeHandle.param("max_variance", maxVariance_, pow(0.03, 2));
   nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.0);
@@ -146,6 +147,8 @@ void ElevationMapping::pointCloudCallback(
   getMeasurementDistances(pointCloud, measurementDistances);
   if (!transformPointCloud(pointCloud, parameters_.elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
   else if (!addToElevationMap(pointCloud, measurementDistances)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
+  generateFusedMap();
+
   cleanElevationMap();
   if (!publishElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
@@ -196,14 +199,12 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   Vector3d positionVariance = robotPoseCovariance_.diagonal().head(3);
   Vector3d newPositionVariance = newRobotPoseCovariance.diagonal().head(3);
 
-  float variancePrediction = static_cast<float>((newPositionVariance - positionVariance).z());
-
-  cout << positionVariance.transpose() << endl;
-  cout << newPositionVariance.transpose() << endl;
-  cout << " --> " << variancePrediction << endl << endl;
+  Vector3f variancePrediction = (newPositionVariance - positionVariance).cast<float>();
 
   // Update map
-  if (variancePrediction != 0.0) varianceData_ = (varianceData_.array() + variancePrediction).matrix();
+  varianceData_ = (varianceData_.array() + variancePrediction.z()).matrix();
+  horizontalVarianceDataX_ = (horizontalVarianceDataX_.array() + variancePrediction.x()).matrix();
+  horizontalVarianceDataY_ = (horizontalVarianceDataY_.array() + variancePrediction.y()).matrix();
 
   robotPoseCovariance_ = newRobotPoseCovariance;
 
@@ -285,6 +286,8 @@ bool ElevationMapping::addToElevationMap(
 
     auto& elevation = elevationData_(index(0), index(1));
     auto& variance = varianceData_(index(0), index(1));
+    auto& horizontalVarianceX = horizontalVarianceDataX_(index(0), index(1));
+    auto& horizontalVarianceY = horizontalVarianceDataY_(index(0), index(1));
     auto& color = colorData_(index(0), index(1));
     auto& multiHeightLabel = labelData_(index(0), index(1));
     auto& measurementDistance = measurementDistances[i];
@@ -327,6 +330,9 @@ bool ElevationMapping::addToElevationMap(
       variance += parameters_.biggerHeightNoiseFactor_ * parameters_.multiHeightNoise_;
       continue;
     }
+
+    horizontalVarianceX = 0.0;
+    horizontalVarianceY = 0.0;
 
     // TODO Add label to cells which are potentially multi-level
 
@@ -377,6 +383,8 @@ bool ElevationMapping::resizeMap(const Eigen::Array2d& length)
 
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
+  horizontalVarianceDataX_.resize(nRows, nCols);
+  horizontalVarianceDataY_.resize(nRows, nCols);
   colorData_.resize(nRows, nCols);
   labelData_.resize(nRows, nCols);
 
@@ -394,6 +402,8 @@ bool ElevationMapping::resetMap()
   elevationMapToParentTransform_.setIdentity();
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(numeric_limits<float>::infinity());
+  horizontalVarianceDataX_.setConstant(numeric_limits<float>::infinity());
+  horizontalVarianceDataY_.setConstant(numeric_limits<float>::infinity());
   colorData_.setConstant(0);
   labelData_.setConstant(false);
   circularBufferStartIndex_.setZero();
@@ -505,11 +515,132 @@ bool ElevationMapping::relocateMap(const Eigen::Vector3d& position)
   return true;
 }
 
+bool ElevationMapping::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size)
+{
+  Array2i submapTopLeftIndex, submapSize;
+  if (!starleth_elevation_msg::getSubmapIndexAndSize(submapTopLeftIndex,
+                                                     submapSize, center, size,
+                                                     parameters_.length_,
+                                                     parameters_.resolution_,
+                                                     getMapBufferSize(),
+                                                     circularBufferStartIndex_))
+  {
+    ROS_ERROR("Position of requested submap is not part of the map.");
+    return false;
+  }
+
+  return getSubmap(submap, map, submapTopLeftIndex, submapSize);
+}
+
+bool ElevationMapping::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Array2i& topLeftindex, const Eigen::Array2i& size)
+{
+  std::vector<Eigen::Array2i> submapIndeces;
+  std::vector<Eigen::Array2i> submapSizes;
+
+  if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftindex, size, getMapBufferSize(), circularBufferStartIndex_))
+  {
+     ROS_ERROR("Cannot access submap of this size.");
+     return false;
+  }
+
+  unsigned int nRows =
+      (submapSizes[3](0) + submapSizes[1](0) > submapSizes[2](0) + submapSizes[0](0)) ?
+          submapSizes[3](0) + submapSizes[1](0) : submapSizes[2](0) + submapSizes[0](0);
+  unsigned int nCols =
+      (submapSizes[3](1) + submapSizes[2](1) > submapSizes[1](1) + submapSizes[0](1)) ?
+          submapSizes[3](1) + submapSizes[2](1) : submapSizes[1](1) + submapSizes[0](1);
+
+  submap.resize(nRows, nCols);
+
+  submap.topLeftCorner    (submapSizes[0](0), submapSizes[0](1)) = map.block(submapIndeces[0](0), submapIndeces[0](1), submapSizes[0](0), submapSizes[0](1));
+  submap.topRightCorner   (submapSizes[1](0), submapSizes[1](1)) = map.block(submapIndeces[1](0), submapIndeces[1](1), submapSizes[1](0), submapSizes[1](1));
+  submap.bottomLeftCorner (submapSizes[2](0), submapSizes[2](1)) = map.block(submapIndeces[2](0), submapIndeces[2](1), submapSizes[2](0), submapSizes[2](1));
+  submap.bottomRightCorner(submapSizes[3](0), submapSizes[3](1)) = map.block(submapIndeces[3](0), submapIndeces[3](1), submapSizes[3](0), submapSizes[3](1));
+
+  return true;
+}
+
 bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response)
 {
 //  res.sum = req.a + req.b;
 //  ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
 //  ROS_INFO("sending back response: [%ld]", (long int)res.sum);
+  return true;
+}
+
+bool ElevationMapping::generateFusedMap()
+{
+  ROS_DEBUG("Fusing elevation map...");
+
+  MatrixXf fusedElevationData(elevationData_.rows(), elevationData_.cols());
+  MatrixXf fusedVarianceData(varianceData_.rows(), varianceData_.cols());
+
+  fusedElevationData.setConstant(NAN);
+  fusedVarianceData.setConstant(0.0);
+
+  for (unsigned int i = 0; i < fusedElevationData.rows(); ++i)
+  {
+    for (unsigned int j = 0; j < fusedElevationData.cols(); ++j)
+    {
+      MatrixXf submap;
+      Vector2d center;
+      starleth_elevation_msg::getPositionFromIndex(center, Array2i(i, j),
+                                                   parameters_.length_, parameters_.resolution_,
+                                                   getMapBufferSize(), circularBufferStartIndex_);
+
+      Array2d size = 6 * Array2d(horizontalVarianceDataX_(i, j), horizontalVarianceDataY_(i, j)).sqrt();
+
+      // TODO Don't skip holes
+      if (!(std::isfinite(size[0]) && std::isfinite(size[1]))) continue;
+
+      getSubmap(submap, elevationData_, center, size);
+
+      unsigned int nFused = 0;
+      float elevation = elevationData_(i, j);
+
+      for (unsigned int m = 0; m < submap.rows(); ++m)
+      {
+        for (unsigned int n = 0; n < submap.cols(); ++n)
+        {
+          if (!std::isnan(submap(m, n)))
+          {
+            elevation += submap(m, n);
+            nFused++;
+          }
+        }
+      }
+
+      if (nFused > 0) fusedElevationData(i, j) = elevation / static_cast<float>(nFused);
+    }
+  }
+
+  publishFusedElevationMap(fusedElevationData, fusedVarianceData);
+
+  return true;
+}
+
+bool ElevationMapping::publishFusedElevationMap(const Eigen::MatrixXf& fusedElevationData, const Eigen::MatrixXf& fusedVarianceData)
+{
+  if (fusedElevationMapPublisher_.getNumSubscribers() < 1) return false;
+
+  starleth_elevation_msg::ElevationMap fusedElevationMapMessage;
+
+  fusedElevationMapMessage.header.stamp = timeOfLastUpdate_;
+  fusedElevationMapMessage.header.frame_id = parameters_.elevationMapFrameId_;
+  fusedElevationMapMessage.resolution = parameters_.resolution_;
+  fusedElevationMapMessage.lengthInX = parameters_.length_(0);
+  fusedElevationMapMessage.lengthInY = parameters_.length_(1);
+  fusedElevationMapMessage.outerStartIndex = circularBufferStartIndex_(0);
+  fusedElevationMapMessage.innerStartIndex = circularBufferStartIndex_(1);
+
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(fusedElevationData, fusedElevationMapMessage.elevation);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(fusedVarianceData, fusedElevationMapMessage.variance);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, fusedElevationMapMessage.color);
+
+  fusedElevationMapPublisher_.publish(fusedElevationMapMessage);
+
+  ROS_DEBUG("Fused elevation map has been published.");
+
   return true;
 }
 

@@ -86,7 +86,15 @@ class ElevationMapping
 
   bool relocateMap(const Eigen::Vector3d& position);
 
+  bool getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
+
+  bool getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Array2i& topLeftindex, const Eigen::Array2i& size);
+
   bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
+
+  bool generateFusedMap();
+
+  bool publishFusedElevationMap(const Eigen::MatrixXf& fusedElevationData, const Eigen::MatrixXf& fusedVarianceData);
 
   void resetMapUpdateTimer();
 
@@ -95,6 +103,7 @@ class ElevationMapping
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
   ros::Publisher elevationMapPublisher_;
+  ros::Publisher fusedElevationMapPublisher_;
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
   message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
   tf::TransformBroadcaster transformBroadcaster_;
@@ -107,8 +116,12 @@ class ElevationMapping
   //! Elevation height data.
   Eigen::MatrixXf elevationData_;
 
-  //! Variance data of the cells in elevationData_.
+  //! Variance data of the height of the cells in elevationData_.
   Eigen::MatrixXf varianceData_;
+
+  //! Variance data of the cells in elevationData_.
+  Eigen::MatrixXf horizontalVarianceDataX_;
+  Eigen::MatrixXf horizontalVarianceDataY_;
 
   //! Color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;

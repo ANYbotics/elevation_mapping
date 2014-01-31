@@ -11,6 +11,8 @@
 // Eigen
 #include <Eigen/Core>
 
+#include <vector>
+
 namespace starleth_elevation_msg {
 
 Eigen::Matrix2i getBufferOrderToMapFrameAlignment();
@@ -67,5 +69,45 @@ void mapIndexWithinRange(Eigen::Array2i& index,
                          const Eigen::Array2i& bufferSize);
 
 void mapIndexWithinRange(int& index, const int& bufferSize);
+
+bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
+                           Eigen::Array2i& submapSize,
+                           const Eigen::Vector2d& submapCenter,
+                           const Eigen::Array2d& submapLength,
+                           const Eigen::Array2d& mapLength,
+                           const double& resolution,
+                           const Eigen::Array2i& bufferSize,
+                           const Eigen::Array2i& bufferStartIndex);
+
+/*!
+ * The way the map is stored in the ring buffer can be split into four different regions:
+ *    0 - Top left,
+ *    1 - Top right,
+ *    2 - Bottom left,
+ *    3 - Bottom right.
+ *
+ * @param index
+ * @param bufferSize
+ * @param bufferStartIndex
+ * @return the map region number
+ */
+int getMapRegion(const Eigen::Array2i& index, const Eigen::Array2i& bufferStartIndex);
+
+/*!
+ *
+ * @param bufferIndeces
+ * @param bufferSizes
+ * @param bufferIndex the index of the top left corner of the submap
+ * @param size
+ * @param bufferSize
+ * @param bufferStartIndex
+ * @return
+ */
+bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& bufferIndeces,
+                               std::vector<Eigen::Array2i>& bufferSizes,
+                               const Eigen::Array2i& bufferIndex,
+                               const Eigen::Array2i& size,
+                               const Eigen::Array2i& bufferSize,
+                               const Eigen::Array2i& bufferStartIndex);
 
 } // namespace

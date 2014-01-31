@@ -197,4 +197,196 @@ void mapIndexWithinRange(int& index, const int& bufferSize)
   index = index % bufferSize;
 }
 
+bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
+                           Eigen::Array2i& submapSize,
+                           const Eigen::Vector2d& submapCenter,
+                           const Eigen::Array2d& submapLength,
+                           const Eigen::Array2d& mapLength,
+                           const double& resolution,
+                           const Eigen::Array2i& bufferSize,
+                           const Eigen::Array2i& bufferStartIndex)
+{
+  // Get center index
+  Array2i centerBufferIndex;
+  if (!getIndexFromPosition(centerBufferIndex, submapCenter, mapLength, resolution, bufferSize, bufferStartIndex)) return false;
+  Array2i centerRegularIndex = getIndexFromBufferIndex(centerBufferIndex, bufferSize, bufferStartIndex);
+
+  // Get size in cells
+  Array2i halfSize;
+  for (int i = 0; i < submapLength.size(); i++)
+  {
+    halfSize[i] = static_cast<int>(ceil(submapLength[i] / resolution / 2.0));
+  }
+
+  // Get top left and right bottom cell index
+  Array2i topLeftIndex = centerRegularIndex - halfSize;
+  Array2i rightBottomIndex = centerRegularIndex + halfSize;
+
+  // Correct to valid indeces
+  topLeftIndex = topLeftIndex.max(Array2i::Zero());
+  rightBottomIndex = rightBottomIndex.min(bufferSize - Array2i::Ones());
+
+  // Prepare output
+  submapTopLeftIndex = getBufferIndexFromIndex(topLeftIndex, bufferSize, bufferStartIndex);
+  submapSize = rightBottomIndex - topLeftIndex + Array2i::Ones();
+
+  return true;
+}
+
+int getMapRegion(const Eigen::Array2i& index, const Eigen::Array2i& bufferStartIndex)
+{
+  // TODO Add enum for regions.
+
+  if (index[0] >= bufferStartIndex[0] && index[1] >= bufferStartIndex[1]) return 0; // Top left
+  if (index[0] >= bufferStartIndex[0] && index[1] <  bufferStartIndex[1]) return 1; // Top right
+  if (index[0] <  bufferStartIndex[0] && index[1] >= bufferStartIndex[1]) return 2; // Bottom left
+  if (index[0] <  bufferStartIndex[0] && index[1] <  bufferStartIndex[1]) return 3; // Bottom right
+
+  return -1;
+}
+
+bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& bufferIndeces,
+                               std::vector<Eigen::Array2i>& bufferSizes,
+                               const Eigen::Array2i& index,
+                               const Eigen::Array2i& size,
+                               const Eigen::Array2i& bufferSize,
+                               const Eigen::Array2i& bufferStartIndex)
+{
+  if ((getIndexFromBufferIndex(index, bufferSize, bufferStartIndex) + size > bufferSize).all()) return false;
+
+  unsigned int nRegions = 4;
+
+  bufferIndeces.clear();
+  bufferIndeces.resize(nRegions, Array2i::Zero());
+  bufferSizes.clear();
+  bufferSizes.resize(nRegions, Array2i::Zero());
+
+  Array2i bottomRightIndex = index + size - Array2i::Ones();
+  mapIndexWithinRange(bottomRightIndex, bufferSize);
+
+  int mapRegionOfTopLeft = getMapRegion(index, bufferStartIndex);
+  int mapRegionOfBottomRight = getMapRegion(bottomRightIndex, bufferStartIndex);
+
+  if (mapRegionOfTopLeft == 0)
+  {
+
+    if (mapRegionOfBottomRight == 0)
+    {
+      bufferIndeces[0] = index;
+      bufferSizes[0] = size;
+      return true;
+    }
+
+    if (mapRegionOfBottomRight == 1)
+    {
+      bufferIndeces[0] = index;
+      bufferSizes[0](0) = size(0);
+      bufferSizes[0](1) = bufferSize(1) - index(1);
+
+      bufferIndeces[1](0) = index(0);
+      bufferIndeces[1](1) = 0;
+      bufferSizes[1](0) = size(0);
+      bufferSizes[1](1) = size(1) - bufferSizes[0](1);
+      return true;
+    }
+
+    if (mapRegionOfBottomRight == 2)
+    {
+      bufferIndeces[0] = index;
+      bufferSizes[0](0) = bufferSize(0) - index(0);
+      bufferSizes[0](1) = size(1);
+
+      bufferIndeces[2](0) = 0;
+      bufferIndeces[2](1) = index(1);
+      bufferSizes[2](0) = size(0) - bufferSizes[0](0);
+      bufferSizes[2](1) = size(1);
+      return true;
+    }
+
+    if (mapRegionOfBottomRight == 3)
+    {
+      bufferIndeces[0] = index;
+      bufferSizes[0](0) = bufferSize(0) - index(0);
+      bufferSizes[0](1) = bufferSize(1) - index(1);
+
+      bufferIndeces[1](0) = index(0);
+      bufferIndeces[1](1) = 0;
+      bufferSizes[1](0) = bufferSize(0) - index(0);
+      bufferSizes[1](1) = size(1) - bufferSizes[0](1);
+
+      bufferIndeces[2](0) = 0;
+      bufferIndeces[2](1) = index(1);
+      bufferSizes[2](0) = size(0) - bufferSizes[0](0);
+      bufferSizes[2](1) = bufferSize(1) - index(1);
+
+      bufferIndeces[3] = Array2i::Zero();
+      bufferSizes[3](0) = bufferSizes[2](0);
+      bufferSizes[3](1) = bufferSizes[1](1);
+      return true;
+    }
+
+  }
+  else if (mapRegionOfTopLeft == 1)
+  {
+
+    if (mapRegionOfBottomRight == 1)
+    {
+      bufferIndeces[1] = index;
+      bufferSizes[1] = size;
+      return true;
+    }
+
+    if (mapRegionOfBottomRight == 3)
+    {
+      bufferIndeces[1] = index;
+      bufferSizes[1](0) = bufferSize(0) - index(0);
+      bufferSizes[1](1) = size(1);
+
+      bufferIndeces[3](0) = 0;
+      bufferIndeces[3](1) = index(1);
+      bufferSizes[3](0) = size(0) - bufferSizes[1](0);
+      bufferSizes[3](1) = size(1);
+      return true;
+    }
+
+  }
+  else if (mapRegionOfTopLeft == 2)
+  {
+
+    if (mapRegionOfBottomRight == 2)
+    {
+      bufferIndeces[2] = index;
+      bufferSizes[2] = size;
+      return true;
+    }
+
+    if (mapRegionOfBottomRight == 3)
+    {
+      bufferIndeces[2] = index;
+      bufferSizes[2](0) = size(0);
+      bufferSizes[2](1) = bufferSize(1) - index(1);
+
+      bufferIndeces[3](0) = index(0);
+      bufferIndeces[3](1) = 0;
+      bufferSizes[3](0) = size(0);
+      bufferSizes[3](1) = size(1) - bufferSizes[2](1);
+      return true;
+    }
+
+  }
+  else if (mapRegionOfTopLeft == 3)
+  {
+
+    if (mapRegionOfBottomRight == 3)
+    {
+      bufferIndeces[3] = index;
+      bufferSizes[3] = size;
+      return true;
+    }
+
+  }
+
+  return false;
+}
+
 }  // namespace
