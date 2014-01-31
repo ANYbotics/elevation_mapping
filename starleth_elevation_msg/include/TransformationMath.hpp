@@ -71,6 +71,7 @@ void mapIndexWithinRange(Eigen::Array2i& index,
 void mapIndexWithinRange(int& index, const int& bufferSize);
 
 bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
+                           Eigen::Array2i& centerIndexInSubmap,
                            Eigen::Array2i& submapSize,
                            const Eigen::Vector2d& submapCenter,
                            const Eigen::Array2d& submapLength,

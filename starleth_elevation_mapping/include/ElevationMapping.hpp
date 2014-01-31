@@ -86,7 +86,7 @@ class ElevationMapping
 
   bool relocateMap(const Eigen::Vector3d& position);
 
-  bool getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
+  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
 
   bool getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Array2i& topLeftindex, const Eigen::Array2i& size);
 
@@ -99,6 +99,8 @@ class ElevationMapping
   void resetMapUpdateTimer();
 
   void stopMapUpdateTimer();
+
+  float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;

@@ -198,6 +198,7 @@ void mapIndexWithinRange(int& index, const int& bufferSize)
 }
 
 bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
+                           Eigen::Array2i& centerIndexInSubmap,
                            Eigen::Array2i& submapSize,
                            const Eigen::Vector2d& submapCenter,
                            const Eigen::Array2d& submapLength,
@@ -227,6 +228,7 @@ bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
   rightBottomIndex = rightBottomIndex.min(bufferSize - Array2i::Ones());
 
   // Prepare output
+  centerIndexInSubmap = centerRegularIndex - topLeftIndex;
   submapTopLeftIndex = getBufferIndexFromIndex(topLeftIndex, bufferSize, bufferStartIndex);
   submapSize = rightBottomIndex - topLeftIndex + Array2i::Ones();
 

@@ -147,9 +147,8 @@ void ElevationMapping::pointCloudCallback(
   getMeasurementDistances(pointCloud, measurementDistances);
   if (!transformPointCloud(pointCloud, parameters_.elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
   else if (!addToElevationMap(pointCloud, measurementDistances)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
-  generateFusedMap();
-
   cleanElevationMap();
+  generateFusedMap();
   if (!publishElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
 }
@@ -164,6 +163,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   if (!updatePrediction(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   timeOfLastUpdate_ = time;
   cleanElevationMap();
+  generateFusedMap();
   if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
 }
@@ -205,6 +205,11 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   varianceData_ = (varianceData_.array() + variancePrediction.z()).matrix();
   horizontalVarianceDataX_ = (horizontalVarianceDataX_.array() + variancePrediction.x()).matrix();
   horizontalVarianceDataY_ = (horizontalVarianceDataY_.array() + variancePrediction.y()).matrix();
+
+  // Make valid variances
+  varianceData_ = varianceData_.cwiseMax(0.0);
+  horizontalVarianceDataX_ = horizontalVarianceDataX_.cwiseMax(0.0);
+  horizontalVarianceDataY_ = horizontalVarianceDataY_.cwiseMax(0.0);
 
   robotPoseCovariance_ = newRobotPoseCovariance;
 
@@ -515,10 +520,10 @@ bool ElevationMapping::relocateMap(const Eigen::Vector3d& position)
   return true;
 }
 
-bool ElevationMapping::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size)
+bool ElevationMapping::getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size)
 {
   Array2i submapTopLeftIndex, submapSize;
-  if (!starleth_elevation_msg::getSubmapIndexAndSize(submapTopLeftIndex,
+  if (!starleth_elevation_msg::getSubmapIndexAndSize(submapTopLeftIndex, centerIndex,
                                                      submapSize, center, size,
                                                      parameters_.length_,
                                                      parameters_.resolution_,
@@ -572,45 +577,112 @@ bool ElevationMapping::generateFusedMap()
 {
   ROS_DEBUG("Fusing elevation map...");
 
+  // Initializations
   MatrixXf fusedElevationData(elevationData_.rows(), elevationData_.cols());
   MatrixXf fusedVarianceData(varianceData_.rows(), varianceData_.cols());
-
   fusedElevationData.setConstant(NAN);
-  fusedVarianceData.setConstant(0.0);
+  fusedVarianceData.setConstant(numeric_limits<float>::infinity());
 
+  // For each cell in map
   for (unsigned int i = 0; i < fusedElevationData.rows(); ++i)
   {
     for (unsigned int j = 0; j < fusedElevationData.cols(); ++j)
     {
-      MatrixXf submap;
+      // Center of submap in map
       Vector2d center;
       starleth_elevation_msg::getPositionFromIndex(center, Array2i(i, j),
                                                    parameters_.length_, parameters_.resolution_,
                                                    getMapBufferSize(), circularBufferStartIndex_);
 
-      Array2d size = 6 * Array2d(horizontalVarianceDataX_(i, j), horizontalVarianceDataY_(i, j)).sqrt();
+      // Size of submap (2 sigma bound)
+      Array2d size = 4 * Array2d(horizontalVarianceDataX_(i, j), horizontalVarianceDataY_(i, j)).sqrt();
 
       // TODO Don't skip holes
       if (!(std::isfinite(size[0]) && std::isfinite(size[1]))) continue;
 
-      getSubmap(submap, elevationData_, center, size);
+      // Get submap data
+      MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
+      Array2i centerIndex;
+      getSubmap(elevationSubmap, centerIndex, elevationData_, center, size);
+      getSubmap(variancesSubmap, centerIndex, varianceData_, center, size);
+      getSubmap(horizontalVariancesXSubmap, centerIndex, horizontalVarianceDataX_, center, size);
+      getSubmap(horizontalVariancesYSubmap, centerIndex, horizontalVarianceDataY_, center, size);
 
-      unsigned int nFused = 0;
-      float elevation = elevationData_(i, j);
+      // Prepare data fusion
+      ArrayXf means, variances, weights;
+      Array2i submapBufferSize(elevationSubmap.rows(), elevationSubmap.cols());
+      int maxNumberOfCellsToFuse = submapBufferSize.prod();
+      means.resize(maxNumberOfCellsToFuse);
+      variances.resize(maxNumberOfCellsToFuse);
+      weights.resize(maxNumberOfCellsToFuse);
 
-      for (unsigned int m = 0; m < submap.rows(); ++m)
+      // Position of center index in submap
+      Vector2d centerInSubmap;
+      starleth_elevation_msg::getPositionFromIndex(centerInSubmap, centerIndex,
+                                                   size, parameters_.resolution_,
+                                                   submapBufferSize, Array2i(0, 0));
+
+      unsigned int n = 0;
+
+      for (unsigned int p = 0; p < elevationSubmap.rows(); ++p)
       {
-        for (unsigned int n = 0; n < submap.cols(); ++n)
+        for (unsigned int q = 0; q < elevationSubmap.cols(); ++q)
         {
-          if (!std::isnan(submap(m, n)))
-          {
-            elevation += submap(m, n);
-            nFused++;
-          }
+          if (!(std::isfinite(elevationSubmap(p, q))
+               && std::isfinite(variancesSubmap(p, q))
+               && std::isnormal(horizontalVariancesXSubmap(p, q))
+               && std::isnormal(horizontalVariancesYSubmap(p, q)))) continue;
+
+          means[n] = elevationSubmap(p, q);
+          variances[n] = variancesSubmap(p, q);
+
+          // Compute weight from probability
+          Vector2d positionInSubmap;
+          starleth_elevation_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
+                                                       size, parameters_.resolution_,
+                                                       submapBufferSize, Array2i(0, 0));
+
+          Vector2d distanceToCenter = positionInSubmap - centerInSubmap;
+
+          float probabilityX = fabs(
+                cumulativeDistributionFunction(distanceToCenter.x() - parameters_.resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q)))
+              - cumulativeDistributionFunction(distanceToCenter.x() + parameters_.resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q))));
+          float probabilityY = fabs(
+                cumulativeDistributionFunction(distanceToCenter.y() - parameters_.resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q)))
+              - cumulativeDistributionFunction(distanceToCenter.y() + parameters_.resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q))));
+
+          weights[n] = probabilityX * probabilityY;
+
+          n++;
         }
       }
 
-      if (nFused > 0) fusedElevationData(i, j) = elevation / static_cast<float>(nFused);
+      if (n == 0)
+      {
+        // Nothing to fuse
+        fusedElevationData(i, j) = elevationData_(i, j);
+        fusedVarianceData(i, j) = varianceData_(i, j);
+        continue;
+      }
+
+      // Fuse
+      means.conservativeResize(n);
+      variances.conservativeResize(n);
+      weights.conservativeResize(n);
+
+      float mean = (weights * means).sum() / weights.sum();
+      float variance = sqrt( (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2) );
+      if(std::isnan(-variance)) variance = 0.0;
+
+      if (!(std::isfinite(variance) && std::isfinite(mean)))
+      {
+        ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
+        continue;
+      }
+
+      // Add to fused map
+      fusedElevationData(i, j) = mean;
+      fusedVarianceData(i, j) = variance;
     }
   }
 
@@ -654,6 +726,11 @@ void ElevationMapping::resetMapUpdateTimer()
 void ElevationMapping::stopMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
+}
+
+float ElevationMapping::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
+{
+  return 0.5 * erfc(-(x-mean)/(standardDeviation*sqrt(2.0)));
 }
 
 } /* namespace starleth_elevation_map */
