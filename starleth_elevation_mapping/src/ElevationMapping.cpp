@@ -671,7 +671,7 @@ bool ElevationMapping::generateFusedMap()
       weights.conservativeResize(n);
 
       float mean = (weights * means).sum() / weights.sum();
-      float variance = sqrt( (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2) );
+      float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
       if(std::isnan(-variance)) variance = 0.0;
 
       if (!(std::isfinite(variance) && std::isfinite(mean)))
