@@ -11,6 +11,9 @@
 // StarlETH Navigation
 #include <starleth_elevation_msg/ElevationSubmap.h>
 #include <EigenConversions.hpp>
+#include "ElevationMap.hpp"
+#include "PrimeSenseSensorProcessor.hpp"
+#include "CovarianceMapUpdater.hpp"
 
 // Eigen
 #include <Eigen/Core>
@@ -22,6 +25,7 @@
 
 // ROS
 #include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <message_filters/cache.h>
 #include <message_filters/subscriber.h>
 #include <tf/transform_listener.h>
@@ -59,48 +63,17 @@ class ElevationMapping
    */
   bool updatePrediction(const ros::Time& time);
 
-  bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
-
-  bool getMeasurementDistances(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& measurementDistances);
-
-  bool transformPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
-                           const std::string& targetFrame);
-
-  bool addToElevationMap(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& measurementDistances);
-
-  bool cleanElevationMap();
-
   bool publishElevationMap();
-
-  bool resizeMap(const Eigen::Array2d& length);
-
-  Eigen::Vector2i getMapBufferSize();
-
-  bool resetMap();
-
-  void resetCols(unsigned int index, unsigned int nCols);
-
-  void resetRows(unsigned int index, unsigned int nRows);
 
   bool updateMapLocation();
 
-  bool relocateMap(const Eigen::Vector3d& position);
-
-  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
-
-  bool getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Array2i& topLeftindex, const Eigen::Array2i& size);
-
   bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
-
-  bool generateFusedMap();
 
   bool publishFusedElevationMap(const Eigen::MatrixXf& fusedElevationData, const Eigen::MatrixXf& fusedVarianceData);
 
   void resetMapUpdateTimer();
 
   void stopMapUpdateTimer();
-
-  float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
@@ -113,46 +86,14 @@ class ElevationMapping
   ros::Timer mapUpdateTimer_;
   ros::ServiceServer submapService_;
 
+  ElevationMap map_;
+  PrimeSenseSensorProcessor sensorProcessor_;
+  CovarianceMapUpdater mapUpdater_;
+
   ros::Time timeOfLastUpdate_;
 
-  //! Elevation height data.
-  Eigen::MatrixXf elevationData_;
-
-  //! Variance data of the height of the cells in elevationData_.
-  Eigen::MatrixXf varianceData_;
-
-  //! Variance data of the cells in elevationData_.
-  Eigen::MatrixXf horizontalVarianceDataX_;
-  Eigen::MatrixXf horizontalVarianceDataY_;
-
-  //! Color data.
-  Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
-
-  //! Label data.
-  Eigen::Matrix<unsigned int, Eigen::Dynamic, Eigen::Dynamic> labelData_;
-
-  Eigen::Affine3d elevationMapToParentTransform_;
-
-  //! Circular buffer start indeces.
-  Eigen::Array2i circularBufferStartIndex_;
-
-  Matrix<double, 6, 6> robotPoseCovariance_;
-
   struct ElevationMappingParameters {
-    //! Map size in x, and y-direction [m].
-    Eigen::Array2d length_;
 
-    //! Map resolution in xy plane [m/cell].
-    double resolution_;
-
-    double minVariance_;
-    double maxVariance_;
-
-    double mahalanobisDistanceThreshold_;
-
-    double multiHeightNoise_;
-    double biggerHeightThresholdFactor_;
-    double biggerHeightNoiseFactor_;
 
     //! Maximum time that the map will not be updated.
     ros::Duration maxNoUpdateDuration_;
@@ -167,15 +108,9 @@ class ElevationMapping
     std::string pointCloudTopic_;
     std::string robotPoseTopic_;
 
-    double robotTwistVarianceFactor_;
-
     Eigen::Vector3d trackPoint_;
 
-    double sensorCutoffMinDepth_;
-    double sensorCutoffMaxDepth_;
-    double sensorModelFactorA_;
-    double sensorModelFactorB_;
-    double sensorModelFactorC_;
+
 
     int robotPoseCacheSize_;
 

@@ -89,6 +89,9 @@ add_executable(
 	starleth_elevation_mapping
 	src/starleth_elevation_mapping_node.cpp
 	src/ElevationMapping.cpp
+	src/ElevationMap.cpp
+	src/PrimeSenseSensorProcessor.cpp
+	src/CovarianceMapUpdater.cpp
 )
 
 ## Add cmake target dependencies of the executable/library
