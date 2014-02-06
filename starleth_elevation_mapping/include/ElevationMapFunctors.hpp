@@ -1,5 +1,5 @@
 /*
- * ElevationMapHelpers.hpp
+ * ElevationMapFunctors.hpp
  *
  *  Created on: Jan 4, 2014
  *      Author: Péter Fankhauser
