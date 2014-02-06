@@ -128,13 +128,19 @@ void ElevationMapping::pointCloudCallback(
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
+  Time& time = pointCloud->header.stamp;
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
-  Time& time = pointCloud->header.stamp;
+  // Update map location.
   updateMapLocation();
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
-  if (!updatePrediction(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
-  timeOfLastUpdate_ = time;
+
+  // Update map from motion prediction.
+  if (!updatePrediction(time)) {
+    ROS_ERROR("ElevationMap: Updating process noise failed.");
+    resetMapUpdateTimer();
+    return;
+  }
 
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
@@ -142,13 +148,22 @@ void ElevationMapping::pointCloudCallback(
   if(!sensorProcessor_.process(pointCloud, elevationMapFrameId_, pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("ElevationMap: Point cloud could not be processed.");
+    resetMapUpdateTimer();
     return;
   }
 
-//  else if (!addToElevationMap(pointCloud, measurementDistances)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
-//  cleanElevationMap();
-//  generateFusedMap();
+  // Add point cloud to elevation map.
+  if (!map_.add(pointCloud, measurementVariances))
+  {
+    ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
+    resetMapUpdateTimer();
+    return;
+  }
+
+  // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
+
+  timeOfLastUpdate_ = time;
   resetMapUpdateTimer();
 }
 
@@ -158,12 +173,19 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
 
   stopMapUpdateTimer();
   Time time = Time::now();
+
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
-  if (!updatePrediction(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
-  timeOfLastUpdate_ = time;
-//  cleanElevationMap();
-//  generateFusedMap();
+
+  // Update map from motion prediction.
+  if (!updatePrediction(time)) {
+    ROS_ERROR("ElevationMap: Updating process noise failed.");
+    resetMapUpdateTimer();
+    return;
+  }
+
+  // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
+
   resetMapUpdateTimer();
 }
 
@@ -203,6 +225,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 
   // Update map.
   map_.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
+  timeOfLastUpdate_ = time;
 
   return true;
 }

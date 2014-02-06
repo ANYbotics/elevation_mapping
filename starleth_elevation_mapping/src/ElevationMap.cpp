@@ -9,8 +9,8 @@
 
 // StarlETH Navigation
 #include "ElevationMapFunctors.hpp"
-#include <starleth_elevation_msg/ElevationMap.h>
 #include <TransformationMath.hpp>
+#include <ElevationMessageHelpers.hpp>
 
 // Math
 #include <math.h>
@@ -63,73 +63,73 @@ bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolutio
   return true;
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::Matrix<float, Eigen::Dynamic, 3>& variances)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::Matrix<float, Eigen::Dynamic, 3>& pointCloudVariances)
 {
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
-//    auto& point = pointCloud->points[i];
-//
-//    Array2i index;
-//    if (!starleth_elevation_msg::getIndexFromPosition(
-//        index, Vector2d(point.x, point.y), length_, resolution_, getMapBufferSize(), bufferStartIndex_))
-//      continue; // Skip this point if it does not lie within the elevation map
-//
-//    auto& elevation = elevationData_(index(0), index(1));
-//    auto& variance = varianceData_(index(0), index(1));
-//    auto& horizontalVarianceX = horizontalVarianceDataX_(index(0), index(1));
-//    auto& horizontalVarianceY = horizontalVarianceDataY_(index(0), index(1));
-//    auto& color = colorData_(index(0), index(1));
-//    auto& multiHeightLabel = labelData_(index(0), index(1));
-//    auto& measurementDistance = measurementDistances[i];
-//
-//    float measurementStandardDeviation = parameters_.sensorModelFactorA_
-//        + parameters_.sensorModelFactorB_ * pow(measurementDistance - parameters_.sensorModelFactorC_, 2);
-//    float measurementVariance = pow(measurementStandardDeviation, 2);
-//
-//    if (std::isnan(elevation) || std::isinf(variance))
-//    {
-//      // No prior information in elevation map, use measurement.
-//      elevation = point.z;
-//      variance = measurementVariance;
-//      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
-//      continue;
-//    }
-//
-//    double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
-//
-//    if (mahalanobisDistance < parameters_.mahalanobisDistanceThreshold_)
-//    {
-//      // Fuse measurement with elevation map data.
-//      elevation = (variance * point.z + measurementVariance * elevation) / (variance + measurementVariance);
-//      variance =  (measurementVariance * variance) / (measurementVariance + variance);
-//      // TODO add color fusion
-//      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
-//      continue;
-//    }
-//    if (point.z > elevation && mahalanobisDistance < parameters_.biggerHeightThresholdFactor_ * parameters_.mahalanobisDistanceThreshold_)
-//    {
-//      // Overwrite elevation map information with measurement data
-//      elevation = point.z;
-//      variance = measurementVariance;
-//      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
-//      continue;
-//    }
-//
-//    if (point.z > elevation && mahalanobisDistance > parameters_.biggerHeightThresholdFactor_ * parameters_.mahalanobisDistanceThreshold_)
-//    {
-//      variance += parameters_.biggerHeightNoiseFactor_ * parameters_.multiHeightNoise_;
-//      continue;
-//    }
-//
-//    horizontalVarianceX = 0.0;
-//    horizontalVarianceY = 0.0;
-//
-//    // TODO Add label to cells which are potentially multi-level
-//
-//    // Add noise to cells which have ignored lower values,
-//    // such we outliers and moving objects are removed
-//    variance += parameters_.multiHeightNoise_;
+    auto& point = pointCloud->points[i];
+
+    Array2i index;
+    if (!starleth_elevation_msg::getIndexFromPosition(
+        index, Vector2d(point.x, point.y), length_, resolution_, getBufferSize(), bufferStartIndex_))
+      continue; // Skip this point if it does not lie within the elevation map
+
+    auto& elevation = elevationData_(index(0), index(1));
+    auto& variance = varianceData_(index(0), index(1));
+    auto& horizontalVarianceX = horizontalVarianceDataX_(index(0), index(1));
+    auto& horizontalVarianceY = horizontalVarianceDataY_(index(0), index(1));
+    auto& color = colorData_(index(0), index(1));
+    auto& multiHeightLabel = labelData_(index(0), index(1));
+    RowVector3f pointVariance = pointCloudVariances.row(i);
+
+    if (std::isnan(elevation) || std::isinf(variance))
+    {
+      // No prior information in elevation map, use measurement.
+      elevation = point.z;
+      variance = pointVariance.z();
+      horizontalVarianceX = pointVariance.x();
+      horizontalVarianceY = pointVariance.y();
+      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      continue;
+    }
+
+    double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
+
+    if (mahalanobisDistance < mahalanobisDistanceThreshold_)
+    {
+      // Fuse measurement with elevation map data.
+      elevation = (variance * point.z + pointVariance.z() * elevation) / (variance + pointVariance.z());
+      variance =  (pointVariance.z() * variance) / (pointVariance.z() + variance);
+      // TODO add color fusion
+      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      continue;
+    }
+    if (point.z > elevation && mahalanobisDistance < biggerHeightThresholdFactor_ * mahalanobisDistanceThreshold_)
+    {
+      // Overwrite elevation map information with measurement data
+      elevation = point.z;
+      variance = pointVariance.z();
+      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      continue;
+    }
+
+    if (point.z > elevation && mahalanobisDistance > biggerHeightThresholdFactor_ * mahalanobisDistanceThreshold_)
+    {
+      variance += biggerHeightNoiseFactor_ * multiHeightNoise_;
+      continue;
+    }
+
+    horizontalVarianceX = 0.0;
+    horizontalVarianceY = 0.0;
+
+    // TODO Add label to cells which are potentially multi-level
+
+    // Add noise to cells which have ignored lower values,
+    // such we outliers and moving objects are removed
+    variance += multiHeightNoise_;
   }
+
+  clean();
 
   return true;
 }
@@ -162,30 +162,30 @@ bool ElevationMap::generateFusedMap()
   // TODO
 //  ROS_DEBUG("Fusing elevation map...");
 
-  // Initializations
+  // Initializations.
   MatrixXf fusedElevationData(elevationData_.rows(), elevationData_.cols());
   MatrixXf fusedVarianceData(varianceData_.rows(), varianceData_.cols());
   fusedElevationData.setConstant(NAN);
   fusedVarianceData.setConstant(numeric_limits<float>::infinity());
 
-  // For each cell in map
+  // For each cell in map.
   for (unsigned int i = 0; i < fusedElevationData.rows(); ++i)
   {
     for (unsigned int j = 0; j < fusedElevationData.cols(); ++j)
     {
-      // Center of submap in map
+      // Center of submap in map.
       Vector2d center;
       starleth_elevation_msg::getPositionFromIndex(center, Array2i(i, j),
                                                    length_, resolution_,
                                                    getBufferSize(), bufferStartIndex_);
 
-      // Size of submap (2 sigma bound)
+      // Size of submap (2 sigma bound).
       Array2d size = 4 * Array2d(horizontalVarianceDataX_(i, j), horizontalVarianceDataY_(i, j)).sqrt();
 
-      // TODO Don't skip holes
+      // TODO Don't skip holes.
       if (!(std::isfinite(size[0]) && std::isfinite(size[1]))) continue;
 
-      // Get submap data
+      // Get submap data.
       MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
       Array2i centerIndex;
       getSubmap(elevationSubmap, centerIndex, elevationData_, center, size);
@@ -193,7 +193,7 @@ bool ElevationMap::generateFusedMap()
       getSubmap(horizontalVariancesXSubmap, centerIndex, horizontalVarianceDataX_, center, size);
       getSubmap(horizontalVariancesYSubmap, centerIndex, horizontalVarianceDataY_, center, size);
 
-      // Prepare data fusion
+      // Prepare data fusion.
       ArrayXf means, variances, weights;
       Array2i submapBufferSize(elevationSubmap.rows(), elevationSubmap.cols());
       int maxNumberOfCellsToFuse = submapBufferSize.prod();
@@ -201,7 +201,7 @@ bool ElevationMap::generateFusedMap()
       variances.resize(maxNumberOfCellsToFuse);
       weights.resize(maxNumberOfCellsToFuse);
 
-      // Position of center index in submap
+      // Position of center index in submap.
       Vector2d centerInSubmap;
       starleth_elevation_msg::getPositionFromIndex(centerInSubmap, centerIndex,
                                                    size, resolution_,
@@ -221,7 +221,7 @@ bool ElevationMap::generateFusedMap()
           means[n] = elevationSubmap(p, q);
           variances[n] = variancesSubmap(p, q);
 
-          // Compute weight from probability
+          // Compute weight from probability.
           Vector2d positionInSubmap;
           starleth_elevation_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
                                                        size, resolution_,
@@ -244,13 +244,13 @@ bool ElevationMap::generateFusedMap()
 
       if (n == 0)
       {
-        // Nothing to fuse
+        // Nothing to fuse.
         fusedElevationData(i, j) = elevationData_(i, j);
         fusedVarianceData(i, j) = varianceData_(i, j);
         continue;
       }
 
-      // Fuse
+      // Fuse.
       means.conservativeResize(n);
       variances.conservativeResize(n);
       weights.conservativeResize(n);
@@ -266,13 +266,11 @@ bool ElevationMap::generateFusedMap()
         continue;
       }
 
-      // Add to fused map
+      // Add to fused map.
       fusedElevationData(i, j) = mean;
       fusedVarianceData(i, j) = variance;
     }
   }
-
-//  publishFusedElevationMap(fusedElevationData, fusedVarianceData);
 
   return true;
 }
@@ -336,19 +334,19 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
   Array2i indexShift;
   starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);
 
-  // Delete fields that fall out of map (and become empty cells)
+  // Delete fields that fall out of map (and become empty cells).
   for (int i = 0; i < indexShift.size(); i++)
   {
     if (indexShift[i] != 0)
     {
       if (abs(indexShift[i]) >= getBufferSize()(i))
       {
-        // Entire map is dropped
+        // Entire map is dropped.
         elevationData_.setConstant(NAN);
       }
       else
       {
-        // Drop cells out of map
+        // Drop cells out of map.
         int sign = (indexShift[i] > 0 ? 1 : -1);
         int startIndex = bufferStartIndex_[i] - (sign < 0 ? 1 : 0);
         int endIndex = startIndex - sign + indexShift[i];
@@ -359,13 +357,13 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
 
         if (index + nCells <= getBufferSize()[i])
         {
-          // One region to drop
+          // One region to drop.
           if (i == 0) resetCols(index, nCells);
           if (i == 1) resetRows(index, nCells);
         }
         else
         {
-          // Two regions to drop
+          // Two regions to drop.
           int firstIndex = index;
           int firstNCells = getBufferSize()[i] - firstIndex;
           if (i == 0) resetCols(firstIndex, firstNCells);
@@ -380,7 +378,7 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
     }
   }
 
-  // Udpate information
+  // Update information.
   bufferStartIndex_ += indexShift;
   starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
 
