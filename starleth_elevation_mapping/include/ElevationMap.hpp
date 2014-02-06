@@ -31,6 +31,8 @@ class ElevationMap
 
   bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::Matrix<float, Eigen::Dynamic, 3>& variances);
 
+  bool update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX, Eigen::MatrixXf horizontalVarianceUpdateY);
+
   bool generateFusedMap();
 
   bool getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
@@ -41,16 +43,33 @@ class ElevationMap
 
   bool reset();
 
+  const double& getResolution();
+
+  const Eigen::Array2d& getLength();
+
+  const Eigen::Affine3d& getMapToParentTransform();
+
+  const Eigen::Array2i& getBufferStartIndex();
+
+  const Eigen::MatrixXf& getRawElevationData();
+
+  const Eigen::MatrixXf& getRawVarianceData();
+
+  const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& getRawColorData();
+
+  Eigen::Array2i getBufferSize();
+
+  // Parameters
   double minVariance_;
   double maxVariance_;
   double mahalanobisDistanceThreshold_;
   double multiHeightNoise_;
   double biggerHeightThresholdFactor_;
   double biggerHeightNoiseFactor_;
+  double minHorizontalVariance_;
+  double maxHorizontalVariance_;
 
  private:
-
-  Eigen::Vector2i getMapBufferSize();
 
   bool clean();
 
@@ -80,8 +99,6 @@ class ElevationMap
 
   //! Circular buffer start indeces.
   Eigen::Array2i bufferStartIndex_;
-
-  // Parameters
 
   //! Map size in x, and y-direction [m].
   Eigen::Array2d length_;

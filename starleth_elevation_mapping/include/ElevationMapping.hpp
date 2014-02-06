@@ -65,13 +65,11 @@ class ElevationMapping
    */
   bool updatePrediction(const ros::Time& time);
 
-  bool publishElevationMap();
+  bool publishRawElevationMap();
 
   bool updateMapLocation();
 
   bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
-
-  bool publishFusedElevationMap(const Eigen::MatrixXf& fusedElevationData, const Eigen::MatrixXf& fusedVarianceData);
 
   void resetMapUpdateTimer();
 

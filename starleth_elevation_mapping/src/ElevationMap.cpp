@@ -22,12 +22,20 @@ namespace starleth_elevation_mapping {
 
 ElevationMap::ElevationMap()
 {
+  minVariance_ = 0.0;
+  maxVariance_ = 0.0;
+  mahalanobisDistanceThreshold_ = 0.0;
+  multiHeightNoise_ = 0.0;
+  biggerHeightThresholdFactor_ = 0.0;
+  biggerHeightNoiseFactor_ = 0.0;
+  minHorizontalVariance_ = 0.0;
+  maxHorizontalVariance_ = 0.0;
   reset();
 }
 
 ElevationMap::~ElevationMap()
 {
-  // TODO Auto-generated destructor stub
+
 }
 
 bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolution)
@@ -126,6 +134,28 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   return true;
 }
 
+bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX, Eigen::MatrixXf horizontalVarianceUpdateY)
+{
+  Array2i bufferSize = getBufferSize();
+
+  if (!(
+      (Array2i(varianceUpdate.rows(), varianceUpdate.cols()) == bufferSize).all() &&
+      (Array2i(horizontalVarianceUpdateX.rows(), horizontalVarianceUpdateX.cols()) == bufferSize).all() &&
+      (Array2i(horizontalVarianceUpdateY.rows(), horizontalVarianceUpdateY.cols()) == bufferSize).all()
+      ))
+  {
+    // TODO add sm
+    return false;
+  }
+
+  varianceData_ += varianceUpdate;
+  horizontalVarianceDataX_ += horizontalVarianceUpdateX;
+  horizontalVarianceDataY_ += horizontalVarianceUpdateY;
+  clean();
+
+  return true;
+}
+
 
 bool ElevationMap::generateFusedMap()
 {
@@ -147,7 +177,7 @@ bool ElevationMap::generateFusedMap()
       Vector2d center;
       starleth_elevation_msg::getPositionFromIndex(center, Array2i(i, j),
                                                    length_, resolution_,
-                                                   getMapBufferSize(), bufferStartIndex_);
+                                                   getBufferSize(), bufferStartIndex_);
 
       // Size of submap (2 sigma bound)
       Array2d size = 4 * Array2d(horizontalVarianceDataX_(i, j), horizontalVarianceDataY_(i, j)).sqrt();
@@ -254,7 +284,7 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerInde
                                                      submapSize, center, size,
                                                      length_,
                                                      resolution_,
-                                                     getMapBufferSize(),
+                                                     getBufferSize(),
                                                      bufferStartIndex_))
   {
     // TODO
@@ -270,7 +300,7 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map
   std::vector<Eigen::Array2i> submapIndeces;
   std::vector<Eigen::Array2i> submapSizes;
 
-  if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftindex, size, getMapBufferSize(), bufferStartIndex_))
+  if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftindex, size, getBufferSize(), bufferStartIndex_))
   {
     // TODO
 //     ROS_ERROR("Cannot access submap of this size.");
@@ -311,7 +341,7 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
   {
     if (indexShift[i] != 0)
     {
-      if (abs(indexShift[i]) >= getMapBufferSize()(i))
+      if (abs(indexShift[i]) >= getBufferSize()(i))
       {
         // Entire map is dropped
         elevationData_.setConstant(NAN);
@@ -325,9 +355,9 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
         int nCells = abs(indexShift[i]);
 
         int index = (sign > 0 ? startIndex : endIndex);
-        starleth_elevation_msg::mapIndexWithinRange(index, getMapBufferSize()[i]);
+        starleth_elevation_msg::mapIndexWithinRange(index, getBufferSize()[i]);
 
-        if (index + nCells <= getMapBufferSize()[i])
+        if (index + nCells <= getBufferSize()[i])
         {
           // One region to drop
           if (i == 0) resetCols(index, nCells);
@@ -337,7 +367,7 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
         {
           // Two regions to drop
           int firstIndex = index;
-          int firstNCells = getMapBufferSize()[i] - firstIndex;
+          int firstNCells = getBufferSize()[i] - firstIndex;
           if (i == 0) resetCols(firstIndex, firstNCells);
           if (i == 1) resetRows(firstIndex, firstNCells);
 
@@ -352,7 +382,7 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
 
   // Udpate information
   bufferStartIndex_ += indexShift;
-  starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getMapBufferSize());
+  starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
 
   toParentTransform_.translation().head(2) = alignedPosition;
 
@@ -374,25 +404,62 @@ bool ElevationMap::reset()
   return true;
 }
 
-Eigen::Vector2i ElevationMap::getMapBufferSize()
+Eigen::Array2i ElevationMap::getBufferSize()
 {
-  return Vector2i(elevationData_.rows(), elevationData_.cols());
+  return Array2i(elevationData_.rows(), elevationData_.cols());
 }
 
 bool ElevationMap::clean()
 {
   varianceData_ = varianceData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
+  horizontalVarianceDataX_ = horizontalVarianceDataX_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
+  horizontalVarianceDataY_ = horizontalVarianceDataY_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
   return true;
 }
 
 void ElevationMap::resetCols(unsigned int index, unsigned int nCols)
 {
-  elevationData_.block(index, 0, nCols, getMapBufferSize()[1]).setConstant(NAN);
+  elevationData_.block(index, 0, nCols, getBufferSize()[1]).setConstant(NAN);
 }
 
 void ElevationMap::resetRows(unsigned int index, unsigned int nRows)
 {
-  elevationData_.block(0, index, getMapBufferSize()[0], nRows).setConstant(NAN);
+  elevationData_.block(0, index, getBufferSize()[0], nRows).setConstant(NAN);
+}
+
+const double& ElevationMap::getResolution()
+{
+  return resolution_;
+}
+
+const Eigen::Array2d& ElevationMap::getLength()
+{
+  return length_;
+}
+
+const Eigen::Affine3d& ElevationMap::getMapToParentTransform()
+{
+  return toParentTransform_;
+}
+
+const Eigen::Array2i& ElevationMap::getBufferStartIndex()
+{
+  return bufferStartIndex_;
+}
+
+const Eigen::MatrixXf& ElevationMap::getRawElevationData()
+{
+  return elevationData_;
+}
+
+const Eigen::MatrixXf& ElevationMap::getRawVarianceData()
+{
+  return varianceData_;
+}
+
+const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getRawColorData()
+{
+  return colorData_;
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)

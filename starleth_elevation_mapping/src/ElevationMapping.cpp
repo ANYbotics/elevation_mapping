@@ -13,6 +13,9 @@
 #include <EigenConversions.hpp>
 #include <TransformationMath.hpp>
 
+// ROS
+#include <tf_conversions/tf_eigen.h>
+
 // PCL
 #include <pcl/ros/conversions.h>
 
@@ -82,6 +85,8 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
   nodeHandle_.param("bigger_height_threshold_factor", map_.biggerHeightThresholdFactor_, 4.0);
   nodeHandle_.param("bigger_height_noise_factor", map_.biggerHeightNoiseFactor_, 2.0);
+  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, 0.0);
+  nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
 
   Eigen::Array2d length;
   double resolution;
@@ -143,7 +148,7 @@ void ElevationMapping::pointCloudCallback(
 //  else if (!addToElevationMap(pointCloud, measurementDistances)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
 //  cleanElevationMap();
 //  generateFusedMap();
-  if (!publishElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
+  if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
 }
 
@@ -158,14 +163,14 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   timeOfLastUpdate_ = time;
 //  cleanElevationMap();
 //  generateFusedMap();
-  if (!publishElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
+  if (!publishRawElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
   resetMapUpdateTimer();
 }
 
 bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
 {
   tf::Transform tfTransform;
-//  poseEigenToTF(elevationMapToParentTransform_, tfTransform);
+  poseEigenToTF(map_.getMapToParentTransform(), tfTransform);
   transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
   ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
@@ -175,60 +180,52 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 {
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
 
-//  if (time < timeOfLastUpdate_)
-//  {
-//    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), timeOfLastUpdate_.toSec());
-//    return false;
-//  }
-//
-//  // Variance from motion prediction
-//  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
-//  if (!poseMessage)
-//  {
-//    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
-//    return false;
-//  }
-//  Matrix<double, 6, 6> newRobotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
-//
-//  Vector3d positionVariance = robotPoseCovariance_.diagonal().head(3);
-//  Vector3d newPositionVariance = newRobotPoseCovariance.diagonal().head(3);
-//
-//  Vector3f variancePrediction = (newPositionVariance - positionVariance).cast<float>();
-//
-//  // Update map
-//  varianceData_ = (varianceData_.array() + variancePrediction.z()).matrix();
-//  horizontalVarianceDataX_ = (horizontalVarianceDataX_.array() + variancePrediction.x()).matrix();
-//  horizontalVarianceDataY_ = (horizontalVarianceDataY_.array() + variancePrediction.y()).matrix();
-//
-//  // Make valid variances
-//  varianceData_ = varianceData_.cwiseMax(0.0);
-//  horizontalVarianceDataX_ = horizontalVarianceDataX_.cwiseMax(0.0);
-//  horizontalVarianceDataY_ = horizontalVarianceDataY_.cwiseMax(0.0);
-//
-//  robotPoseCovariance_ = newRobotPoseCovariance;
+  if (time < timeOfLastUpdate_)
+  {
+    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), timeOfLastUpdate_.toSec());
+    return false;
+  }
+
+  // Variance from motion prediction
+  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
+  if (!poseMessage)
+  {
+    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
+    return false;
+  }
+
+  Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
+  Array2i size = map_.getBufferSize();
+  MatrixXf varianceUpdate(size(0), size(1));
+  MatrixXf horizontalVarianceUpdateX(size(0), size(1));
+  MatrixXf horizontalVarianceUpdateY(size(0), size(1));
+  mapUpdater_.computeUpdate(robotPoseCovariance, varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
+
+  // Update map.
+  map_.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
 
   return true;
 }
 
-bool ElevationMapping::publishElevationMap()
+bool ElevationMapping::publishRawElevationMap()
 {
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
 
-//  starleth_elevation_msg::ElevationMap elevationMapMessage;
-//
-//  elevationMapMessage.header.stamp = timeOfLastUpdate_;
-//  elevationMapMessage.header.frame_id = parameters_.elevationMapFrameId_;
-//  elevationMapMessage.resolution = parameters_.resolution_;
-//  elevationMapMessage.lengthInX = parameters_.length_(0);
-//  elevationMapMessage.lengthInY = parameters_.length_(1);
-//  elevationMapMessage.outerStartIndex = circularBufferStartIndex_(0);
-//  elevationMapMessage.innerStartIndex = circularBufferStartIndex_(1);
-//
-//  starleth_elevation_msg::matrixEigenToMultiArrayMessage(elevationData_, elevationMapMessage.elevation);
-//  starleth_elevation_msg::matrixEigenToMultiArrayMessage(varianceData_, elevationMapMessage.variance);
-//  starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, elevationMapMessage.color);
-//
-//  elevationMapPublisher_.publish(elevationMapMessage);
+  starleth_elevation_msg::ElevationMap elevationMapMessage;
+
+  elevationMapMessage.header.stamp = timeOfLastUpdate_;
+  elevationMapMessage.header.frame_id = elevationMapFrameId_;
+  elevationMapMessage.resolution = map_.getResolution();
+  elevationMapMessage.lengthInX = map_.getLength()(0);
+  elevationMapMessage.lengthInY = map_.getLength()(1);
+  elevationMapMessage.outerStartIndex = map_.getBufferStartIndex()(0);
+  elevationMapMessage.innerStartIndex = map_.getBufferStartIndex()(1);
+
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawElevationData(), elevationMapMessage.elevation);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawVarianceData(), elevationMapMessage.variance);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawColorData(), elevationMapMessage.color);
+
+  elevationMapPublisher_.publish(elevationMapMessage);
 
   ROS_DEBUG("Elevation map has been published.");
 
@@ -270,31 +267,6 @@ bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Reques
 //  res.sum = req.a + req.b;
 //  ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
 //  ROS_INFO("sending back response: [%ld]", (long int)res.sum);
-  return true;
-}
-
-bool ElevationMapping::publishFusedElevationMap(const Eigen::MatrixXf& fusedElevationData, const Eigen::MatrixXf& fusedVarianceData)
-{
-  if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
-
-//  starleth_elevation_msg::ElevationMap fusedElevationMapMessage;
-//
-//  fusedElevationMapMessage.header.stamp = timeOfLastUpdate_;
-//  fusedElevationMapMessage.header.frame_id = parameters_.elevationMapFrameId_;
-//  fusedElevationMapMessage.resolution = parameters_.resolution_;
-//  fusedElevationMapMessage.lengthInX = parameters_.length_(0);
-//  fusedElevationMapMessage.lengthInY = parameters_.length_(1);
-//  fusedElevationMapMessage.outerStartIndex = circularBufferStartIndex_(0);
-//  fusedElevationMapMessage.innerStartIndex = circularBufferStartIndex_(1);
-//
-//  starleth_elevation_msg::matrixEigenToMultiArrayMessage(fusedElevationData, fusedElevationMapMessage.elevation);
-//  starleth_elevation_msg::matrixEigenToMultiArrayMessage(fusedVarianceData, fusedElevationMapMessage.variance);
-//  starleth_elevation_msg::matrixEigenToMultiArrayMessage(colorData_, fusedElevationMapMessage.color);
-//
-//  fusedElevationMapPublisher_.publish(fusedElevationMapMessage);
-
-  ROS_DEBUG("Fused elevation map has been published.");
-
   return true;
 }
 
