@@ -15,6 +15,9 @@
 // Math
 #include <math.h>
 
+// ROS Logging
+#include <ros/ros.h>
+
 using namespace std;
 using namespace Eigen;
 
@@ -40,9 +43,9 @@ ElevationMap::~ElevationMap()
 
 bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolution)
 {
-//  ROS_ASSERT(length_(0) > 0.0);
-//  ROS_ASSERT(length_(1) > 0.0);
-//  ROS_ASSERT(resolution_ > 0.0);
+  ROS_ASSERT(length_(0) > 0.0);
+  ROS_ASSERT(length_(1) > 0.0);
+  ROS_ASSERT(resolution_ > 0.0);
 
   int nRows = static_cast<int>(round(length(0) / resolution));
   int nCols = static_cast<int>(round(length(1) / resolution));
@@ -58,8 +61,7 @@ bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolutio
   resolution_ = resolution;
   length_ = (Array2i(nRows, nCols).cast<double>() * resolution_).matrix();
 
-  // TODO Add SM
-//  ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
+  ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
   return true;
 }
 
@@ -144,7 +146,7 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
       (Array2i(horizontalVarianceUpdateY.rows(), horizontalVarianceUpdateY.cols()) == bufferSize).all()
       ))
   {
-    // TODO add sm
+    ROS_ERROR("The size of the update matrices does not match.");
     return false;
   }
 
@@ -159,8 +161,7 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
 
 bool ElevationMap::generateFusedMap()
 {
-  // TODO
-//  ROS_DEBUG("Fusing elevation map...");
+  ROS_DEBUG("Fusing elevation map...");
 
   // Initializations.
   MatrixXf fusedElevationData(elevationData_.rows(), elevationData_.cols());
@@ -261,8 +262,7 @@ bool ElevationMap::generateFusedMap()
 
       if (!(std::isfinite(variance) && std::isfinite(mean)))
       {
-        // TODO
-//        ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
+        ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
         continue;
       }
 
@@ -285,8 +285,7 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerInde
                                                      getBufferSize(),
                                                      bufferStartIndex_))
   {
-    // TODO
-//    ROS_ERROR("Position of requested submap is not part of the map.");
+    ROS_ERROR("Position of requested submap is not part of the map.");
     return false;
   }
 
@@ -300,8 +299,7 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map
 
   if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftindex, size, getBufferSize(), bufferStartIndex_))
   {
-    // TODO
-//     ROS_ERROR("Cannot access submap of this size.");
+     ROS_ERROR("Cannot access submap of this size.");
      return false;
   }
 
@@ -381,9 +379,9 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
   // Update information.
   bufferStartIndex_ += indexShift;
   starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
-
   toParentTransform_.translation().head(2) = alignedPosition;
 
+  ROS_DEBUG("Elevation has been moved to position (%f, %f).", toParentTransform_.translation().head(2).x(), toParentTransform_.translation().head(2).y());
   return true;
 }
 

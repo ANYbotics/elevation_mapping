@@ -153,7 +153,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloud, measurementVariances))
+  if (!map_.add(pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
@@ -248,9 +248,9 @@ bool ElevationMapping::publishRawElevationMap()
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawVarianceData(), elevationMapMessage.variance);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawColorData(), elevationMapMessage.color);
 
-  elevationMapPublisher_.publish(elevationMapMessage);
+  elevationMapRawPublisher_.publish(elevationMapMessage);
 
-  ROS_DEBUG("Elevation map has been published.");
+  ROS_DEBUG("Elevation map raw has been published.");
 
   return true;
 }

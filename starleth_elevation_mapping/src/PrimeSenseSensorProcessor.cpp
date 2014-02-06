@@ -53,7 +53,9 @@ bool PrimeSenseSensorProcessor::process(
 
   VectorXf measurementDistances;
   computeMeasurementDistances(pointCloudOutput, measurementDistances);
+
   if (!transformPointCloud(pointCloudOutput, targetFrame)) return false;
+
   computeVariances(pointCloudOutput, measurementDistances, variances);
 
   return true;
@@ -114,7 +116,7 @@ bool PrimeSenseSensorProcessor::transformPointCloud(
     pointCloud->swap(*pointCloudTransformed);
     pointCloud->header.frame_id = targetFrame;
 //    pointCloud->header.stamp = timeStamp;
-    ROS_DEBUG("ElevationMap: Point cloud transformed for time stamp %f.", timeStamp.toSec());
+    ROS_DEBUG("ElevationMap: Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(), timeStamp.toSec());
     return true;
   }
   catch (TransformException &ex)
