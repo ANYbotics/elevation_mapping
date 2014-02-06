@@ -33,7 +33,7 @@ class ElevationMap
 
   bool update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX, Eigen::MatrixXf horizontalVarianceUpdateY);
 
-  bool generateFusedMap();
+  bool fuse();
 
   bool getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
 
@@ -50,6 +50,12 @@ class ElevationMap
   const Eigen::Affine3d& getMapToParentTransform();
 
   const Eigen::Array2i& getBufferStartIndex();
+
+  const Eigen::MatrixXf& getElevationData();
+
+  const Eigen::MatrixXf& getVarianceData();
+
+  const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& getColorData();
 
   const Eigen::MatrixXf& getRawElevationData();
 
@@ -73,6 +79,8 @@ class ElevationMap
 
   bool clean();
 
+  void resetFusedData();
+
   void resetCols(unsigned int index, unsigned int nCols);
 
   void resetRows(unsigned int index, unsigned int nRows);
@@ -80,20 +88,22 @@ class ElevationMap
   float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
   //! Elevation height data.
-  Eigen::MatrixXf elevationData_;
+  Eigen::MatrixXf elevationRawData_;
 
   //! Variance data of the height of the cells in elevationData_.
-  Eigen::MatrixXf varianceData_;
+  Eigen::MatrixXf varianceRawData_;
 
   //! Variance data of the cells in elevationData_.
-  Eigen::MatrixXf horizontalVarianceDataX_;
-  Eigen::MatrixXf horizontalVarianceDataY_;
+  Eigen::MatrixXf horizontalVarianceRawDataX_;
+  Eigen::MatrixXf horizontalVarianceRawDataY_;
 
   //! Color data.
-  Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
+  Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorRawData_;
 
-  //! Label data.
-  Eigen::Matrix<unsigned int, Eigen::Dynamic, Eigen::Dynamic> labelData_;
+  //! The fused map.
+  Eigen::MatrixXf elevationData_;
+  Eigen::MatrixXf varianceData_;
+  Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
   Eigen::Affine3d toParentTransform_;
 

@@ -7,6 +7,10 @@
  */
 #include "CovarianceMapUpdater.hpp"
 
+// STD
+#include <iostream>
+
+using namespace std;
 using namespace Eigen;
 
 namespace starleth_elevation_mapping {

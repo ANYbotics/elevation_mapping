@@ -40,6 +40,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(robotPoseCacheSize_);
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
+  fusionTriggerService_ = nodeHandle_.advertiseService("trigger_fusion_of_elevation_map", &ElevationMapping::fuseMap, this);
   submapService_ = nodeHandle_.advertiseService("get_part_of_elevation_map", &ElevationMapping::getSubmap, this);
   initialize();
 }
@@ -113,6 +114,7 @@ bool ElevationMapping::readParameters()
 bool ElevationMapping::initialize()
 {
   timeOfLastUpdate_ = Time::now();
+  timeOfLastFusion_.fromSec(0.0);
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
@@ -189,6 +191,14 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   resetMapUpdateTimer();
 }
 
+bool ElevationMapping::fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Request& response)
+{
+  map_.fuse();
+  timeOfLastFusion_ = timeOfLastUpdate_;
+  publishElevationMap();
+  return true;
+}
+
 bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
 {
   tf::Transform tfTransform;
@@ -251,6 +261,31 @@ bool ElevationMapping::publishRawElevationMap()
   elevationMapRawPublisher_.publish(elevationMapMessage);
 
   ROS_DEBUG("Elevation map raw has been published.");
+
+  return true;
+}
+
+bool ElevationMapping::publishElevationMap()
+{
+  if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
+
+  starleth_elevation_msg::ElevationMap elevationMapMessage;
+
+  elevationMapMessage.header.stamp = timeOfLastFusion_;
+  elevationMapMessage.header.frame_id = elevationMapFrameId_;
+  elevationMapMessage.resolution = map_.getResolution();
+  elevationMapMessage.lengthInX = map_.getLength()(0);
+  elevationMapMessage.lengthInY = map_.getLength()(1);
+  elevationMapMessage.outerStartIndex = map_.getBufferStartIndex()(0);
+  elevationMapMessage.innerStartIndex = map_.getBufferStartIndex()(1);
+
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getVarianceData(), elevationMapMessage.variance);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getColorData(), elevationMapMessage.color);
+
+  elevationMapPublisher_.publish(elevationMapMessage);
+
+  ROS_DEBUG("Elevation map (fused) has been published.");
 
   return true;
 }

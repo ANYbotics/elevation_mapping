@@ -31,6 +31,7 @@
 #include <tf/transform_listener.h>
 #include <tf/transform_broadcaster.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <std_srvs/Empty.h>
 
 // STD
 #include <limits>
@@ -51,6 +52,8 @@ class ElevationMapping
 
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
+  bool fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Request& response);
+
  private:
   bool readParameters();
 
@@ -66,6 +69,8 @@ class ElevationMapping
   bool updatePrediction(const ros::Time& time);
 
   bool publishRawElevationMap();
+
+  bool publishElevationMap();
 
   bool updateMapLocation();
 
@@ -84,12 +89,14 @@ class ElevationMapping
   tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
   ros::Timer mapUpdateTimer_;
+  ros::ServiceServer fusionTriggerService_;
   ros::ServiceServer submapService_;
 
   ElevationMap map_;
   PrimeSenseSensorProcessor sensorProcessor_;
   CovarianceMapUpdater mapUpdater_;
   ros::Time timeOfLastUpdate_;
+  ros::Time timeOfLastFusion_;
 
 
   // Parameters

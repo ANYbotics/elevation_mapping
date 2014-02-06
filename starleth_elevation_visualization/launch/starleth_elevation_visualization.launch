@@ -1,6 +1,6 @@
 <launch>
- 	<node pkg="starleth_elevation_visualization" type="starleth_elevation_visualization" name="starleth_elevation_visualization_fused" output="screen">
- 		 <param name="elevation_map_topic" value="/starleth_elevation_mapping/elevation_map_fused" />
+ 	<node pkg="starleth_elevation_visualization" type="starleth_elevation_visualization" name="starleth_elevation_visualization" output="screen">
+ 		 <param name="elevation_map_topic" value="/starleth_elevation_mapping/elevation_map" />
  		 <param name="set_color_from_map" value="false" />
     	 <param name="set_color_from_variance" value="true" />
     	 <param name="set_color_from_height" value="false" />    	 
@@ -8,6 +8,6 @@
     	 <param name="set_alpha_from_variance" value="false" />
 		 <param name="show_empty_cells" value="false" />   	 
 		 <param name="variance_lower_value_" value="0.000009" /> 
-		 <param name="variance_upper_value_" value="0.01" /> 
+		 <param name="variance_upper_value_" value="0.0005" /> 
     </node>
 </launch>

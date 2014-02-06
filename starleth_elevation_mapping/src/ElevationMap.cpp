@@ -49,19 +49,21 @@ bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolutio
 
   int nRows = static_cast<int>(round(length(0) / resolution));
   int nCols = static_cast<int>(round(length(1) / resolution));
+  elevationRawData_.resize(nRows, nCols);
+  varianceRawData_.resize(nRows, nCols);
+  horizontalVarianceRawDataX_.resize(nRows, nCols);
+  horizontalVarianceRawDataY_.resize(nRows, nCols);
+  colorRawData_.resize(nRows, nCols);
   elevationData_.resize(nRows, nCols);
   varianceData_.resize(nRows, nCols);
-  horizontalVarianceDataX_.resize(nRows, nCols);
-  horizontalVarianceDataY_.resize(nRows, nCols);
   colorData_.resize(nRows, nCols);
-  labelData_.resize(nRows, nCols);
 
   reset();
 
   resolution_ = resolution;
   length_ = (Array2i(nRows, nCols).cast<double>() * resolution_).matrix();
 
-  ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationData_.rows() << " rows and "  << elevationData_.cols() << " columns.");
+  ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationRawData_.rows() << " rows and "  << elevationRawData_.cols() << " columns.");
   return true;
 }
 
@@ -76,12 +78,11 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
         index, Vector2d(point.x, point.y), length_, resolution_, getBufferSize(), bufferStartIndex_))
       continue; // Skip this point if it does not lie within the elevation map
 
-    auto& elevation = elevationData_(index(0), index(1));
-    auto& variance = varianceData_(index(0), index(1));
-    auto& horizontalVarianceX = horizontalVarianceDataX_(index(0), index(1));
-    auto& horizontalVarianceY = horizontalVarianceDataY_(index(0), index(1));
-    auto& color = colorData_(index(0), index(1));
-    auto& multiHeightLabel = labelData_(index(0), index(1));
+    auto& elevation = elevationRawData_(index(0), index(1));
+    auto& variance = varianceRawData_(index(0), index(1));
+    auto& horizontalVarianceX = horizontalVarianceRawDataX_(index(0), index(1));
+    auto& horizontalVarianceY = horizontalVarianceRawDataY_(index(0), index(1));
+    auto& color = colorRawData_(index(0), index(1));
     RowVector3f pointVariance = pointCloudVariances.row(i);
 
     if (std::isnan(elevation) || std::isinf(variance))
@@ -124,8 +125,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     horizontalVarianceX = 0.0;
     horizontalVarianceY = 0.0;
 
-    // TODO Add label to cells which are potentially multi-level
-
     // Add noise to cells which have ignored lower values,
     // such we outliers and moving objects are removed
     variance += multiHeightNoise_;
@@ -150,29 +149,26 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
     return false;
   }
 
-  varianceData_ += varianceUpdate;
-  horizontalVarianceDataX_ += horizontalVarianceUpdateX;
-  horizontalVarianceDataY_ += horizontalVarianceUpdateY;
+  varianceRawData_ += varianceUpdate;
+  horizontalVarianceRawDataX_ += horizontalVarianceUpdateX;
+  horizontalVarianceRawDataY_ += horizontalVarianceUpdateY;
   clean();
 
   return true;
 }
 
 
-bool ElevationMap::generateFusedMap()
+bool ElevationMap::fuse()
 {
   ROS_DEBUG("Fusing elevation map...");
 
   // Initializations.
-  MatrixXf fusedElevationData(elevationData_.rows(), elevationData_.cols());
-  MatrixXf fusedVarianceData(varianceData_.rows(), varianceData_.cols());
-  fusedElevationData.setConstant(NAN);
-  fusedVarianceData.setConstant(numeric_limits<float>::infinity());
+  resetFusedData();
 
   // For each cell in map.
-  for (unsigned int i = 0; i < fusedElevationData.rows(); ++i)
+  for (unsigned int i = 0; i < elevationData_.rows(); ++i)
   {
-    for (unsigned int j = 0; j < fusedElevationData.cols(); ++j)
+    for (unsigned int j = 0; j < elevationData_.cols(); ++j)
     {
       // Center of submap in map.
       Vector2d center;
@@ -181,7 +177,7 @@ bool ElevationMap::generateFusedMap()
                                                    getBufferSize(), bufferStartIndex_);
 
       // Size of submap (2 sigma bound).
-      Array2d size = 4 * Array2d(horizontalVarianceDataX_(i, j), horizontalVarianceDataY_(i, j)).sqrt();
+      Array2d size = 4 * Array2d(horizontalVarianceRawDataX_(i, j), horizontalVarianceRawDataY_(i, j)).sqrt();
 
       // TODO Don't skip holes.
       if (!(std::isfinite(size[0]) && std::isfinite(size[1]))) continue;
@@ -189,10 +185,10 @@ bool ElevationMap::generateFusedMap()
       // Get submap data.
       MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
       Array2i centerIndex;
-      getSubmap(elevationSubmap, centerIndex, elevationData_, center, size);
-      getSubmap(variancesSubmap, centerIndex, varianceData_, center, size);
-      getSubmap(horizontalVariancesXSubmap, centerIndex, horizontalVarianceDataX_, center, size);
-      getSubmap(horizontalVariancesYSubmap, centerIndex, horizontalVarianceDataY_, center, size);
+      getSubmap(elevationSubmap, centerIndex, elevationRawData_, center, size);
+      getSubmap(variancesSubmap, centerIndex, varianceRawData_, center, size);
+      getSubmap(horizontalVariancesXSubmap, centerIndex, horizontalVarianceRawDataX_, center, size);
+      getSubmap(horizontalVariancesYSubmap, centerIndex, horizontalVarianceRawDataY_, center, size);
 
       // Prepare data fusion.
       ArrayXf means, variances, weights;
@@ -246,8 +242,9 @@ bool ElevationMap::generateFusedMap()
       if (n == 0)
       {
         // Nothing to fuse.
-        fusedElevationData(i, j) = elevationData_(i, j);
-        fusedVarianceData(i, j) = varianceData_(i, j);
+        elevationData_(i, j) = elevationRawData_(i, j);
+        varianceData_(i, j) = varianceRawData_(i, j);
+        colorData_(i, j) = colorRawData_(i, j);
         continue;
       }
 
@@ -267,8 +264,11 @@ bool ElevationMap::generateFusedMap()
       }
 
       // Add to fused map.
-      fusedElevationData(i, j) = mean;
-      fusedVarianceData(i, j) = variance;
+      elevationData_(i, j) = mean;
+      varianceData_(i, j) = variance;
+
+      // TODO Add fusion of colors.
+      colorData_(i, j) = colorRawData_(i, j);
     }
   }
 
@@ -340,7 +340,7 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
       if (abs(indexShift[i]) >= getBufferSize()(i))
       {
         // Entire map is dropped.
-        elevationData_.setConstant(NAN);
+        elevationRawData_.setConstant(NAN);
       }
       else
       {
@@ -388,39 +388,49 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
 bool ElevationMap::reset()
 {
   toParentTransform_.setIdentity();
+  elevationRawData_.setConstant(NAN);
+  varianceRawData_.setConstant(numeric_limits<float>::infinity());
+  horizontalVarianceRawDataX_.setConstant(numeric_limits<float>::infinity());
+  horizontalVarianceRawDataY_.setConstant(numeric_limits<float>::infinity());
+  colorRawData_.setConstant(0);
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(numeric_limits<float>::infinity());
-  horizontalVarianceDataX_.setConstant(numeric_limits<float>::infinity());
-  horizontalVarianceDataY_.setConstant(numeric_limits<float>::infinity());
   colorData_.setConstant(0);
-  labelData_.setConstant(0);
   bufferStartIndex_.setZero();
   length_.setZero();
   resolution_ = 0.0;
+  resetFusedData();
   return true;
 }
 
 Eigen::Array2i ElevationMap::getBufferSize()
 {
-  return Array2i(elevationData_.rows(), elevationData_.cols());
+  return Array2i(elevationRawData_.rows(), elevationRawData_.cols());
 }
 
 bool ElevationMap::clean()
 {
-  varianceData_ = varianceData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
-  horizontalVarianceDataX_ = horizontalVarianceDataX_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
-  horizontalVarianceDataY_ = horizontalVarianceDataY_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
+  varianceRawData_ = varianceRawData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
+  horizontalVarianceRawDataX_ = horizontalVarianceRawDataX_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
+  horizontalVarianceRawDataY_ = horizontalVarianceRawDataY_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
   return true;
+}
+
+void ElevationMap::resetFusedData()
+{
+  elevationData_.setConstant(NAN);
+  varianceData_.setConstant(numeric_limits<float>::infinity());
+  colorData_.setConstant(0);
 }
 
 void ElevationMap::resetCols(unsigned int index, unsigned int nCols)
 {
-  elevationData_.block(index, 0, nCols, getBufferSize()[1]).setConstant(NAN);
+  elevationRawData_.block(index, 0, nCols, getBufferSize()[1]).setConstant(NAN);
 }
 
 void ElevationMap::resetRows(unsigned int index, unsigned int nRows)
 {
-  elevationData_.block(0, index, getBufferSize()[0], nRows).setConstant(NAN);
+  elevationRawData_.block(0, index, getBufferSize()[0], nRows).setConstant(NAN);
 }
 
 const double& ElevationMap::getResolution()
@@ -443,19 +453,34 @@ const Eigen::Array2i& ElevationMap::getBufferStartIndex()
   return bufferStartIndex_;
 }
 
-const Eigen::MatrixXf& ElevationMap::getRawElevationData()
+const Eigen::MatrixXf& ElevationMap::getElevationData()
 {
   return elevationData_;
 }
 
-const Eigen::MatrixXf& ElevationMap::getRawVarianceData()
+const Eigen::MatrixXf& ElevationMap::getVarianceData()
 {
   return varianceData_;
 }
 
-const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getRawColorData()
+const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getColorData()
 {
   return colorData_;
+}
+
+const Eigen::MatrixXf& ElevationMap::getRawElevationData()
+{
+  return elevationRawData_;
+}
+
+const Eigen::MatrixXf& ElevationMap::getRawVarianceData()
+{
+  return varianceRawData_;
+}
+
+const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getRawColorData()
+{
+  return colorRawData_;
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
