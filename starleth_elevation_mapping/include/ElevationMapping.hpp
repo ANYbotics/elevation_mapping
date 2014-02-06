@@ -38,7 +38,7 @@
 namespace starleth_elevation_mapping {
 
 /*
- * Elevation map stored as planar grid holding elevation height and variance.
+ *
  */
 class ElevationMapping
 {
@@ -52,6 +52,8 @@ class ElevationMapping
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
  private:
+  bool readParameters();
+
   bool initialize();
 
   bool broadcastElevationMapTransform(const ros::Time& time);
@@ -77,8 +79,8 @@ class ElevationMapping
 
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber pointCloudSubscriber_;
+  ros::Publisher elevationMapRawPublisher_;
   ros::Publisher elevationMapPublisher_;
-  ros::Publisher fusedElevationMapPublisher_;
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
   message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
   tf::TransformBroadcaster transformBroadcaster_;
@@ -89,36 +91,27 @@ class ElevationMapping
   ElevationMap map_;
   PrimeSenseSensorProcessor sensorProcessor_;
   CovarianceMapUpdater mapUpdater_;
-
   ros::Time timeOfLastUpdate_;
 
-  struct ElevationMappingParameters {
 
+  // Parameters
 
-    //! Maximum time that the map will not be updated.
-    ros::Duration maxNoUpdateDuration_;
+  //! Maximum time that the map will not be updated.
+  ros::Duration maxNoUpdateDuration_;
 
-    //! Duration in which interval the map is checked for relocation.
-    ros::Duration mapRelocateTimerDuration_;
+  //! Duration in which interval the map is checked for relocation.
+  ros::Duration mapRelocateTimerDuration_;
 
-    std::string parentFrameId_;
-    std::string elevationMapFrameId_;
-    std::string trackPointFrameId_;
-    std::string trackPointId_;
-    std::string pointCloudTopic_;
-    std::string robotPoseTopic_;
+  std::string parentFrameId_;
+  std::string elevationMapFrameId_;
+  std::string trackPointFrameId_;
+  std::string trackPointId_;
+  std::string pointCloudTopic_;
+  std::string robotPoseTopic_;
 
-    Eigen::Vector3d trackPoint_;
+  Eigen::Vector3d trackPoint_;
 
-
-
-    int robotPoseCacheSize_;
-
-    bool read(ros::NodeHandle& nodeHandle);
-    bool checkValidity();
-  };
-
-  ElevationMappingParameters parameters_;
+  int robotPoseCacheSize_;
 
 };
 

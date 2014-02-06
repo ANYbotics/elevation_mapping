@@ -19,7 +19,7 @@
 namespace starleth_elevation_mapping {
 
 /*
- *
+ * Elevation map stored as planar grid holding elevation height and variance.
  */
 class ElevationMap
 {
@@ -27,7 +27,7 @@ class ElevationMap
   ElevationMap();
   virtual ~ElevationMap();
 
-  bool resize(const Eigen::Array2d& length, const double& resolution);
+  bool setSize(const Eigen::Array2d& length, const double& resolution);
 
   bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::Matrix<float, Eigen::Dynamic, 3>& variances);
 
@@ -41,6 +41,12 @@ class ElevationMap
 
   bool reset();
 
+  double minVariance_;
+  double maxVariance_;
+  double mahalanobisDistanceThreshold_;
+  double multiHeightNoise_;
+  double biggerHeightThresholdFactor_;
+  double biggerHeightNoiseFactor_;
 
  private:
 
@@ -75,21 +81,13 @@ class ElevationMap
   //! Circular buffer start indeces.
   Eigen::Array2i bufferStartIndex_;
 
+  // Parameters
+
   //! Map size in x, and y-direction [m].
   Eigen::Array2d length_;
 
   //! Map resolution in xy plane [m/cell].
   double resolution_;
-
-  double minVariance_;
-  double maxVariance_;
-
-  double mahalanobisDistanceThreshold_;
-
-  double multiHeightNoise_;
-  double biggerHeightThresholdFactor_;
-  double biggerHeightNoiseFactor_;
-
 };
 
 } /* namespace starleth_elevation_mapping */

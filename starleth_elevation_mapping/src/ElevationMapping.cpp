@@ -13,9 +13,6 @@
 #include <EigenConversions.hpp>
 #include <TransformationMath.hpp>
 
-// ROS
-#include <tf_conversions/tf_eigen.h>
-
 // PCL
 #include <pcl/ros/conversions.h>
 
@@ -28,18 +25,19 @@ using namespace pcl;
 namespace starleth_elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
-    : nodeHandle_(nodeHandle)
+    : nodeHandle_(nodeHandle),
+      sensorProcessor_(transformListener_)
 {
   ROS_INFO("StarlETH elevation map node started.");
-  parameters_.read(nodeHandle_);
-  pointCloudSubscriber_ = nodeHandle_.subscribe(parameters_.pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
+  readParameters();
+  pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
+  elevationMapRawPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map_raw", 1);
   elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
-  fusedElevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map_fused", 1);
-  robotPoseSubscriber_.subscribe(nodeHandle_, parameters_.robotPoseTopic_, 1);
+  robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
   robotPoseCache_.connectInput(robotPoseSubscriber_);
-  robotPoseCache_.setCacheSize(parameters_.robotPoseCacheSize_);
-  mapUpdateTimer_ = nodeHandle_.createTimer(parameters_.maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
-  submapService_ = nodeHandle_.advertiseService("get_subpart_of_elevation_map", &ElevationMapping::getSubmap, this);
+  robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
+  submapService_ = nodeHandle_.advertiseService("get_part_of_elevation_map", &ElevationMapping::getSubmap, this);
   initialize();
 }
 
@@ -48,39 +46,28 @@ ElevationMapping::~ElevationMapping()
 
 }
 
-bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHandle)
+bool ElevationMapping::readParameters()
 {
-  nodeHandle.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
-  nodeHandle.param("map_frame_id", parentFrameId_, string("/map"));
-  nodeHandle.param("elevation_map_frame_id", elevationMapFrameId_, string("/elevation_map"));
-  nodeHandle.param("track_point_frame_id", trackPointFrameId_, string("/odom"));
-  nodeHandle.param("track_point_x", trackPoint_.x(), 0.5);
-  nodeHandle.param("track_point_y", trackPoint_.y(), 0.0);
-  nodeHandle.param("track_point_z", trackPoint_.z(), 0.0);
-  nodeHandle.param("robot_pose_topic", robotPoseTopic_, string("/starleth/robot_state/pose"));
-  nodeHandle.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
-//  nodeHandle.param("sensor_cutoff_min_depth", sensorCutoffMaxDepth_, 0.2);
-//  nodeHandle.param("sensor_cutoff_max_depth", sensorCutoffMaxDepth_, 2.0);
-//  nodeHandle.param("sensor_model_factor_a", sensorModelFactorA_, 0.003);
-//  nodeHandle.param("sensor_model_factor_b", sensorModelFactorB_, 0.015);
-//  nodeHandle.param("sensor_model_factor_c", sensorModelFactorC_, 0.25);
-  // TODO
-//  nodeHandle.param("length_in_x", length_(0), 1.5);
-//  nodeHandle.param("length_in_y", length_(1), 1.5);
-//  nodeHandle.param("resolution", resolution_, 0.1);
-//  nodeHandle.param("min_variance", minVariance_, pow(0.003, 2));
-//  nodeHandle.param("max_variance", maxVariance_, pow(0.03, 2));
-//  nodeHandle.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.0);
-//  nodeHandle.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
-//  nodeHandle.param("bigger_height_threshold_factor", biggerHeightThresholdFactor_, 4.0);
-//  nodeHandle.param("bigger_height_noise_factor", biggerHeightNoiseFactor_, 2.0);
+  // ElevationMapping parameters.
+  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
+  nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
+  nodeHandle_.param("elevation_map_frame_id", elevationMapFrameId_, string("/elevation_map"));
+  nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/odom"));
+  nodeHandle_.param("track_point_x", trackPoint_.x(), 0.0);
+  nodeHandle_.param("track_point_y", trackPoint_.y(), 0.0);
+  nodeHandle_.param("track_point_z", trackPoint_.z(), 0.0);
+  nodeHandle_.param("robot_pose_topic", robotPoseTopic_, string("/starleth/robot_state/pose"));
+
+  nodeHandle_.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
+  ROS_ASSERT(robotPoseCacheSize_ >= 0);
 
   double minUpdateRate;
-  nodeHandle.param("min_update_rate", minUpdateRate, 2.0);
+  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+  ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
   double relocateRate;
-  nodeHandle.param("relocate_rate", relocateRate, 3.0);
+  nodeHandle_.param("relocate_rate", relocateRate, 3.0);
   if (relocateRate > 0.0)
     mapRelocateTimerDuration_.fromSec(1.0 / relocateRate);
   else
@@ -88,30 +75,38 @@ bool ElevationMapping::ElevationMappingParameters::read(ros::NodeHandle& nodeHan
     mapRelocateTimerDuration_.fromSec(0.0);
   }
 
-  return checkValidity();
-}
+  // ElevationMap parameters.
+  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
+  nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
+  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.0);
+  nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
+  nodeHandle_.param("bigger_height_threshold_factor", map_.biggerHeightThresholdFactor_, 4.0);
+  nodeHandle_.param("bigger_height_noise_factor", map_.biggerHeightNoiseFactor_, 2.0);
 
-bool ElevationMapping::ElevationMappingParameters::checkValidity()
-{
-  ROS_ASSERT(sensorCutoffMinDepth_ >= 0.0);
-  ROS_ASSERT(sensorCutoffMaxDepth_ > sensorCutoffMinDepth_);
-  ROS_ASSERT(length_(0) > 0.0);
-  ROS_ASSERT(length_(1) > 0.0);
-  ROS_ASSERT(resolution_ > 0.0);
-  ROS_ASSERT(minVariance_ >= 0.0);
-  ROS_ASSERT(maxVariance_ > minVariance_);
-  ROS_ASSERT(mahalanobisDistanceThreshold_ >= 0.0);
-  ROS_ASSERT(multiHeightNoise_ >= 0.0);
-  ROS_ASSERT(!maxNoUpdateDuration_.isZero());
-  ROS_ASSERT(robotPoseCacheSize_ >= 0);
+  Eigen::Array2d length;
+  double resolution;
+  nodeHandle_.param("length_in_x", length(0), 1.5);
+  nodeHandle_.param("length_in_y", length(1), 1.5);
+  nodeHandle_.param("resolution", resolution, 0.1);
+  map_.setSize(length, resolution);
+
+  // SensorProcessor parameters.
+  nodeHandle_.param("sensor_cutoff_min_depth", sensorProcessor_.sensorCutoffMinDepth_, 0.2);
+  ROS_ASSERT(sensorProcessor_.sensorCutoffMinDepth_ >= 0.0);
+  nodeHandle_.param("sensor_cutoff_max_depth", sensorProcessor_.sensorCutoffMaxDepth_, 2.0);
+  ROS_ASSERT(sensorProcessor_.sensorCutoffMaxDepth_ > sensorProcessor_.sensorCutoffMinDepth_);
+
+  nodeHandle_.param("sensor_model_factor_a", sensorProcessor_.sensorModelFactorA_, 0.003);
+  nodeHandle_.param("sensor_model_factor_b", sensorProcessor_.sensorModelFactorB_, 0.015);
+  nodeHandle_.param("sensor_model_factor_c", sensorProcessor_.sensorModelFactorC_, 0.25);
+
+  sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
+
   return true;
 }
 
 bool ElevationMapping::initialize()
 {
-  // TODO
-  // map_.resize();
-
   timeOfLastUpdate_ = Time::now();
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
@@ -125,7 +120,7 @@ void ElevationMapping::pointCloudCallback(
 {
   stopMapUpdateTimer();
 
-  // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud
+  // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
@@ -135,10 +130,16 @@ void ElevationMapping::pointCloudCallback(
   if (!broadcastElevationMapTransform(time)) ROS_ERROR("ElevationMap: Broadcasting elevation map transform to parent failed.");
   if (!updatePrediction(time)) { ROS_ERROR("ElevationMap: Updating process noise failed."); return; }
   timeOfLastUpdate_ = time;
-//  cleanPointCloud(pointCloud);
-//  VectorXf measurementDistances;
-//  getMeasurementDistances(pointCloud, measurementDistances);
-//  if (!transformPointCloud(pointCloud, parameters_.elevationMapFrameId_)) ROS_ERROR("ElevationMap: Point cloud transform failed for time stamp %f.", time.toSec());
+
+  // Process point cloud.
+  PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
+  Matrix<float, Dynamic, sensorProcessor_.dimensionOfVariances> measurementVariances;
+  if(!sensorProcessor_.process(pointCloud, elevationMapFrameId_, pointCloudProcessed, measurementVariances))
+  {
+    ROS_ERROR("ElevationMap: Point cloud could not be processed.");
+    return;
+  }
+
 //  else if (!addToElevationMap(pointCloud, measurementDistances)) ROS_ERROR("ElevationMap: Adding point cloud to elevation map failed.");
 //  cleanElevationMap();
 //  generateFusedMap();
@@ -165,7 +166,7 @@ bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
 {
   tf::Transform tfTransform;
 //  poseEigenToTF(elevationMapToParentTransform_, tfTransform);
-  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parameters_.parentFrameId_, parameters_.elevationMapFrameId_));
+  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
   ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
 }
@@ -211,7 +212,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 
 bool ElevationMapping::publishElevationMap()
 {
-  if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
+  if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
 
 //  starleth_elevation_msg::ElevationMap elevationMapMessage;
 //
@@ -239,17 +240,17 @@ bool ElevationMapping::updateMapLocation()
   ROS_DEBUG("Elevation map is checked for relocalization.");
 
   geometry_msgs::PointStamped trackPoint;
-  trackPoint.header.frame_id = parameters_.trackPointFrameId_;
+  trackPoint.header.frame_id = trackPointFrameId_;
   trackPoint.header.stamp = Time(0);
-  trackPoint.point.x = parameters_.trackPoint_.x();
-  trackPoint.point.y = parameters_.trackPoint_.y();
-  trackPoint.point.z = parameters_.trackPoint_.z();
+  trackPoint.point.x = trackPoint_.x();
+  trackPoint.point.y = trackPoint_.y();
+  trackPoint.point.z = trackPoint_.z();
 
   geometry_msgs::PointStamped trackPointTransformed;
 
   try
   {
-    transformListener_.transformPoint(parameters_.parentFrameId_, trackPoint, trackPointTransformed);
+    transformListener_.transformPoint(parentFrameId_, trackPoint, trackPointTransformed);
   }
   catch (TransformException &ex)
   {
@@ -274,7 +275,7 @@ bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Reques
 
 bool ElevationMapping::publishFusedElevationMap(const Eigen::MatrixXf& fusedElevationData, const Eigen::MatrixXf& fusedVarianceData)
 {
-  if (fusedElevationMapPublisher_.getNumSubscribers() < 1) return false;
+  if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
 
 //  starleth_elevation_msg::ElevationMap fusedElevationMapMessage;
 //
@@ -300,7 +301,7 @@ bool ElevationMapping::publishFusedElevationMap(const Eigen::MatrixXf& fusedElev
 void ElevationMapping::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
-  mapUpdateTimer_.setPeriod(parameters_.maxNoUpdateDuration_ - (Time::now() - timeOfLastUpdate_));
+  mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - (Time::now() - timeOfLastUpdate_));
   mapUpdateTimer_.start();
 }
 

@@ -30,8 +30,12 @@ ElevationMap::~ElevationMap()
   // TODO Auto-generated destructor stub
 }
 
-bool ElevationMap::resize(const Eigen::Array2d& length, const double& resolution)
+bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolution)
 {
+//  ROS_ASSERT(length_(0) > 0.0);
+//  ROS_ASSERT(length_(1) > 0.0);
+//  ROS_ASSERT(resolution_ > 0.0);
+
   int nRows = static_cast<int>(round(length(0) / resolution));
   int nCols = static_cast<int>(round(length(1) / resolution));
   elevationData_.resize(nRows, nCols);
