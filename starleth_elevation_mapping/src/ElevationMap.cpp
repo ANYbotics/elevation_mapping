@@ -274,6 +274,7 @@ bool ElevationMap::fuse()
 
       float mean = (weights * means).sum() / weights.sum();
       float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
+      if(variance < 0.0) variance = 0.0; // TODO Why is this necessary?
 
       if (!(std::isfinite(variance) && std::isfinite(mean)))
       {

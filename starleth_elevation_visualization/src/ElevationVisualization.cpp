@@ -45,6 +45,7 @@ bool ElevationVisualization::readParameters()
 {
   nodeHandle_.param("elevation_map_topic", mapTopic_, string("/starleth_elevation_mapping/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
+  nodeHandle_.param("sigma_bound", sigmaBound_, 0.0);
   nodeHandle_.param("set_color_from_map", isSetColorFromMap_, true);
   nodeHandle_.param("set_color_from_variance", isSetColorFromVariance_, false);
   nodeHandle_.param("set_color_from_height", isSetColorFromHeight_, false);
@@ -150,7 +151,7 @@ bool ElevationVisualization::generateVisualization(
       geometry_msgs::Point point;
       point.x = position.x();
       point.y = position.y();
-      point.z = !isEmtpyCell ? elevation - markerHeightOffset : 0;
+      point.z = !isEmtpyCell ? (elevation + sigmaBound_ * sqrt(variance)  - markerHeightOffset) : 0;
       elevationMarker.points.push_back(point);
 
       // Add marker color

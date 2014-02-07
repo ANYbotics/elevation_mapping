@@ -73,6 +73,7 @@ class ElevationVisualization
   // TODO Add struct for parameters
   std::string mapTopic_;
   double markerHeight_;
+  double sigmaBound_;
   bool isSetColorFromMap_;
   bool isSetColorFromVariance_;
   bool isSetColorFromHeight_;
