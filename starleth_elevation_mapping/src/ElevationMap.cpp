@@ -20,6 +20,8 @@
 
 using namespace std;
 using namespace Eigen;
+using namespace sm;
+using namespace sm::timing;
 
 namespace starleth_elevation_mapping {
 
@@ -43,9 +45,9 @@ ElevationMap::~ElevationMap()
 
 bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolution)
 {
-  ROS_ASSERT(length_(0) > 0.0);
-  ROS_ASSERT(length_(1) > 0.0);
-  ROS_ASSERT(resolution_ > 0.0);
+  ROS_ASSERT(length(0) > 0.0);
+  ROS_ASSERT(length(1) > 0.0);
+  ROS_ASSERT(resolution > 0.0);
 
   int nRows = static_cast<int>(round(length(0) / resolution));
   int nCols = static_cast<int>(round(length(1) / resolution));
@@ -163,6 +165,8 @@ bool ElevationMap::fuse()
   ROS_DEBUG("Fusing elevation map...");
 
   // Initializations.
+  string timerId = "map_fusion_timer";
+  Timer timer(timerId, true);
   resetFusedData();
 
   // For each cell in map.
@@ -170,21 +174,31 @@ bool ElevationMap::fuse()
   {
     for (unsigned int j = 0; j < elevationData_.cols(); ++j)
     {
+      if (timer.isTiming()) timer.stop();
+      timer.start();
+
+      if (std::isnan(elevationRawData_(i, j)) ||
+          std::isinf(varianceRawData_(i, j)) ||
+          std::isinf(horizontalVarianceRawDataX_(i, j)) ||
+          std::isinf(horizontalVarianceRawDataY_(i, j)))
+      {
+        // This is an empty cell (hole in the map).
+        continue;
+      }
+
+      // Size of submap (2 sigma bound). TODO Add minimum submap size?
+      Array2d size = 4 * Array2d(horizontalVarianceRawDataX_(i, j), horizontalVarianceRawDataY_(i, j)).sqrt();
+
       // Center of submap in map.
       Vector2d center;
       starleth_elevation_msg::getPositionFromIndex(center, Array2i(i, j),
                                                    length_, resolution_,
                                                    getBufferSize(), bufferStartIndex_);
 
-      // Size of submap (2 sigma bound).
-      Array2d size = 4 * Array2d(horizontalVarianceRawDataX_(i, j), horizontalVarianceRawDataY_(i, j)).sqrt();
-
-      // TODO Don't skip holes.
-      if (!(std::isfinite(size[0]) && std::isfinite(size[1]))) continue;
-
       // Get submap data.
       MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
       Array2i centerIndex;
+      // TODO check for small values if correct.
       getSubmap(elevationSubmap, centerIndex, elevationRawData_, center, size);
       getSubmap(variancesSubmap, centerIndex, varianceRawData_, center, size);
       getSubmap(horizontalVariancesXSubmap, centerIndex, horizontalVarianceRawDataX_, center, size);
@@ -206,14 +220,19 @@ bool ElevationMap::fuse()
 
       unsigned int n = 0;
 
+      // For each cell in submap.
       for (unsigned int p = 0; p < elevationSubmap.rows(); ++p)
       {
         for (unsigned int q = 0; q < elevationSubmap.cols(); ++q)
         {
-          if (!(std::isfinite(elevationSubmap(p, q))
-               && std::isfinite(variancesSubmap(p, q))
-               && std::isnormal(horizontalVariancesXSubmap(p, q))
-               && std::isnormal(horizontalVariancesYSubmap(p, q)))) continue;
+          if (std::isnan(elevationSubmap(p, q)) ||
+              std::isinf(variancesSubmap(p, q)) ||
+              std::isinf(horizontalVariancesXSubmap(p, q)) ||
+              std::isinf(horizontalVariancesYSubmap(p, q)))
+          {
+            // Empty cell in submap (cannot be center cell because we checked above).
+            continue;
+          }
 
           means[n] = elevationSubmap(p, q);
           variances[n] = variancesSubmap(p, q);
@@ -224,14 +243,14 @@ bool ElevationMap::fuse()
                                                        size, resolution_,
                                                        submapBufferSize, Array2i(0, 0));
 
-          Vector2d distanceToCenter = positionInSubmap - centerInSubmap;
+          Vector2d distanceToCenter = (positionInSubmap - centerInSubmap).cwiseAbs();
 
-          float probabilityX = fabs(
-                cumulativeDistributionFunction(distanceToCenter.x() - resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q)))
-              - cumulativeDistributionFunction(distanceToCenter.x() + resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q))));
-          float probabilityY = fabs(
-                cumulativeDistributionFunction(distanceToCenter.y() - resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q)))
-              - cumulativeDistributionFunction(distanceToCenter.y() + resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q))));
+          float probabilityX =
+                cumulativeDistributionFunction(distanceToCenter.x() + resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q)))
+              - cumulativeDistributionFunction(distanceToCenter.x() - resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q)));
+          float probabilityY =
+                cumulativeDistributionFunction(distanceToCenter.y() + resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q)))
+              - cumulativeDistributionFunction(distanceToCenter.y() - resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q)));
 
           weights[n] = probabilityX * probabilityY;
 
@@ -255,7 +274,6 @@ bool ElevationMap::fuse()
 
       float mean = (weights * means).sum() / weights.sum();
       float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
-      if(std::isnan(-variance)) variance = 0.0;
 
       if (!(std::isfinite(variance) && std::isfinite(mean)))
       {
@@ -269,8 +287,13 @@ bool ElevationMap::fuse()
 
       // TODO Add fusion of colors.
       colorData_(i, j) = colorRawData_(i, j);
+      timer.stop();
     }
   }
+
+  ROS_INFO("Elevation map has been fused in %f s.", Timing::getTotalSeconds(timerId));
+  ROS_DEBUG("Mean: %f s, Min: %f s, Max: %f s.", Timing::getMeanSeconds(timerId), Timing::getMinSeconds(timerId), Timing::getMaxSeconds(timerId));
+  Timing::reset(timerId);
 
   return true;
 }

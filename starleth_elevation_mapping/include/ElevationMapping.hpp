@@ -52,7 +52,7 @@ class ElevationMapping
 
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
-  bool fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Request& response);
+  bool fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
  private:
   bool readParameters();

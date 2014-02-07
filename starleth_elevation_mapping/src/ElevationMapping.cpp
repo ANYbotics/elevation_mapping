@@ -53,7 +53,7 @@ ElevationMapping::~ElevationMapping()
 bool ElevationMapping::readParameters()
 {
   // ElevationMapping parameters.
-  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points_throttled"));
+  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points"));
   nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
   nodeHandle_.param("elevation_map_frame_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/odom"));
@@ -162,6 +162,11 @@ void ElevationMapping::pointCloudCallback(
     return;
   }
 
+  // TODO remove.
+  std_srvs::Empty::Request request;
+  std_srvs::Empty::Response response;
+  fuseMap(request, response);
+
   // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
 
@@ -191,7 +196,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   resetMapUpdateTimer();
 }
 
-bool ElevationMapping::fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Request& response)
+bool ElevationMapping::fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
   map_.fuse();
   timeOfLastFusion_ = timeOfLastUpdate_;

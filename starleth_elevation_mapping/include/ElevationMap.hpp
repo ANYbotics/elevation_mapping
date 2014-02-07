@@ -16,6 +16,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+// Schweizer-Messer
+#include <sm/timing/Timer.hpp>
+
 namespace starleth_elevation_mapping {
 
 /*

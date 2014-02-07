@@ -19,7 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
 )
 
 ## System dependencies are found with CMake's conventions
-# find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -75,8 +75,10 @@ catkin_package(
 # include_directories(include)
 include_directories(
   include
+  ~/sl_root/schweizer-messer/sm_timing/include
+  ~/sl_root/schweizer-messer/sm_common/include
   ${catkin_INCLUDE_DIRS}
-  #${Boost_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -92,6 +94,7 @@ add_executable(
 	src/ElevationMap.cpp
 	src/PrimeSenseSensorProcessor.cpp
 	src/CovarianceMapUpdater.cpp
+	~/sl_root/schweizer-messer/sm_timing/src/Timer.cpp
 )
 
 ## Add cmake target dependencies of the executable/library
