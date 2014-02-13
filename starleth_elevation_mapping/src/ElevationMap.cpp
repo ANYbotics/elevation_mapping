@@ -346,15 +346,11 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map
 
 bool ElevationMap::relocate(const Eigen::Vector3d& position)
 {
-  Vector2d alignedPosition;
-  starleth_elevation_msg::getAlignedPosition(position.head(2),
-                                        alignedPosition, length_,
-                                        resolution_);
-
-  Vector2d positionShift = alignedPosition - toParentTransform_.translation().head(2);
-
   Array2i indexShift;
+  Vector2d positionShift = position.head(2) - toParentTransform_.translation().head(2);
   starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);
+  Vector2d alignedPositionShift;
+  starleth_elevation_msg::getPositionShiftFromIndexShift(alignedPositionShift, indexShift, resolution_);
 
   // Delete fields that fall out of map (and become empty cells).
   for (int i = 0; i < indexShift.size(); i++)
@@ -403,7 +399,7 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
   // Update information.
   bufferStartIndex_ += indexShift;
   starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
-  toParentTransform_.translation().head(2) = alignedPosition;
+  toParentTransform_.translation().head(2) =  toParentTransform_.translation().head(2) + alignedPositionShift;
 
   ROS_DEBUG("Elevation has been moved to position (%f, %f).", toParentTransform_.translation().head(2).x(), toParentTransform_.translation().head(2).y());
   return true;

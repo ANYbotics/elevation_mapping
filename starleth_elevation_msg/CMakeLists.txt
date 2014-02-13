@@ -72,11 +72,10 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
+  #${Boost_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
-
 add_library(transformation_math
    src/TransformationMath.cpp
 )
@@ -145,12 +144,12 @@ target_link_libraries(
 #############
 ## Testing ##
 #############
-
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_starleth_elevation_map.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+catkin_add_gtest(${PROJECT_NAME}-test test/test_starleth_elevation_msg.cpp test/TransformationMathTest.cpp)
+if(TARGET ${PROJECT_NAME}-test)
+  target_link_libraries(${PROJECT_NAME}-test transformation_math)
+endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
