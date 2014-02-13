@@ -105,15 +105,6 @@ inline Eigen::Array2i getIndexFromBufferIndex(
   return index;
 }
 
-inline bool checkIfIndexWithinRange(const Eigen::Array2i& index, const Eigen::Array2i& bufferSize)
-{
-  if (index[0] >= 0 && index[1] >= 0.0 && index[0] < bufferSize[0] && index[1] < bufferSize[1])
-  {
-    return true;
-  }
-  return false;
-}
-
 inline Eigen::Vector2d getIndexVectorFromIndex(
     const Eigen::Array2i& index,
     const Eigen::Array2i& bufferSize,
@@ -213,6 +204,30 @@ bool getPositionShiftFromIndexShift(Eigen::Vector2d& positionShift,
   return true;
 }
 
+bool checkIfIndexWithinRange(const Eigen::Array2i& index, const Eigen::Array2i& bufferSize)
+{
+  if (index[0] >= 0 && index[1] >= 0 && index[0] < bufferSize[0] && index[1] < bufferSize[1])
+  {
+    return true;
+  }
+  return false;
+}
+
+//void limitIndexToRange(Eigen::Array2i& index,
+//                       const Eigen::Array2i& bufferSize,
+//                       const Eigen::Array2i& bufferStartIndex)
+//{
+//  if(checkIfIndexWithinRange(index, bufferSize)) return;
+//
+//  Array2i unwrappedIndex = index - bufferStartIndex; // No mapping back to range!
+//
+//  // Limiting to range
+//  unwrappedIndex = unwrappedIndex.max(Array2i::Zero());
+//  unwrappedIndex = unwrappedIndex.min(bufferSize - Array2i::Ones());
+//
+//  index = getBufferIndexFromIndex(unwrappedIndex, bufferSize, bufferStartIndex);
+//}
+
 void mapIndexWithinRange(Eigen::Array2i& index,
                          const Eigen::Array2i& bufferSize)
 {
@@ -228,42 +243,67 @@ void mapIndexWithinRange(int& index, const int& bufferSize)
   index = index % bufferSize;
 }
 
-
-
-bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
-                           Eigen::Array2i& centerIndexInSubmap,
-                           Eigen::Array2i& submapSize,
-                           const Eigen::Vector2d& submapCenter,
-                           const Eigen::Array2d& submapLength,
-                           const Eigen::Array2d& mapLength,
-                           const double& resolution,
-                           const Eigen::Array2i& bufferSize,
-                           const Eigen::Array2i& bufferStartIndex)
+void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLength)
 {
-  // Get center index
-  Array2i centerBufferIndex;
-  if (!getIndexFromPosition(centerBufferIndex, submapCenter, mapLength, resolution, bufferSize, bufferStartIndex)) return false;
-  Array2i centerRegularIndex = getIndexFromBufferIndex(centerBufferIndex, bufferSize, bufferStartIndex);
+  Vector2d distanceOfOrigin;
+  getDistanceOfOrigin(distanceOfOrigin, mapLength);
+  Vector2d positionShifted = position + distanceOfOrigin;
+  positionShifted = positionShifted.cwiseMax(Vector2d::Zero()).cwiseMin(mapLength.matrix());
+  position = positionShifted - distanceOfOrigin;
+}
 
-  // Get size in cells
-  Array2i halfSize;
-  for (int i = 0; i < submapLength.size(); i++)
-  {
-    halfSize[i] = static_cast<int>(ceil(submapLength[i] / resolution / 2.0));
-  }
+//bool convertToValidSubmap(Eigen::Array2i& submapTopLeftIndex, Eigen::Array2i& submapSize,
+//                          const Eigen::Array2i& bufferSize, const Eigen::Array2i& bufferStartIndex)
+//{
+//  limitIndexToRange(submapTopLeftIndex, bufferSize, bufferStartIndex);
+//
+//  Array2i topLeft = getIndexFromBufferIndex(submapTopLeftIndex, bufferSize, bufferStartIndex);
+//  Array2i bottomRight = topLeft + submapSize;
+//
+//  // Correct to valid indeces
+//  bottomRight = bottomRight.min(bufferSize - Array2i::Ones());
+//
+//  // Prepare output
+//  submapSize = bottomRight - topLeft + Array2i::Ones();
+//
+//  return true;
+//}
 
-  // Get top left and right bottom cell index
-  Array2i topLeftIndex = centerRegularIndex - halfSize;
-  Array2i rightBottomIndex = centerRegularIndex + halfSize;
+bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
+                          Eigen::Array2i& submapSize,
+                          Eigen::Vector2d& submapPosition,
+                          Eigen::Array2i& requestedIndexInSubmap,
+                          const Eigen::Vector2d& requestedSubmapPosition,
+                          const Eigen::Vector2d& requestedSubmapSize,
+                          const Eigen::Array2d& mapLength,
+                          const double& resolution,
+                          const Eigen::Array2i& bufferSize,
+                          const Eigen::Array2i& bufferStartIndex)
+{
+  // Corners of submap.
+  Vector2d topLeftPosition = requestedSubmapPosition - 0.5 * requestedSubmapSize;
+  limitPositionToRange(topLeftPosition, mapLength);
+  Array2i topLeftIndex;
+  getIndexFromPosition(topLeftIndex, topLeftPosition, mapLength, resolution, bufferSize, bufferStartIndex);
 
-  // Correct to valid indeces
-  topLeftIndex = topLeftIndex.max(Array2i::Zero());
-  rightBottomIndex = rightBottomIndex.min(bufferSize - Array2i::Ones());
+  Vector2d bottomRightPosition = requestedSubmapPosition + 0.5 * requestedSubmapSize;
+  limitPositionToRange(bottomRightPosition, mapLength);
+  Array2i bottomRightIndex;
+  getIndexFromPosition(bottomRightIndex, bottomRightPosition, mapLength, resolution, bufferSize, bufferStartIndex);
 
-  // Prepare output
-  centerIndexInSubmap = centerRegularIndex - topLeftIndex; // This is a submap index, so no "getBufferIndexFromIndex" necessary
-  submapTopLeftIndex = getBufferIndexFromIndex(topLeftIndex, bufferSize, bufferStartIndex);
-  submapSize = rightBottomIndex - topLeftIndex + Array2i::Ones();
+  // Size of submap.
+  submapSize = topLeftIndex - bottomRightIndex;
+
+  // Position of submap.
+  Array2d submapLength = bottomRightPosition - topLeftPosition;
+  Vector2d distanceOfSubmapOrigin;
+  getDistanceOfOrigin(distanceOfSubmapOrigin, submapLength);
+  submapPosition = topLeftPosition + distanceOfSubmapOrigin;
+
+  // Get the index of the cell which corresponds the requested
+  // position of the submap.
+  Vector2d requestedPositionInSubmap = requestedSubmapPosition - submapPosition;
+  getIndexFromPosition(requestedIndexInSubmap, requestedPositionInSubmap, submapLength, resolution, submapSize);
 
   return true;
 }

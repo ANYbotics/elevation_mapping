@@ -84,20 +84,44 @@ bool getPositionShiftFromIndexShift(Eigen::Vector2d& positionShift,
                                     const double& resolution);
 
 /*!
+ * Checks if index is within range of the buffer.
+ * @param[in] index to check.
+ * @param[in] bufferSize the size of the buffer.
+ * @return true if index is within, and false if index is outside of the buffer.
+ */
+bool checkIfIndexWithinRange(const Eigen::Array2i& index, const Eigen::Array2i& bufferSize);
+
+///*!
+// * Limits (cuts off) the index to fit the range of the buffer.
+// * @param[in/out] index to be limited.
+// * @param[in] bufferSize the size of the buffer.
+// * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
+// */
+//void limitIndexToRange(Eigen::Array2i& index,
+//                       const Eigen::Array2i& bufferSize,
+//                       const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
+
+/*!
  * Maps an index that runs out of the range of the circular buffer back into allowed the region.
  * This is the 2d version of mapIndexWithinRange(int&, const int&).
- * @param index the indeces that will be mapped into the valid region of the buffer.
- * @param bufferSize the size of the buffer.
+ * @param[in/out] index the indeces that will be mapped into the valid region of the buffer.
+ * @param[in] bufferSize the size of the buffer.
  */
 void mapIndexWithinRange(Eigen::Array2i& index,
                          const Eigen::Array2i& bufferSize);
 
 /*!
  * Maps an index that runs out of the range of the circular buffer back into allowed the region.
- * @param index the index that will be mapped into the valid region of the buffer.
- * @param bufferSize the size of the buffer.
+ * @param[in/out] index the index that will be mapped into the valid region of the buffer.
+ * @param[in] bufferSize the size of the buffer.
  */
 void mapIndexWithinRange(int& index, const int& bufferSize);
+
+//bool convertToValidSubmapSize(const Eigen::Array2i& submapTopLeftIndex, Eigen::Array2i& submapSize,
+//                          const Eigen::Array2i& bufferSize, const Eigen::Array2i& bufferStartIndex);
+
+
+void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLength);
 
 /*!
  * Given a map and a desired submap (defined by center and size), this function returns the index
@@ -115,15 +139,16 @@ void mapIndexWithinRange(int& index, const int& bufferSize);
  * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
  * @return true if successful, false if requested submapCenter lies outside of the map.
  */
-bool getSubmapIndexAndSize(Eigen::Array2i& submapTopLeftIndex,
-                           Eigen::Array2i& centerIndexInSubmap,
-                           Eigen::Array2i& submapSize,
-                           const Eigen::Vector2d& submapCenter,
-                           const Eigen::Array2d& submapLength,
-                           const Eigen::Array2d& mapLength,
-                           const double& resolution,
-                           const Eigen::Array2i& bufferSize,
-                           const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
+bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
+                          Eigen::Array2i& submapSize,
+                          Eigen::Vector2d& submapPosition,
+                          Eigen::Array2i& requestedIndexInSubmap,
+                          const Eigen::Vector2d& requestedSubmapPosition,
+                          const Eigen::Vector2d& requestedSubmapSize,
+                          const Eigen::Array2d& mapLength,
+                          const double& resolution,
+                          const Eigen::Array2i& bufferSize,
+                          const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
 
 /*!
  *

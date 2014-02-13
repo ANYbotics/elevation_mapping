@@ -108,7 +108,6 @@ TEST(IndexFromPosition, Simple)
   EXPECT_FALSE(getIndexFromPosition(index, Vector2d(4.0, 0.5), mapLength, resolution, bufferSize));
 }
 
-
 TEST(IndexFromPosition, EdgeCases)
 {
   Array2d mapLength(3.0, 2.0);
@@ -225,6 +224,53 @@ TEST(getPositionShiftFromIndexShift, All)
   EXPECT_DOUBLE_EQ(-0.3, positionShift.y());
 }
 
+TEST(checkIfIndexWithinRange, All)
+{
+  Array2i bufferSize(10, 15);
+  EXPECT_TRUE(checkIfIndexWithinRange(Array2i(0, 0), bufferSize));
+  EXPECT_TRUE(checkIfIndexWithinRange(Array2i(9, 14), bufferSize));
+  EXPECT_FALSE(checkIfIndexWithinRange(Array2i(10, 5), bufferSize));
+  EXPECT_FALSE(checkIfIndexWithinRange(Array2i(5, 300), bufferSize));
+  EXPECT_FALSE(checkIfIndexWithinRange(Array2i(-1, 0), bufferSize));
+  EXPECT_FALSE(checkIfIndexWithinRange(Array2i(0, -300), bufferSize));
+}
+
+//TEST(limitIndexToRange, Simple)
+//{
+//  Array2i bufferSize(10, 15);
+//  Array2i index;
+//
+//  index << 0, 0;
+//  limitIndexToRange(index, bufferSize);
+//  EXPECT_EQ(0, index(0));
+//  EXPECT_EQ(0, index(1));
+//
+//  index << 9, 14;
+//  limitIndexToRange(index, bufferSize);
+//  EXPECT_EQ(9, index(0));
+//  EXPECT_EQ(14, index(1));
+//
+//  index << 10, 15;
+//  limitIndexToRange(index, bufferSize);
+//  EXPECT_EQ(9, index(0));
+//  EXPECT_EQ(14, index(1));
+//
+//  index << -1, -1;
+//  limitIndexToRange(index, bufferSize);
+//  EXPECT_EQ(0, index(0));
+//  EXPECT_EQ(0, index(1));
+//
+//  index << 1e6, 1e6;
+//  limitIndexToRange(index, bufferSize);
+//  EXPECT_EQ(9, index(0));
+//  EXPECT_EQ(14, index(1));
+//
+//  index << -1e6, -1e6;
+//  limitIndexToRange(index, bufferSize);
+//  EXPECT_EQ(0, index(0));
+//  EXPECT_EQ(0, index(1));
+//}
+
 TEST(mapIndexWithinRange, All)
 {
   int index;
@@ -267,50 +313,91 @@ TEST(mapIndexWithinRange, All)
   EXPECT_EQ(1, index);
 }
 
-TEST(getSubmapIndexAndSize, Simple)
+TEST(limitPositionToRange, All)
 {
-  // Map
-  Array2d mapLength(3.0, 2.0);
-  double resolution = 0.1;
-  Array2i bufferSize(30, 20);
+  Array2d mapLength(30.0, 10.0);
+  Vector2d position;
 
-  // Requested submap
-  Vector2d submapCenter(0.5, 0.0);
-  Vector2d submapLength(1.0, 1.5);
+  position << 0.0, 0.0;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(0.0, position.x());
+  EXPECT_DOUBLE_EQ(0.0, position.y());
 
-  // The returned submap indeces
-  Array2i submapTopLeftIndex;
-  Array2i centerIndexInSubmap;
-  Array2i submapSize;
+  position << 15.0, 5.0;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(15.0, position.x());
+  EXPECT_DOUBLE_EQ(5.0, position.y());
 
-  EXPECT_TRUE(getSubmapIndexAndSize(submapTopLeftIndex, centerIndexInSubmap, submapSize,
-                                    submapCenter, submapLength,
-                                    mapLength, resolution, bufferSize));
-  EXPECT_LE(10, submapSize.x());
-  EXPECT_GE(10 + 2, submapSize.x());
-  EXPECT_LE(15, submapSize.y());
-  EXPECT_GE(15 + 2, submapSize.y());
+  position << -15.0, -5.0;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(-15.0, position.x());
+  EXPECT_DOUBLE_EQ(-5.0, position.y());
+
+  position << 16.0, 6.0;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(15.0, position.x());
+  EXPECT_DOUBLE_EQ(5.0, position.y());
+
+  position << -16.0, -6.0;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(-15.0, position.x());
+  EXPECT_DOUBLE_EQ(-5.0, position.y());
+
+  position << 1e6, 1e6;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(15.0, position.x());
+  EXPECT_DOUBLE_EQ(5.0, position.y());
+
+  position << -1e6, -1e6;
+  limitPositionToRange(position, mapLength);
+  EXPECT_DOUBLE_EQ(-15.0, position.x());
+  EXPECT_DOUBLE_EQ(-5.0, position.y());
 }
-
-TEST(getSubmapIndexAndSize, ExceedingBoundaries)
-{
-  // Map
-  Array2d mapLength(3.0, 2.0);
-  double resolution = 0.1;
-  Array2i bufferSize(30, 20);
-
-  // Requested submap
-  Vector2d submapCenter(1.0, 0.0);
-  Vector2d submapLength(1e6, 1e6);
-
-  // The returned submap indeces
-  Array2i submapTopLeftIndex;
-  Array2i centerIndexInSubmap;
-  Array2i submapSize;
-
-  EXPECT_TRUE(getSubmapIndexAndSize(submapTopLeftIndex, centerIndexInSubmap, submapSize,
-                                    submapCenter, submapLength,
-                                    mapLength, resolution, bufferSize));
-  EXPECT_EQ(30, submapSize.x());
-  EXPECT_EQ(20, submapSize.y());
-}
+//
+//TEST(getSubmapIndexAndSize, Simple)
+//{
+//  // Map
+//  Array2d mapLength(3.0, 2.0);
+//  double resolution = 0.1;
+//  Array2i bufferSize(30, 20);
+//
+//  // Requested submap
+//  Vector2d submapCenter(0.5, 0.0);
+//  Vector2d submapLength(1.0, 1.5);
+//
+//  // The returned submap indeces
+//  Array2i submapTopLeftIndex;
+//  Array2i centerIndexInSubmap;
+//  Array2i submapSize;
+//
+//  EXPECT_TRUE(getSubmapIndexAndSize(submapTopLeftIndex, centerIndexInSubmap, submapSize,
+//                                    submapCenter, submapLength,
+//                                    mapLength, resolution, bufferSize));
+//  EXPECT_LE(10, submapSize.x());
+//  EXPECT_GE(10 + 2, submapSize.x());
+//  EXPECT_LE(15, submapSize.y());
+//  EXPECT_GE(15 + 2, submapSize.y());
+//}
+//
+//TEST(getSubmapIndexAndSize, ExceedingBoundaries)
+//{
+//  // Map
+//  Array2d mapLength(3.0, 2.0);
+//  double resolution = 0.1;
+//  Array2i bufferSize(30, 20);
+//
+//  // Requested submap
+//  Vector2d submapCenter(1.0, 0.0);
+//  Vector2d submapLength(1e6, 1e6);
+//
+//  // The returned submap indeces
+//  Array2i submapTopLeftIndex;
+//  Array2i centerIndexInSubmap;
+//  Array2i submapSize;
+//
+//  EXPECT_TRUE(getSubmapIndexAndSize(submapTopLeftIndex, centerIndexInSubmap, submapSize,
+//                                    submapCenter, submapLength,
+//                                    mapLength, resolution, bufferSize));
+//  EXPECT_EQ(30, submapSize.x());
+//  EXPECT_EQ(20, submapSize.y());
+//}
