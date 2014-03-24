@@ -128,7 +128,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     horizontalVarianceY = 0.0;
 
     // Add noise to cells which have ignored lower values,
-    // such we outliers and moving objects are removed
+    // such that outliers and moving objects are removed
     variance += multiHeightNoise_;
   }
 
@@ -158,7 +158,6 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
 
   return true;
 }
-
 
 bool ElevationMap::fuse()
 {

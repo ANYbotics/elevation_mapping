@@ -40,8 +40,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(robotPoseCacheSize_);
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
-  fusionTriggerService_ = nodeHandle_.advertiseService("trigger_fusion_of_elevation_map", &ElevationMapping::fuseMap, this);
-  submapService_ = nodeHandle_.advertiseService("get_part_of_elevation_map", &ElevationMapping::getSubmap, this);
+  fusionTriggerService_ = nodeHandle_.advertiseService("trigger_fusion", &ElevationMapping::fuseMap, this);
+  submapService_ = nodeHandle_.advertiseService("get_submap", &ElevationMapping::getSubmap, this);
   initialize();
 }
 
@@ -245,6 +245,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   return true;
 }
 
+// TODO Combine these two methods.
 bool ElevationMapping::publishRawElevationMap()
 {
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
