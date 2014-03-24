@@ -117,24 +117,26 @@ void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLe
 
 /*!
  * Given a map and a desired submap (defined by position and size), this function computes
- * various information about the submap. The returned submap respects the boundaries of
- * the map and the returned submap might be smaller than the requested size.
+ * various information about the submap. The returned submap might be smaller than the requested
+ * size as it respects the boundaries of the map.
  * @param[out] submapTopLeftIndex the top left index of the returned submap.
  * @param[out] submapBufferSize the buffer size of the returned submap.
- * @param[out] submapPosition the position of the submap in the map frame.
+ * @param[out] submapPosition the position of the submap (center) in the map frame.
+ * @param[out] submapLength the length of the submap.
  * @param[out] requestedIndexInSubmap the index in the submap that corresponds to the requested
  *             position of the submap.
  * @param[in] requestedSubmapPosition the requested submap position (center) in the map frame.
  * @param[in] requestedSubmapLength the requested submap length.
  * @param[in] mapLength the lengths in x and y direction.
- * @param[in] resolution resolution the resolution of the map.
+ * @param[in] resolution the resolution of the map.
  * @param[in] bufferSize the buffer size of the map.
  * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
- * @return
+ * @return true if successful.
  */
 bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
                           Eigen::Array2i& submapBufferSize,
                           Eigen::Vector2d& submapPosition,
+                          Eigen::Array2d& submapLength,
                           Eigen::Array2i& requestedIndexInSubmap,
                           const Eigen::Vector2d& requestedSubmapPosition,
                           const Eigen::Vector2d& requestedSubmapLength,
@@ -149,7 +151,7 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
  * @param[out] submapIndeces the list of indeces (top-left) for the buffer regions.
  * @param[out] submapSizes the sizes of the buffer regions.
  * @param[in] submapIndex the index (top-left) for the requested submap.
- * @param[in] submapSize the size of the requested submap.
+ * @param[in] submapBufferSize the size of the requested submap.
  * @param[in] bufferSize the buffer size of the map.
  * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
  * @return true if successful, false if requested submap is not fully contained in the map.
@@ -157,25 +159,32 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
 bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
                                std::vector<Eigen::Array2i>& submapSizes,
                                const Eigen::Array2i& submapIndex,
-                               const Eigen::Array2i& submapSize,
+                               const Eigen::Array2i& submapBufferSize,
                                const Eigen::Array2i& bufferSize,
                                const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
+
+/*!
+ * Provides the alignment transformation from the buffer order (outer/inner storage)
+ * and the map frame (x/y-coordinate).
+ * @return the alignment transformation.
+ */
+const Eigen::Matrix2i getBufferOrderToMapFrameAlignment();
 
 /*!
  * The definition of the buffer regions.
  */
 enum class bufferRegion
 {
-    TopLeft,
-    TopRight,
-    BottomLeft,
-    BottomRight
+  TopLeft,
+  TopRight,
+  BottomLeft,
+  BottomRight
 };
 
 /*!
  * The definition of the position in the list for the buffer regions.
  */
-std::map<bufferRegion, int> bufferRegionIndeces =
+static std::map<bufferRegion, int> bufferRegionIndeces =
 {
 { bufferRegion::TopLeft, 0 },
 { bufferRegion::TopRight, 1 },

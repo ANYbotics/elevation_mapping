@@ -187,26 +187,28 @@ bool ElevationMap::fuse()
       }
 
       // Size of submap (2 sigma bound). TODO Add minimum submap size?
-      Array2d size = 4 * Array2d(horizontalVarianceRawDataX_(i, j), horizontalVarianceRawDataY_(i, j)).sqrt();
+      Array2d requestedSubmapLength = 4 * Array2d(horizontalVarianceRawDataX_(i, j), horizontalVarianceRawDataY_(i, j)).sqrt();
 
-      // Center of submap in map.
-      Vector2d center;
-      starleth_elevation_msg::getPositionFromIndex(center, Array2i(i, j),
+      // Requested position (center) of submap in map.
+      Vector2d requestedSubmapPosition;
+      starleth_elevation_msg::getPositionFromIndex(requestedSubmapPosition, Array2i(i, j),
                                                    length_, resolution_,
                                                    getBufferSize(), bufferStartIndex_);
 
       // Get submap data.
       MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
-      Array2i centerIndex;
-      // TODO check for small values if correct.
-      getSubmap(elevationSubmap, centerIndex, elevationRawData_, center, size);
-      getSubmap(variancesSubmap, centerIndex, varianceRawData_, center, size);
-      getSubmap(horizontalVariancesXSubmap, centerIndex, horizontalVarianceRawDataX_, center, size);
-      getSubmap(horizontalVariancesYSubmap, centerIndex, horizontalVarianceRawDataY_, center, size);
+      Vector2d submapPosition;
+      Array2d submapLength;
+      Array2i submapBufferSize;
+      Array2i requestedIndex;
+
+      getSubmap(elevationSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, elevationRawData_, requestedSubmapPosition, requestedSubmapLength);
+      getSubmap(variancesSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, varianceRawData_, requestedSubmapPosition, requestedSubmapLength);
+      getSubmap(horizontalVariancesXSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, horizontalVarianceRawDataX_, requestedSubmapPosition, requestedSubmapLength);
+      getSubmap(horizontalVariancesYSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, horizontalVarianceRawDataY_, requestedSubmapPosition, requestedSubmapLength);
 
       // Prepare data fusion.
       ArrayXf means, variances, weights;
-      Array2i submapBufferSize(elevationSubmap.rows(), elevationSubmap.cols());
       int maxNumberOfCellsToFuse = submapBufferSize.prod();
       means.resize(maxNumberOfCellsToFuse);
       variances.resize(maxNumberOfCellsToFuse);
@@ -214,9 +216,8 @@ bool ElevationMap::fuse()
 
       // Position of center index in submap.
       Vector2d centerInSubmap;
-      starleth_elevation_msg::getPositionFromIndex(centerInSubmap, centerIndex,
-                                                   size, resolution_,
-                                                   submapBufferSize, Array2i(0, 0));
+      starleth_elevation_msg::getPositionFromIndex(centerInSubmap, requestedIndex, submapLength, resolution_, submapBufferSize,
+                                                   Array2i(0, 0));
 
       unsigned int n = 0;
 
@@ -240,7 +241,7 @@ bool ElevationMap::fuse()
           // Compute weight from probability.
           Vector2d positionInSubmap;
           starleth_elevation_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
-                                                       size, resolution_,
+                                                       submapLength, resolution_,
                                                        submapBufferSize, Array2i(0, 0));
 
           Vector2d distanceToCenter = (positionInSubmap - centerInSubmap).cwiseAbs();
@@ -299,29 +300,20 @@ bool ElevationMap::fuse()
   return true;
 }
 
-bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size)
+bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPosition, Eigen::Array2d& submapLength, Eigen::Array2i& submapBufferSize,
+                             Eigen::Array2i& requestedIndexInSubmap, const Eigen::MatrixXf& map,
+                             const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapLength)
 {
-  Array2i submapTopLeftIndex, submapSize;
-  if (!starleth_elevation_msg::getSubmapIndexAndSize(submapTopLeftIndex, centerIndex,
-                                                     submapSize, center, size,
-                                                     length_,
-                                                     resolution_,
-                                                     getBufferSize(),
-                                                     bufferStartIndex_))
-  {
-    ROS_ERROR("Position of requested submap is not part of the map.");
-    return false;
-  }
+  Array2i topLeftIndex;
 
-  return getSubmap(submap, map, submapTopLeftIndex, submapSize);
-}
+  starleth_elevation_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap,
+                                               requestedSubmapPosition, requestedSubmapLength, length_, resolution_,
+                                               getBufferSize(), bufferStartIndex_);
 
-bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Array2i& topLeftindex, const Eigen::Array2i& size)
-{
   std::vector<Eigen::Array2i> submapIndeces;
   std::vector<Eigen::Array2i> submapSizes;
 
-  if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftindex, size, getBufferSize(), bufferStartIndex_))
+  if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftIndex, submapBufferSize, getBufferSize(), bufferStartIndex_))
   {
      ROS_ERROR("Cannot access submap of this size.");
      return false;

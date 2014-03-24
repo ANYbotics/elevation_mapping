@@ -340,19 +340,21 @@ TEST(getSubmapInformation, Simple)
   Array2i submapTopLeftIndex;
   Array2i submapSize;
   Eigen::Vector2d submapPosition;
+  Eigen::Array2d submapLength;
   Eigen::Array2i requestedIndexInSubmap;
 
   requestedSubmapPosition << 0.0, 0.5;
   requestedSubmapLength << 0.9, 2.9;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
-                                   requestedSubmapPosition, requestedSubmapLength,
-                                    mapLength, resolution, bufferSize));
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
+                           requestedSubmapPosition, requestedSubmapLength, mapLength, resolution, bufferSize));
   EXPECT_EQ(2, submapTopLeftIndex(0));
   EXPECT_EQ(0, submapTopLeftIndex(1));
   EXPECT_EQ(1, submapSize(0));
   EXPECT_EQ(3, submapSize(1));
   EXPECT_DOUBLE_EQ(0.0, submapPosition.x());
   EXPECT_DOUBLE_EQ(0.5, submapPosition.y());
+  EXPECT_DOUBLE_EQ(1.0, submapLength(0));
+  EXPECT_DOUBLE_EQ(3.0, submapLength(1));
   EXPECT_EQ(0, requestedIndexInSubmap(0));
   EXPECT_EQ(1, requestedIndexInSubmap(1));
 }
@@ -372,11 +374,12 @@ TEST(getSubmapInformation, Zero)
   Array2i submapTopLeftIndex;
   Array2i submapSize;
   Eigen::Vector2d submapPosition;
+  Eigen::Array2d submapLength;
   Eigen::Array2i requestedIndexInSubmap;
 
   requestedSubmapPosition << -1.0, -0.5;
   requestedSubmapLength << 0.0, 0.0;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
                                    requestedSubmapPosition, requestedSubmapLength,
                                     mapLength, resolution, bufferSize));
   EXPECT_EQ(3, submapTopLeftIndex(0));
@@ -385,6 +388,8 @@ TEST(getSubmapInformation, Zero)
   EXPECT_EQ(1, submapSize(1));
   EXPECT_DOUBLE_EQ(requestedSubmapPosition.x(), submapPosition.x());
   EXPECT_DOUBLE_EQ(requestedSubmapPosition.y(), submapPosition.y());
+  EXPECT_DOUBLE_EQ(resolution, submapLength(0));
+  EXPECT_DOUBLE_EQ(resolution, submapLength(1));
   EXPECT_EQ(0, requestedIndexInSubmap(0));
   EXPECT_EQ(0, requestedIndexInSubmap(1));
 }
@@ -404,11 +409,12 @@ TEST(getSubmapInformation, ExceedingBoundaries)
   Array2i submapTopLeftIndex;
   Array2i submapSize;
   Eigen::Vector2d submapPosition;
+  Eigen::Array2d submapLength;
   Eigen::Array2i requestedIndexInSubmap;
 
   requestedSubmapPosition << 2.0, 1.5;
   requestedSubmapLength << 2.9, 2.9;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
                                    requestedSubmapPosition, requestedSubmapLength,
                                     mapLength, resolution, bufferSize));
   EXPECT_EQ(0, submapTopLeftIndex(0));
@@ -417,12 +423,14 @@ TEST(getSubmapInformation, ExceedingBoundaries)
   EXPECT_EQ(2, submapSize(1));
   EXPECT_DOUBLE_EQ(1.5, submapPosition.x());
   EXPECT_DOUBLE_EQ(1.0, submapPosition.y());
+  EXPECT_DOUBLE_EQ(2.0, submapLength(0));
+  EXPECT_DOUBLE_EQ(2.0, submapLength(1));
   EXPECT_EQ(0, requestedIndexInSubmap(0));
   EXPECT_EQ(0, requestedIndexInSubmap(1));
 
   requestedSubmapPosition << 0.0, 0.0;
   requestedSubmapLength << 1e6, 1e6;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
                                    requestedSubmapPosition, requestedSubmapLength,
                                     mapLength, resolution, bufferSize));
   EXPECT_EQ(0, submapTopLeftIndex(0));
@@ -431,6 +439,8 @@ TEST(getSubmapInformation, ExceedingBoundaries)
   EXPECT_EQ(bufferSize(1), submapSize(1));
   EXPECT_DOUBLE_EQ(0.0, submapPosition.x());
   EXPECT_DOUBLE_EQ(0.0, submapPosition.y());
+  EXPECT_DOUBLE_EQ(mapLength(0), submapLength(0));
+  EXPECT_DOUBLE_EQ(mapLength(1), submapLength(1));
   EXPECT_EQ(2, requestedIndexInSubmap(0));
   EXPECT_LE(1, requestedIndexInSubmap(1));
   EXPECT_GE(2, requestedIndexInSubmap(1));
@@ -452,11 +462,12 @@ TEST(getSubmapInformation, CircularBuffer)
   Array2i submapTopLeftIndex;
   Array2i submapSize;
   Eigen::Vector2d submapPosition;
+  Eigen::Array2d submapLength;
   Eigen::Array2i requestedIndexInSubmap;
 
   requestedSubmapPosition << 0.0, 0.5;
   requestedSubmapLength << 0.9, 2.9;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
                                    requestedSubmapPosition, requestedSubmapLength,
                                     mapLength, resolution, bufferSize, bufferStartIndex));
   EXPECT_EQ(4, submapTopLeftIndex(0));
@@ -465,12 +476,14 @@ TEST(getSubmapInformation, CircularBuffer)
   EXPECT_EQ(3, submapSize(1));
   EXPECT_DOUBLE_EQ(0.0, submapPosition.x());
   EXPECT_DOUBLE_EQ(0.5, submapPosition.y());
+  EXPECT_DOUBLE_EQ(1.0, submapLength(0));
+  EXPECT_DOUBLE_EQ(3.0, submapLength(1));
   EXPECT_EQ(0, requestedIndexInSubmap(0));
   EXPECT_EQ(1, requestedIndexInSubmap(1));
 
   requestedSubmapPosition << 2.0, 1.5;
   requestedSubmapLength << 2.9, 2.9;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
                                    requestedSubmapPosition, requestedSubmapLength,
                                     mapLength, resolution, bufferSize, bufferStartIndex));
   EXPECT_EQ(2, submapTopLeftIndex(0));
@@ -479,12 +492,14 @@ TEST(getSubmapInformation, CircularBuffer)
   EXPECT_EQ(2, submapSize(1));
   EXPECT_DOUBLE_EQ(1.5, submapPosition.x());
   EXPECT_DOUBLE_EQ(1.0, submapPosition.y());
+  EXPECT_DOUBLE_EQ(2.0, submapLength(0));
+  EXPECT_DOUBLE_EQ(2.0, submapLength(1));
   EXPECT_EQ(0, requestedIndexInSubmap(0));
   EXPECT_EQ(0, requestedIndexInSubmap(1));
 
   requestedSubmapPosition << 0.0, 0.0;
   requestedSubmapLength << 1e6, 1e6;
-  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, requestedIndexInSubmap,
+  EXPECT_TRUE(getSubmapInformation(submapTopLeftIndex, submapSize, submapPosition, submapLength, requestedIndexInSubmap,
                                    requestedSubmapPosition, requestedSubmapLength,
                                     mapLength, resolution, bufferSize, bufferStartIndex));
   EXPECT_EQ(2, submapTopLeftIndex(0));
@@ -493,6 +508,8 @@ TEST(getSubmapInformation, CircularBuffer)
   EXPECT_EQ(bufferSize(1), submapSize(1));
   EXPECT_DOUBLE_EQ(0.0, submapPosition.x());
   EXPECT_DOUBLE_EQ(0.0, submapPosition.y());
+  EXPECT_DOUBLE_EQ(mapLength(0), submapLength(0));
+  EXPECT_DOUBLE_EQ(mapLength(1), submapLength(1));
   EXPECT_EQ(2, requestedIndexInSubmap(0));
   EXPECT_LE(1, requestedIndexInSubmap(1));
   EXPECT_GE(2, requestedIndexInSubmap(1));

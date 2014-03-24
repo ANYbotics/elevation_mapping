@@ -243,6 +243,7 @@ void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLe
 bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
                           Eigen::Array2i& submapBufferSize,
                           Eigen::Vector2d& submapPosition,
+                          Eigen::Array2d& submapLength,
                           Eigen::Array2i& requestedIndexInSubmap,
                           const Eigen::Vector2d& requestedSubmapPosition,
                           const Eigen::Vector2d& requestedSubmapLength,
@@ -278,8 +279,10 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
   // Size of submap.
   submapBufferSize = bottomRightIndex - topLeftIndex + Array2i::Ones();
 
+  // Length of the submap.
+  submapLength = submapBufferSize.cast<double>() * resolution;
+
   // Position of submap.
-  Array2d submapLength = submapBufferSize.cast<double>() * resolution;
   Vector2d distanceOfSubmapOrigin;
   getDistanceOfOrigin(distanceOfSubmapOrigin, submapLength);
   submapPosition = topLeftCorner - distanceOfSubmapOrigin;
@@ -296,18 +299,18 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
 bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
                                std::vector<Eigen::Array2i>& submapSizes,
                                const Eigen::Array2i& submapIndex,
-                               const Eigen::Array2i& submapSize,
+                               const Eigen::Array2i& submapBufferSize,
                                const Eigen::Array2i& bufferSize,
                                const Eigen::Array2i& bufferStartIndex)
 {
-  if ((getIndexFromBufferIndex(submapIndex, bufferSize, bufferStartIndex) + submapSize > bufferSize).any()) return false;
+  if ((getIndexFromBufferIndex(submapIndex, bufferSize, bufferStartIndex) + submapBufferSize > bufferSize).any()) return false;
 
   submapIndeces.clear();
   submapIndeces.resize(nBufferRegions, Array2i::Zero());
   submapSizes.clear();
   submapSizes.resize(nBufferRegions, Array2i::Zero());
 
-  Array2i bottomRightIndex = submapIndex + submapSize - Array2i::Ones();
+  Array2i bottomRightIndex = submapIndex + submapBufferSize - Array2i::Ones();
   mapIndexWithinRange(bottomRightIndex, bufferSize);
 
   bufferRegion mapRegionOfTopLeft = getMapRegion(submapIndex, bufferStartIndex);
@@ -324,20 +327,20 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     if (mapRegionOfBottomRight == bufferRegion::TopLeft)
     {
       submapIndeces[topLeft] = submapIndex;
-      submapSizes[topLeft] = submapSize;
+      submapSizes[topLeft] = submapBufferSize;
       return true;
     }
 
     if (mapRegionOfBottomRight == bufferRegion::TopRight)
     {
       submapIndeces[topLeft] = submapIndex;
-      submapSizes[topLeft](0) = submapSize(0);
+      submapSizes[topLeft](0) = submapBufferSize(0);
       submapSizes[topLeft](1) = bufferSize(1) - submapIndex(1);
 
       submapIndeces[topRight](0) = submapIndex(0);
       submapIndeces[topRight](1) = 0;
-      submapSizes[topRight](0) = submapSize(0);
-      submapSizes[topRight](1) = submapSize(1) - submapSizes[topLeft](1);
+      submapSizes[topRight](0) = submapBufferSize(0);
+      submapSizes[topRight](1) = submapBufferSize(1) - submapSizes[topLeft](1);
       return true;
     }
 
@@ -345,12 +348,12 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     {
       submapIndeces[topLeft] = submapIndex;
       submapSizes[topLeft](0) = bufferSize(0) - submapIndex(0);
-      submapSizes[topLeft](1) = submapSize(1);
+      submapSizes[topLeft](1) = submapBufferSize(1);
 
       submapIndeces[bottomLeft](0) = 0;
       submapIndeces[bottomLeft](1) = submapIndex(1);
-      submapSizes[bottomLeft](0) = submapSize(0) - submapSizes[topLeft](0);
-      submapSizes[bottomLeft](1) = submapSize(1);
+      submapSizes[bottomLeft](0) = submapBufferSize(0) - submapSizes[topLeft](0);
+      submapSizes[bottomLeft](1) = submapBufferSize(1);
       return true;
     }
 
@@ -363,11 +366,11 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
       submapIndeces[topRight](0) = submapIndex(0);
       submapIndeces[topRight](1) = 0;
       submapSizes[topRight](0) = bufferSize(0) - submapIndex(0);
-      submapSizes[topRight](1) = submapSize(1) - submapSizes[topLeft](1);
+      submapSizes[topRight](1) = submapBufferSize(1) - submapSizes[topLeft](1);
 
       submapIndeces[bottomLeft](0) = 0;
       submapIndeces[bottomLeft](1) = submapIndex(1);
-      submapSizes[bottomLeft](0) = submapSize(0) - submapSizes[topLeft](0);
+      submapSizes[bottomLeft](0) = submapBufferSize(0) - submapSizes[topLeft](0);
       submapSizes[bottomLeft](1) = bufferSize(1) - submapIndex(1);
 
       submapIndeces[bottomRight] = Array2i::Zero();
@@ -383,7 +386,7 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     if (mapRegionOfBottomRight == bufferRegion::TopRight)
     {
       submapIndeces[topRight] = submapIndex;
-      submapSizes[topRight] = submapSize;
+      submapSizes[topRight] = submapBufferSize;
       return true;
     }
 
@@ -391,12 +394,12 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     {
       submapIndeces[topRight] = submapIndex;
       submapSizes[topRight](0) = bufferSize(0) - submapIndex(0);
-      submapSizes[topRight](1) = submapSize(1);
+      submapSizes[topRight](1) = submapBufferSize(1);
 
       submapIndeces[bottomRight](0) = 0;
       submapIndeces[bottomRight](1) = submapIndex(1);
-      submapSizes[bottomRight](0) = submapSize(0) - submapSizes[topRight](0);
-      submapSizes[bottomRight](1) = submapSize(1);
+      submapSizes[bottomRight](0) = submapBufferSize(0) - submapSizes[topRight](0);
+      submapSizes[bottomRight](1) = submapBufferSize(1);
       return true;
     }
 
@@ -407,20 +410,20 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     if (mapRegionOfBottomRight == bufferRegion::BottomLeft)
     {
       submapIndeces[bottomLeft] = submapIndex;
-      submapSizes[bottomLeft] = submapSize;
+      submapSizes[bottomLeft] = submapBufferSize;
       return true;
     }
 
     if (mapRegionOfBottomRight == bufferRegion::BottomRight)
     {
       submapIndeces[bottomLeft] = submapIndex;
-      submapSizes[bottomLeft](0) = submapSize(0);
+      submapSizes[bottomLeft](0) = submapBufferSize(0);
       submapSizes[bottomLeft](1) = bufferSize(1) - submapIndex(1);
 
       submapIndeces[bottomRight](0) = submapIndex(0);
       submapIndeces[bottomRight](1) = 0;
-      submapSizes[bottomRight](0) = submapSize(0);
-      submapSizes[bottomRight](1) = submapSize(1) - submapSizes[bottomLeft](1);
+      submapSizes[bottomRight](0) = submapBufferSize(0);
+      submapSizes[bottomRight](1) = submapBufferSize(1) - submapSizes[bottomLeft](1);
       return true;
     }
 
@@ -431,13 +434,18 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     if (mapRegionOfBottomRight == bufferRegion::BottomRight)
     {
       submapIndeces[bottomRight] = submapIndex;
-      submapSizes[bottomRight] = submapSize;
+      submapSizes[bottomRight] = submapBufferSize;
       return true;
     }
 
   }
 
   return false;
+}
+
+const Eigen::Matrix2i getBufferOrderToMapFrameAlignment()
+{
+  return getBufferOrderToMapFrameTransformation().array().abs().matrix();
 }
 
 }  // namespace

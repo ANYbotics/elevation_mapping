@@ -38,9 +38,23 @@ class ElevationMap
 
   bool fuse();
 
-  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Array2i& centerIndex, const Eigen::MatrixXf& map, const Eigen::Vector2d& center, const Eigen::Array2d& size);
-
-  bool getSubmap(Eigen::MatrixXf& submap, const Eigen::MatrixXf& map, const Eigen::Array2i& topLeftindex, const Eigen::Array2i& size);
+  /*!
+   * Gets a submap from the map. The requested submap is specified with the requested location (usually the center)
+   * and length. The returned position of the submap might be different as the submap might not have the same
+   * length as the requested length due to the borders of the map.
+   * @param[out] submap the data of the submap.
+   * @param[out] submapPosition the position of the submap in the map frame.
+   * @param[out] submapLength the length of the submap.
+   * @param[out] submapBufferSize the buffer size of the submap.
+   * @param[out] requestedIndexInSubmap the index of the requested position in the submap.
+   * @param[in] map the map to take the submap from.
+   * @param[in] requestedSubmapPosition the requested position of the submap.
+   * @param[in] requestedSubmapLength the requested length of the submap.
+   * @return true if successful.
+   */
+  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPosition, Eigen::Array2d& submapLength, Eigen::Array2i& submapBufferSize,
+                 Eigen::Array2i& requestedIndexInSubmap, const Eigen::MatrixXf& map,
+                 const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapLength);
 
   bool relocate(const Eigen::Vector3d& position);
 
