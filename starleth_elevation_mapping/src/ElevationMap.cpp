@@ -100,6 +100,8 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
     double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
 
+    // TODO TODO TODO TODO
+
     if (mahalanobisDistance < mahalanobisDistanceThreshold_)
     {
       // Fuse measurement with elevation map data.
@@ -109,6 +111,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
+
     if (point.z > elevation && mahalanobisDistance < biggerHeightThresholdFactor_ * mahalanobisDistanceThreshold_)
     {
       // Overwrite elevation map information with measurement data
@@ -392,7 +395,9 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
   starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
   toParentTransform_.translation().head(2) =  toParentTransform_.translation().head(2) + alignedPositionShift;
 
-  ROS_DEBUG("Elevation has been moved to position (%f, %f).", toParentTransform_.translation().head(2).x(), toParentTransform_.translation().head(2).y());
+  if (indexShift.all() != 0)
+    ROS_DEBUG("Elevation has been moved to position (%f, %f).", toParentTransform_.translation().head(2).x(), toParentTransform_.translation().head(2).y());
+
   return true;
 }
 

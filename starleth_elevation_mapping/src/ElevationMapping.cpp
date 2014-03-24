@@ -113,12 +113,13 @@ bool ElevationMapping::readParameters()
 
 bool ElevationMapping::initialize()
 {
+  ROS_INFO("StarlETH elevation map node initializing ... ");
   timeOfLastUpdate_ = Time::now();
   timeOfLastFusion_.fromSec(0.0);
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
-  ROS_INFO("StarlETH elevation map node initialized.");
+  ROS_INFO("Done.");
   return true;
 }
 

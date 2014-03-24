@@ -31,6 +31,8 @@ bool CovarianceMapUpdater::computeUpdate(
     Eigen::MatrixXf& horizontalVarianceUpdateX,
     Eigen::MatrixXf& horizontalVarianceUpdateY)
 {
+  // TODO TODO TODO
+
   varianceUpdate.setZero();
   horizontalVarianceUpdateX.setZero();
   horizontalVarianceUpdateY.setZero();

@@ -75,8 +75,7 @@ bool PrimeSenseSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::Point
   tempPointCloud.is_dense = true;
   pointCloud->swap(tempPointCloud);
 
-  // TODO add sm
-//  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
   return true;
 }
 
@@ -115,7 +114,7 @@ bool PrimeSenseSensorProcessor::transformPointCloud(
     pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.cast<float>());
     pointCloud->swap(*pointCloudTransformed);
     pointCloud->header.frame_id = targetFrame;
-//    pointCloud->header.stamp = timeStamp;
+    pointCloud->header.stamp = timeStamp;
     ROS_DEBUG("ElevationMap: Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(), timeStamp.toSec());
     return true;
   }
@@ -137,10 +136,12 @@ bool PrimeSenseSensorProcessor::computeVariances(
   {
     auto& point = pointCloud->points[i];
     auto& measurementDistance = measurementDistances[i];
-    RowVector3f variance = Vector3f::Zero();
+    RowVector3f variance = RowVector3f::Zero();
 
     float measurementStandardDeviation = sensorModelFactorA_ + sensorModelFactorB_ * pow(measurementDistance - sensorModelFactorC_, 2);
     variance.z() = pow(measurementStandardDeviation, 2);
+
+    // TODO TODO TODO TODO
 
     variances.row(i) = variance;
   }
