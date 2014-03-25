@@ -102,9 +102,10 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("sensor_cutoff_max_depth", sensorProcessor_.sensorCutoffMaxDepth_, 2.0);
   ROS_ASSERT(sensorProcessor_.sensorCutoffMaxDepth_ > sensorProcessor_.sensorCutoffMinDepth_);
 
-  nodeHandle_.param("sensor_model_factor_a", sensorProcessor_.sensorModelFactorA_, 0.003);
-  nodeHandle_.param("sensor_model_factor_b", sensorProcessor_.sensorModelFactorB_, 0.015);
-  nodeHandle_.param("sensor_model_factor_c", sensorProcessor_.sensorModelFactorC_, 0.25);
+  nodeHandle_.param("sensor_model_normal_factor_a", sensorProcessor_.sensorModelNormalFactorA_, 0.003);
+  nodeHandle_.param("sensor_model_normal_factor_b", sensorProcessor_.sensorModelNormalFactorB_, 0.015);
+  nodeHandle_.param("sensor_model_normal_factor_c", sensorProcessor_.sensorModelNormalFactorC_, 0.25);
+  nodeHandle_.param("sensor_model_lateral_factor", sensorProcessor_.sensorModelLateralFactor_, 3.0);
 
   sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
 

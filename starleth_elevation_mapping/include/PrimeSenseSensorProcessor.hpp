@@ -59,12 +59,12 @@ class PrimeSenseSensorProcessor
   double sensorCutoffMaxDepth_;
 
   /*! PrimeSense sensor model:
-   * standardDeviation = sensorModelFactorA_ + sensorModelFactorB_ * (measurementDistance - sensorModelFactorC_)^2;
+   * standardDeviationInNormalDirection = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * (measurementDistance - sensorModelNormalFactorC_)^2;
+   * standardDeviationInLateralDirection = sensorModelLateralFactor_ * standardDeviationInNormalDirection
    * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
    */
-  double sensorModelFactorA_;
-  double sensorModelFactorB_;
-  double sensorModelFactorC_;
+  double sensorModelNormalFactorA_, sensorModelNormalFactorB_, sensorModelNormalFactorC_;
+  double sensorModelLateralFactor_;
 
   //! The timeout duration for the lookup of the transformation between sensor frame and target frame.
   ros::Duration transformListenerTimeout_;

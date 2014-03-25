@@ -31,9 +31,10 @@ PrimeSenseSensorProcessor::PrimeSenseSensorProcessor(tf::TransformListener& tran
 {
   sensorCutoffMinDepth_ = 0.0;
   sensorCutoffMaxDepth_ = 0.0;
-  sensorModelFactorA_ = 0.0;
-  sensorModelFactorB_ = 0.0;
-  sensorModelFactorC_ = 0.0;
+  sensorModelNormalFactorA_ = 0.0;
+  sensorModelNormalFactorB_ = 0.0;
+  sensorModelNormalFactorC_ = 0.0;
+  sensorModelLateralFactor_ = 0.0;
   transformListenerTimeout_.fromSec(1.0);
 }
 
@@ -83,7 +84,7 @@ bool PrimeSenseSensorProcessor::computeMeasurementDistances(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
     Eigen::VectorXf& measurementDistances)
 {
-  // TODO Measurement distances should be added to the point cloud.
+  // TODO Measurement distances should be added to the point cloud instead of separate data structure.
   measurementDistances.resize(pointCloud->size());
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
@@ -138,7 +139,7 @@ bool PrimeSenseSensorProcessor::computeVariances(
     auto& measurementDistance = measurementDistances[i];
     RowVector3f variance = RowVector3f::Zero();
 
-    float measurementStandardDeviation = sensorModelFactorA_ + sensorModelFactorB_ * pow(measurementDistance - sensorModelFactorC_, 2);
+    float measurementStandardDeviation = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * pow(measurementDistance - sensorModelNormalFactorB_, 2);
     variance.z() = pow(measurementStandardDeviation, 2);
 
     // TODO TODO TODO TODO
