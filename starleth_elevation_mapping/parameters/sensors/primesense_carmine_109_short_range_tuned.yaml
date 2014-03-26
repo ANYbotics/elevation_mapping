@@ -7,4 +7,4 @@ sensor_cutoff_max_depth: 2.0
 sensor_model_normal_factor_a: 0.003
 sensor_model_normal_factor_b: 0.015
 sensor_model_normal_factor_c: 0.25
-sensor_model_lateral_factor: 0.004
+sensor_model_lateral_factor: 0.04

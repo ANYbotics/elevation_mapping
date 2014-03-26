@@ -18,6 +18,9 @@
 // ROS
 #include <tf_conversions/tf_eigen.h>
 
+// Kindr
+#include <kindr/quaternions/QuaternionEigen.hpp>
+
 using namespace std;
 using namespace pcl;
 using namespace Eigen;
@@ -29,12 +32,16 @@ namespace starleth_elevation_mapping {
 PrimeSenseSensorProcessor::PrimeSenseSensorProcessor(tf::TransformListener& transformListener)
     : transformListener_(transformListener)
 {
+  mapFrameId_ = "";
+  baseFrameId_ = "";
+  transformationSensorToMap_.setIdentity();
   sensorCutoffMinDepth_ = 0.0;
   sensorCutoffMaxDepth_ = 0.0;
   sensorModelNormalFactorA_ = 0.0;
   sensorModelNormalFactorB_ = 0.0;
   sensorModelNormalFactorC_ = 0.0;
   sensorModelLateralFactor_ = 0.0;
+  discretizationVariance_ = 0.0;
   transformListenerTimeout_.fromSec(1.0);
 }
 
@@ -45,23 +52,21 @@ PrimeSenseSensorProcessor::~PrimeSenseSensorProcessor()
 
 bool PrimeSenseSensorProcessor::process(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
-    const std::string& targetFrame,
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
     Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances)
 {
-  copyPointCloud(*pointCloudInput, *pointCloudOutput);
-  cleanPointCloud(pointCloudOutput);
+  PointCloud<PointXYZRGB>::Ptr pointCloudClean(new PointCloud<PointXYZRGB>);
+  copyPointCloud(*pointCloudInput, *pointCloudClean);
+  cleanPointCloud(pointCloudClean);
 
-  VectorXf measurementDistances;
-  computeMeasurementDistances(pointCloudOutput, measurementDistances);
+  if (!updateTransformations(pointCloudClean->header.frame_id, pointCloudClean->header.stamp)) return false;
 
-  if (!transformPointCloud(pointCloudOutput, targetFrame)) return false;
+  if (!transformPointCloud(pointCloudClean, pointCloudOutput, mapFrameId_)) return false;
 
-  computeVariances(pointCloudOutput, measurementDistances, variances);
+  computeVariances(pointCloudClean, variances);
 
   return true;
 }
-
 
 bool PrimeSenseSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
@@ -80,43 +85,27 @@ bool PrimeSenseSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::Point
   return true;
 }
 
-bool PrimeSenseSensorProcessor::computeMeasurementDistances(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-    Eigen::VectorXf& measurementDistances)
+bool PrimeSenseSensorProcessor::updateTransformations(std::string sensorFrameId, ros::Time timeStamp)
 {
-  // TODO Measurement distances should be added to the point cloud instead of separate data structure.
-  measurementDistances.resize(pointCloud->size());
-
-  for (unsigned int i = 0; i < pointCloud->size(); ++i)
-  {
-    auto& point = pointCloud->points[i];
-    measurementDistances[i] = Vector3f(point.x, point.y, point.z).norm();
-  }
-
-  return true;
-}
-
-bool PrimeSenseSensorProcessor::transformPointCloud(
-    const PointCloud<PointXYZRGB>::Ptr pointCloud,
-    const std::string& targetFrame)
-{
-  StampedTransform transformTf;
-  string sourceFrame = pointCloud->header.frame_id;
-  Time timeStamp =  pointCloud->header.stamp;
-
-  PointCloud<PointXYZRGB>::Ptr pointCloudTransformed(new PointCloud<PointXYZRGB>);
-
   try
   {
-    transformListener_.waitForTransform(targetFrame, sourceFrame, timeStamp, transformListenerTimeout_);
-    transformListener_.lookupTransform(targetFrame, sourceFrame, timeStamp, transformTf);
+    transformListener_.waitForTransform(sensorFrameId, mapFrameId_, timeStamp, Duration(1.0));
+
+    StampedTransform transformTf;
+    transformListener_.lookupTransform(mapFrameId_, sensorFrameId, timeStamp, transformTf);
+    poseTFToEigen(transformTf, transformationSensorToMap_);
+
+    transformListener_.lookupTransform(baseFrameId_, sensorFrameId, timeStamp, transformTf); // TODO Why wrong direction?
     Affine3d transform;
     poseTFToEigen(transformTf, transform);
-    pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.cast<float>());
-    pointCloud->swap(*pointCloudTransformed);
-    pointCloud->header.frame_id = targetFrame;
-    pointCloud->header.stamp = timeStamp;
-    ROS_DEBUG("ElevationMap: Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(), timeStamp.toSec());
+    rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
+    translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
+
+    transformListener_.lookupTransform(mapFrameId_, baseFrameId_, timeStamp, transformTf); // TODO Why wrong direction?
+    poseTFToEigen(transformTf, transform);
+    rotationMapToBase_.setMatrix(transform.rotation().matrix());
+    translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
+
     return true;
   }
   catch (TransformException &ex)
@@ -126,25 +115,61 @@ bool PrimeSenseSensorProcessor::transformPointCloud(
   }
 }
 
+bool PrimeSenseSensorProcessor::transformPointCloud(
+    const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
+    pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
+    const std::string& targetFrame)
+{
+  pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transformationSensorToMap_.cast<float>());
+  pointCloudTransformed->header.frame_id = targetFrame;
+  ROS_DEBUG("ElevationMap: Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),
+            pointCloudTransformed->header.stamp.toSec());
+  return true;
+}
+
 bool PrimeSenseSensorProcessor::computeVariances(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-    const Eigen::VectorXf& measurementDistances,
     Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances)
 {
-  variances.resize(measurementDistances.rows(), dimensionOfVariances);
+  variances.resize(pointCloud->size(), dimensionOfVariances);
+
+  // Projection vector (P)
+  const RowVector3f projectionMatrix = RowVector3f::UnitZ();
+
+  // Sensor Jacobian (J_S)
+  Matrix3f jacobianSensor = (rotationMapToBase_.transposed() * rotationBaseToSensor_.transposed()).toImplementation().cast<float>();
+
+  // Discretization variance
+  Matrix3f discretizationVarianceMatrix = Matrix3f::Zero();
+  discretizationVarianceMatrix(0, 0) = discretizationVariance_;
+  discretizationVarianceMatrix(1, 1) = discretizationVariance_;
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
+    // For every point in point cloud
+
+    // Preparation
     auto& point = pointCloud->points[i];
-    auto& measurementDistance = measurementDistances[i];
-    RowVector3f variance = RowVector3f::Zero();
+    Vector3f pointVector(point.x, point.y, point.z); // S_r_SP
+    Matrix3f varianceMatrix = Matrix3f::Zero();
 
-    float measurementStandardDeviation = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * pow(measurementDistance - sensorModelNormalFactorB_, 2);
-    variance.z() = pow(measurementStandardDeviation, 2);
+    // Measurement distance
+    float measurementDistance = pointVector.norm();
 
-    // TODO TODO TODO TODO
+    // Compute sensor covariance matrix (Sigma_S) with sensor model
+    float varianceNormal =
+        pow(sensorModelNormalFactorA_ + sensorModelNormalFactorB_ *
+        pow(measurementDistance - sensorModelNormalFactorB_, 2), 2);
+    float varianceLateral = pow(sensorModelLateralFactor_ * measurementDistance, 2);
+    Matrix3f sensorVariance = Matrix3f::Zero();
+    sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
-    variances.row(i) = variance;
+
+
+    varianceMatrix = jacobianSensor * sensorVariance * jacobianSensor.transpose() + discretizationVarianceMatrix;
+
+    // Copy to list
+    variances.row(i) = varianceMatrix.diagonal();
   }
 
   return true;

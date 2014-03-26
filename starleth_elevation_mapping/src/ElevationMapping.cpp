@@ -97,6 +97,7 @@ bool ElevationMapping::readParameters()
   map_.setSize(length, resolution);
 
   // SensorProcessor parameters.
+  nodeHandle_.param("base_frame_id", sensorProcessor_.baseFrameId_, string("/starleth/BASE"));
   nodeHandle_.param("sensor_cutoff_min_depth", sensorProcessor_.sensorCutoffMinDepth_, 0.2);
   ROS_ASSERT(sensorProcessor_.sensorCutoffMinDepth_ >= 0.0);
   nodeHandle_.param("sensor_cutoff_max_depth", sensorProcessor_.sensorCutoffMaxDepth_, 2.0);
@@ -105,9 +106,11 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("sensor_model_normal_factor_a", sensorProcessor_.sensorModelNormalFactorA_, 0.003);
   nodeHandle_.param("sensor_model_normal_factor_b", sensorProcessor_.sensorModelNormalFactorB_, 0.015);
   nodeHandle_.param("sensor_model_normal_factor_c", sensorProcessor_.sensorModelNormalFactorC_, 0.25);
-  nodeHandle_.param("sensor_model_lateral_factor", sensorProcessor_.sensorModelLateralFactor_, 3.0);
+  nodeHandle_.param("sensor_model_lateral_factor", sensorProcessor_.sensorModelLateralFactor_, 0.004);
 
+  sensorProcessor_.mapFrameId_ = elevationMapFrameId_;
   sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
+  sensorProcessor_.discretizationVariance_ = pow(resolution / 2.0, 2); // two-sigma
 
   return true;
 }
@@ -149,7 +152,7 @@ void ElevationMapping::pointCloudCallback(
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
   Matrix<float, Dynamic, sensorProcessor_.dimensionOfVariances> measurementVariances;
-  if(!sensorProcessor_.process(pointCloud, elevationMapFrameId_, pointCloudProcessed, measurementVariances))
+  if(!sensorProcessor_.process(pointCloud, pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("ElevationMap: Point cloud could not be processed.");
     resetMapUpdateTimer();
@@ -165,9 +168,9 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // TODO remove.
-  std_srvs::Empty::Request request;
-  std_srvs::Empty::Response response;
-  fuseMap(request, response);
+//  std_srvs::Empty::Request request;
+//  std_srvs::Empty::Response response;
+//  fuseMap(request, response);
 
   // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
