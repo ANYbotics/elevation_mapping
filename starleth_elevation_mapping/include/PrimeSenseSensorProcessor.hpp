@@ -54,6 +54,7 @@ class PrimeSenseSensorProcessor
    */
   bool process(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
       Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances);
 
@@ -93,6 +94,7 @@ class PrimeSenseSensorProcessor
 
   bool computeVariances(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
       Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances);
 
   tf::TransformListener& transformListener_;

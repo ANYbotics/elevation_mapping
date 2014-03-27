@@ -20,12 +20,14 @@
 
 // Kindr
 #include <kindr/quaternions/QuaternionEigen.hpp>
+#include <kindr/linear_algebra/LinearAlgebra.hpp>
 
 using namespace std;
 using namespace pcl;
 using namespace Eigen;
 using namespace tf;
 using namespace ros;
+using namespace kindr;
 
 namespace starleth_elevation_mapping {
 
@@ -52,6 +54,7 @@ PrimeSenseSensorProcessor::~PrimeSenseSensorProcessor()
 
 bool PrimeSenseSensorProcessor::process(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
+    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
     const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
     Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances)
 {
@@ -63,7 +66,7 @@ bool PrimeSenseSensorProcessor::process(
 
   if (!transformPointCloud(pointCloudClean, pointCloudOutput, mapFrameId_)) return false;
 
-  computeVariances(pointCloudClean, variances);
+  if (!computeVariances(pointCloudClean, robotPoseCovariance, variances)) return false;
 
   return true;
 }
@@ -129,34 +132,42 @@ bool PrimeSenseSensorProcessor::transformPointCloud(
 
 bool PrimeSenseSensorProcessor::computeVariances(
     const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
     Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances)
 {
   variances.resize(pointCloud->size(), dimensionOfVariances);
 
-  // Projection vector (P)
-  const RowVector3f projectionMatrix = RowVector3f::UnitZ();
+  // Sensor Jacobian (J_s).
+  Matrix3f sensorJacobian = (rotationMapToBase_.transposed() * rotationBaseToSensor_.transposed()).toImplementation().cast<float>();
 
-  // Sensor Jacobian (J_S)
-  Matrix3f jacobianSensor = (rotationMapToBase_.transposed() * rotationBaseToSensor_.transposed()).toImplementation().cast<float>();
+  // Robot rotation covariance natrix (Sigma_q).
+  Matrix3f rotationVariance = robotPoseCovariance.block(3, 3, 3, 3).cast<float>();
 
   // Discretization variance
-  Matrix3f discretizationVarianceMatrix = Matrix3f::Zero();
-  discretizationVarianceMatrix(0, 0) = discretizationVariance_;
-  discretizationVarianceMatrix(1, 1) = discretizationVariance_;
+  Matrix3f discretizationVariance = Matrix3f::Zero();
+  discretizationVariance(0, 0) = discretizationVariance_;
+  discretizationVariance(1, 1) = discretizationVariance_;
+
+  // Preparations for robot rotation jacobian (J_q) to minimze computation for every point in point cloud.
+  const Matrix3f P = Vector3f::UnitZ().asDiagonal(); // Projection vector (P).
+  const Matrix3f C_BM_transpose = rotationMapToBase_.transposed().toImplementation().cast<float>();
+  const Matrix3f P_mul_C_BM_transpose = P * C_BM_transpose;
+  const Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
+  const Matrix3f B_r_BS_skew = linear_algebra::getSkewMatrixFromVector(Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
-    // For every point in point cloud
+    // For every point in point cloud.
 
-    // Preparation
+    // Preparation.
     auto& point = pointCloud->points[i];
     Vector3f pointVector(point.x, point.y, point.z); // S_r_SP
     Matrix3f varianceMatrix = Matrix3f::Zero();
 
-    // Measurement distance
+    // Measurement distance.
     float measurementDistance = pointVector.norm();
 
-    // Compute sensor covariance matrix (Sigma_S) with sensor model
+    // Compute sensor covariance matrix (Sigma_s) with sensor model.
     float varianceNormal =
         pow(sensorModelNormalFactorA_ + sensorModelNormalFactorB_ *
         pow(measurementDistance - sensorModelNormalFactorB_, 2), 2);
@@ -164,11 +175,16 @@ bool PrimeSenseSensorProcessor::computeVariances(
     Matrix3f sensorVariance = Matrix3f::Zero();
     sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
+    // Robot rotation Jacobian (J_q).
+    const Matrix3f S_r_SP_skew = linear_algebra::getSkewMatrixFromVector(pointVector);
+    Matrix3f rotationJacobian = P_mul_C_BM_transpose * (C_SB_transpose * S_r_SP_skew + B_r_BS_skew);
 
+    // Measurement variance for map (error propagation law).
+    varianceMatrix = rotationJacobian * rotationVariance * rotationJacobian.transpose() +
+                     sensorJacobian * sensorVariance * sensorJacobian.transpose() +
+                     discretizationVariance;
 
-    varianceMatrix = jacobianSensor * sensorVariance * jacobianSensor.transpose() + discretizationVarianceMatrix;
-
-    // Copy to list
+    // Copy to list.
     variances.row(i) = varianceMatrix.diagonal();
   }
 

@@ -149,10 +149,20 @@ void ElevationMapping::pointCloudCallback(
     return;
   }
 
+  // Get robot pose covariance matrix at timestamp of point cloud.
+  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
+  if (!poseMessage)
+  {
+    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
+    return;
+  }
+
+  Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
+
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
   Matrix<float, Dynamic, sensorProcessor_.dimensionOfVariances> measurementVariances;
-  if(!sensorProcessor_.process(pointCloud, pointCloudProcessed, measurementVariances))
+  if(!sensorProcessor_.process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("ElevationMap: Point cloud could not be processed.");
     resetMapUpdateTimer();
