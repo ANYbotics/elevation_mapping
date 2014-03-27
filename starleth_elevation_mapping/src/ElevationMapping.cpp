@@ -80,21 +80,19 @@ bool ElevationMapping::readParameters()
   }
 
   // ElevationMap parameters.
-  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
-  nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
-  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.0);
-  nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
-  nodeHandle_.param("bigger_height_threshold_factor", map_.biggerHeightThresholdFactor_, 4.0);
-  nodeHandle_.param("bigger_height_noise_factor", map_.biggerHeightNoiseFactor_, 2.0);
-  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, 0.0);
-  nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
-
   Eigen::Array2d length;
   double resolution;
   nodeHandle_.param("length_in_x", length(0), 1.5);
   nodeHandle_.param("length_in_y", length(1), 1.5);
   nodeHandle_.param("resolution", resolution, 0.1);
   map_.setSize(length, resolution);
+
+  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
+  nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
+  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.0);
+  nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
+  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
+  nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
 
   // SensorProcessor parameters.
   nodeHandle_.param("base_frame_id", sensorProcessor_.baseFrameId_, string("/starleth/BASE"));
@@ -110,7 +108,7 @@ bool ElevationMapping::readParameters()
 
   sensorProcessor_.mapFrameId_ = elevationMapFrameId_;
   sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
-  sensorProcessor_.discretizationVariance_ = pow(resolution / 2.0, 2); // two-sigma
+  sensorProcessor_.discretizationVariance_ = 0.0;
 
   return true;
 }

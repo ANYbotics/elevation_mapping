@@ -87,8 +87,6 @@ class ElevationMap
   double maxVariance_;
   double mahalanobisDistanceThreshold_;
   double multiHeightNoise_;
-  double biggerHeightThresholdFactor_;
-  double biggerHeightNoiseFactor_;
   double minHorizontalVariance_;
   double maxHorizontalVariance_;
 

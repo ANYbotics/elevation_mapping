@@ -31,8 +31,6 @@ ElevationMap::ElevationMap()
   maxVariance_ = 0.0;
   mahalanobisDistanceThreshold_ = 0.0;
   multiHeightNoise_ = 0.0;
-  biggerHeightThresholdFactor_ = 0.0;
-  biggerHeightNoiseFactor_ = 0.0;
   minHorizontalVariance_ = 0.0;
   maxHorizontalVariance_ = 0.0;
   reset();
@@ -100,8 +98,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
     double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
 
-    // TODO TODO TODO TODO
-
     if (mahalanobisDistance < mahalanobisDistanceThreshold_)
     {
       // Fuse measurement with elevation map data.
@@ -112,27 +108,13 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       continue;
     }
 
-    if (point.z > elevation && mahalanobisDistance < biggerHeightThresholdFactor_ * mahalanobisDistanceThreshold_)
-    {
-      // Overwrite elevation map information with measurement data
-      elevation = point.z;
-      variance = pointVariance.z();
-      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
-      continue;
-    }
-
-    if (point.z > elevation && mahalanobisDistance > biggerHeightThresholdFactor_ * mahalanobisDistanceThreshold_)
-    {
-      variance += biggerHeightNoiseFactor_ * multiHeightNoise_;
-      continue;
-    }
-
-    horizontalVarianceX = 0.0;
-    horizontalVarianceY = 0.0;
-
     // Add noise to cells which have ignored lower values,
     // such that outliers and moving objects are removed
     variance += multiHeightNoise_;
+
+    // TODO TODO TODO
+    horizontalVarianceX = 0.0;
+    horizontalVarianceY = 0.0;
   }
 
   clean();
