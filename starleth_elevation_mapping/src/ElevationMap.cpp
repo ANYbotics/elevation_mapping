@@ -112,9 +112,9 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     // such that outliers and moving objects are removed
     variance += multiHeightNoise_;
 
-    // TODO TODO TODO
-    horizontalVarianceX = 0.0;
-    horizontalVarianceY = 0.0;
+    // Horizontal variances are reset.
+    horizontalVarianceX = minHorizontalVariance_;
+    horizontalVarianceY = minHorizontalVariance_;
   }
 
   clean();

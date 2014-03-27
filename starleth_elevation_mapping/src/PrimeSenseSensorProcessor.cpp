@@ -137,23 +137,22 @@ bool PrimeSenseSensorProcessor::computeVariances(
 {
   variances.resize(pointCloud->size(), dimensionOfVariances);
 
+  // Projection vector (P).
+  const RowVector3f projectionVector = RowVector3f::UnitZ();
+
   // Sensor Jacobian (J_s).
-  Matrix3f sensorJacobian = (rotationMapToBase_.transposed() * rotationBaseToSensor_.transposed()).toImplementation().cast<float>();
+  const RowVector3f sensorJacobian = projectionVector * (rotationMapToBase_.transposed() * rotationBaseToSensor_.transposed()).toImplementation().cast<float>();
 
   // Robot rotation covariance natrix (Sigma_q).
   Matrix3f rotationVariance = robotPoseCovariance.block(3, 3, 3, 3).cast<float>();
 
-  // Discretization variance
-  Matrix3f discretizationVariance = Matrix3f::Zero();
-  discretizationVariance(0, 0) = discretizationVariance_;
-  discretizationVariance(1, 1) = discretizationVariance_;
-
   // Preparations for robot rotation jacobian (J_q) to minimze computation for every point in point cloud.
-  const Matrix3f P = Vector3f::UnitZ().asDiagonal(); // Projection vector (P).
   const Matrix3f C_BM_transpose = rotationMapToBase_.transposed().toImplementation().cast<float>();
-  const Matrix3f P_mul_C_BM_transpose = P * C_BM_transpose;
+  const RowVector3f p_mul_C_BM_transpose = projectionVector * C_BM_transpose;
   const Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
   const Matrix3f B_r_BS_skew = linear_algebra::getSkewMatrixFromVector(Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
+
+  cout << p_mul_C_BM_transpose << endl;
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
@@ -162,7 +161,7 @@ bool PrimeSenseSensorProcessor::computeVariances(
     // Preparation.
     auto& point = pointCloud->points[i];
     Vector3f pointVector(point.x, point.y, point.z); // S_r_SP
-    Matrix3f varianceMatrix = Matrix3f::Zero();
+    float heightVariance = 0.0; // sigma_h
 
     // Measurement distance.
     float measurementDistance = pointVector.norm();
@@ -177,15 +176,14 @@ bool PrimeSenseSensorProcessor::computeVariances(
 
     // Robot rotation Jacobian (J_q).
     const Matrix3f S_r_SP_skew = linear_algebra::getSkewMatrixFromVector(pointVector);
-    Matrix3f rotationJacobian = P_mul_C_BM_transpose * (C_SB_transpose * S_r_SP_skew + B_r_BS_skew);
+    RowVector3f rotationJacobian = p_mul_C_BM_transpose * (C_SB_transpose * S_r_SP_skew + B_r_BS_skew);
 
     // Measurement variance for map (error propagation law).
-    varianceMatrix = rotationJacobian * rotationVariance * rotationJacobian.transpose() +
-                     sensorJacobian * sensorVariance * sensorJacobian.transpose() +
-                     discretizationVariance;
+    heightVariance = rotationJacobian * rotationVariance * rotationJacobian.transpose();
+    heightVariance += sensorJacobian * sensorVariance * sensorJacobian.transpose();
 
     // Copy to list.
-    variances.row(i) = varianceMatrix.diagonal();
+    variances.row(i) << 0.0, 0.0, heightVariance;
   }
 
   return true;
