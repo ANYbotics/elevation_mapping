@@ -19,6 +19,11 @@
 // PCL
 #include <pcl/ros/conversions.h>
 
+// Kindr
+#include <kindr/poses/PoseEigen.hpp>
+#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
+#include <kindr/rotations/RotationEigen.hpp>
+
 using namespace std;
 using namespace Eigen;
 using namespace ros;
@@ -176,9 +181,9 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // TODO remove.
-//  std_srvs::Empty::Request request;
-//  std_srvs::Empty::Response response;
-//  fuseMap(request, response);
+  std_srvs::Empty::Request request;
+  std_srvs::Empty::Response response;
+  fuseMap(request, response);
 
   // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
@@ -244,12 +249,25 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
+  kindr::phys_quant::eigen_impl::Position3D robotPosition(poseMessage->pose.pose.position.x,
+                                                          poseMessage->pose.pose.position.y,
+                                                          poseMessage->pose.pose.position.z);
+
+  kindr::rotations::eigen_impl::RotationQuaternionPD robotRotation(
+                          poseMessage->pose.pose.orientation.w,
+                          poseMessage->pose.pose.orientation.x,
+                          poseMessage->pose.pose.orientation.y,
+                          poseMessage->pose.pose.orientation.z);
+
+  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose(robotPosition, robotRotation);
+
   Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
+
   Array2i size = map_.getBufferSize();
   MatrixXf varianceUpdate(size(0), size(1));
   MatrixXf horizontalVarianceUpdateX(size(0), size(1));
   MatrixXf horizontalVarianceUpdateY(size(0), size(1));
-  mapUpdater_.computeUpdate(robotPoseCovariance, varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
+  mapUpdater_.computeUpdate(robotPose, robotPoseCovariance, varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
 
   // Update map.
   map_.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
@@ -341,9 +359,36 @@ bool ElevationMapping::updateMapLocation()
 
 bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response)
 {
-//  res.sum = req.a + req.b;
-//  ROS_INFO("request: x=%ld, y=%ld", (long int)req.a, (long int)req.b);
-//  ROS_INFO("sending back response: [%ld]", (long int)res.sum);
+  // Request
+  Vector2d requestedSubmapPosition(request.positionInX, request.positionInY);
+  Array2d requestedSubmapLength(request.lengthInX, request.lengthInY);
+
+  ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
+
+  // Response
+  MatrixXf submapElevation, submapVariance, submapColor;
+  Vector2d submapPosition;
+  Array2d submapLength;
+  Array2i submapBufferSize;
+  Array2i requestedIndexInSubmap;
+
+  map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
+  map_.getSubmap(submapVariance, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getVarianceData(), requestedSubmapPosition, requestedSubmapLength);
+//  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength); // TODO
+
+  response.elevation_map.header.stamp = timeOfLastFusion_;
+  response.elevation_map.header.frame_id = elevationMapFrameId_;
+  response.elevation_map.resolution = map_.getResolution();
+  response.elevation_map.lengthInX = submapLength(0);
+  response.elevation_map.lengthInY = submapLength(1);
+  response.elevation_map.outerStartIndex = 0;
+  response.elevation_map.innerStartIndex = 0;
+
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(submapElevation, response.elevation_map.elevation);
+  starleth_elevation_msg::matrixEigenToMultiArrayMessage(submapVariance, response.elevation_map.variance);
+
+  ROS_DEBUG("Elevation submap responded with timestamp %f.", timeOfLastFusion_.toSec());
+
   return true;
 }
 

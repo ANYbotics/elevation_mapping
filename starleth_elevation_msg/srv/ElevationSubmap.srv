@@ -1,12 +1,18 @@
-# Map length in x-direction [m].
+# Requested submap position in x-direction [m].
+float32 positionInX
+  
+# Requested submap position in y-direction [m].
+float32 positionInY
+
+# Requested submap length in x-direction [m].
 float32 lengthInX
   
-# Map width in y-direction [m].
+# Requested submap width in y-direction [m].
 float32 lengthInY
 
 ---
 
-# Position of submap
+# Position of submap TODO
 
-# Elevation map
+# Submap
 ElevationMap elevation_map

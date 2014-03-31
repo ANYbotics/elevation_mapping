@@ -152,8 +152,6 @@ bool PrimeSenseSensorProcessor::computeVariances(
   const Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
   const Matrix3f B_r_BS_skew = linear_algebra::getSkewMatrixFromVector(Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
-  cout << p_mul_C_BM_transpose << endl;
-
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
     // For every point in point cloud.
