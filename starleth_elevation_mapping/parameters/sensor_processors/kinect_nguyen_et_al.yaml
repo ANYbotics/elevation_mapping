@@ -3,6 +3,7 @@
 # Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking.
 sensor_cutoff_min_depth: 0.35
 sensor_cutoff_max_depth: 3.0
-sensor_model_factor_a: 0.0012
-sensor_model_factor_b: 0.0019
-sensor_model_factor_c: 0.4
+sensor_model_normal_factor_a: 0.0012
+sensor_model_normal_factor_b: 0.0019
+sensor_model_normal_factor_c: 0.4
+sensor_model_lateral_factor: 0.001376915 # for theta = 45°: 0.835 * 0.00780 [mm/px] / 4.73 [mm]

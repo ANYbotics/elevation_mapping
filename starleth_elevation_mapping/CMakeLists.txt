@@ -20,6 +20,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
+find_package(Kindr REQUIRED)
 
 
 ## Uncomment this if the package has a setup.py. This macro ensures
@@ -79,6 +80,7 @@ include_directories(
   ~/sl_root/schweizer-messer/sm_common/include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
+  ${Kindr_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library

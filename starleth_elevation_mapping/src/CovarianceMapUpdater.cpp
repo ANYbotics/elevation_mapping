@@ -26,11 +26,14 @@ CovarianceMapUpdater::~CovarianceMapUpdater()
 }
 
 bool CovarianceMapUpdater::computeUpdate(
+    const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
     Eigen::MatrixXf& varianceUpdate,
     Eigen::MatrixXf& horizontalVarianceUpdateX,
     Eigen::MatrixXf& horizontalVarianceUpdateY)
 {
+  // TODO TODO TODO
+
   varianceUpdate.setZero();
   horizontalVarianceUpdateX.setZero();
   horizontalVarianceUpdateY.setZero();
