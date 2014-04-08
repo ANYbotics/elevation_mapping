@@ -13,9 +13,6 @@
 #include <EigenConversions.hpp>
 #include <TransformationMath.hpp>
 
-// ROS
-#include <tf_conversions/tf_eigen.h>
-
 // PCL
 #include <pcl/ros/conversions.h>
 
@@ -23,12 +20,16 @@
 #include <kindr/poses/PoseEigen.hpp>
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 #include <kindr/rotations/RotationEigen.hpp>
+#include <kindr/thirdparty/ros/RosEigen.hpp>
 
 using namespace std;
 using namespace Eigen;
 using namespace ros;
 using namespace tf;
 using namespace pcl;
+using namespace kindr::poses::eigen_impl;
+using namespace kindr::phys_quant::eigen_impl;
+using namespace kindr::rotations::eigen_impl;
 
 namespace starleth_elevation_mapping {
 
@@ -180,11 +181,6 @@ void ElevationMapping::pointCloudCallback(
     return;
   }
 
-  // TODO remove.
-  std_srvs::Empty::Request request;
-  std_srvs::Empty::Response response;
-  fuseMap(request, response);
-
   // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
 
@@ -225,7 +221,7 @@ bool ElevationMapping::fuseMap(std_srvs::Empty::Request& request, std_srvs::Empt
 bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
 {
   tf::Transform tfTransform;
-  poseEigenToTF(map_.getMapToParentTransform(), tfTransform);
+  convertToRosTf(map_.getPose(), tfTransform);
   transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
   ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
@@ -334,10 +330,7 @@ bool ElevationMapping::updateMapLocation()
   geometry_msgs::PointStamped trackPoint;
   trackPoint.header.frame_id = trackPointFrameId_;
   trackPoint.header.stamp = Time(0);
-  trackPoint.point.x = trackPoint_.x();
-  trackPoint.point.y = trackPoint_.y();
-  trackPoint.point.z = trackPoint_.z();
-
+  convertToRosGeometryMsg(trackPoint_, trackPoint.point);
   geometry_msgs::PointStamped trackPointTransformed;
 
   try
@@ -350,9 +343,8 @@ bool ElevationMapping::updateMapLocation()
     return false;
   }
 
-  Vector3d position = Vector3d(trackPointTransformed.point.x,
-                               trackPointTransformed.point.y,
-                               trackPointTransformed.point.z);
+  Position3D position;
+  convertFromRosGeometryMsg(trackPointTransformed.point, position);
 
   return map_.relocate(position);
 }

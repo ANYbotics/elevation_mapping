@@ -16,6 +16,9 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
+// Kindr
+#include <kindr/poses/PoseEigen.hpp>
+
 // Schweizer-Messer
 #include <sm/timing/Timer.hpp>
 
@@ -56,7 +59,7 @@ class ElevationMap
                  Eigen::Array2i& requestedIndexInSubmap, const Eigen::MatrixXf& map,
                  const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapLength);
 
-  bool relocate(const Eigen::Vector3d& position);
+  bool relocate(const kindr::phys_quant::eigen_impl::Position3D& position);
 
   bool reset();
 
@@ -64,7 +67,7 @@ class ElevationMap
 
   const Eigen::Array2d& getLength();
 
-  const Eigen::Affine3d& getMapToParentTransform();
+  const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& getPose();
 
   const Eigen::Array2i& getBufferStartIndex();
 
@@ -120,7 +123,7 @@ class ElevationMap
   Eigen::MatrixXf varianceData_;
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
-  Eigen::Affine3d toParentTransform_;
+  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
 
   //! Circular buffer start indeces.
   Eigen::Array2i bufferStartIndex_;

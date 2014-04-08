@@ -320,10 +320,11 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPos
   return true;
 }
 
-bool ElevationMap::relocate(const Eigen::Vector3d& position)
+bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& position)
 {
+  // TODO Add height shift.
   Array2i indexShift;
-  Vector2d positionShift = position.head(2) - toParentTransform_.translation().head(2);
+  Vector2d positionShift = position.vector().head(2) - pose_.getPosition().vector().head(2);
   starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);
   Vector2d alignedPositionShift;
   starleth_elevation_msg::getPositionShiftFromIndexShift(alignedPositionShift, indexShift, resolution_);
@@ -375,17 +376,17 @@ bool ElevationMap::relocate(const Eigen::Vector3d& position)
   // Update information.
   bufferStartIndex_ += indexShift;
   starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
-  toParentTransform_.translation().head(2) =  toParentTransform_.translation().head(2) + alignedPositionShift;
+  pose_.getPosition() += kindr::phys_quant::eigen_impl::Position3D(alignedPositionShift.x(), alignedPositionShift.y(), 0.0);
 
   if (indexShift.all() != 0)
-    ROS_DEBUG("Elevation has been moved to position (%f, %f).", toParentTransform_.translation().head(2).x(), toParentTransform_.translation().head(2).y());
+    ROS_DEBUG("Elevation has been moved to position (%f, %f).", pose_.getPosition().x(), pose_.getPosition().y());
 
   return true;
 }
 
 bool ElevationMap::reset()
 {
-  toParentTransform_.setIdentity();
+  pose_.setIdentity();
   elevationRawData_.setConstant(NAN);
   varianceRawData_.setConstant(numeric_limits<float>::infinity());
   horizontalVarianceRawDataX_.setConstant(numeric_limits<float>::infinity());
@@ -441,9 +442,9 @@ const Eigen::Array2d& ElevationMap::getLength()
   return length_;
 }
 
-const Eigen::Affine3d& ElevationMap::getMapToParentTransform()
+const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& ElevationMap::getPose()
 {
-  return toParentTransform_;
+  return pose_;
 }
 
 const Eigen::Array2i& ElevationMap::getBufferStartIndex()

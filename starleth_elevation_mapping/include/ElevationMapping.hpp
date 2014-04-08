@@ -114,7 +114,7 @@ class ElevationMapping
   std::string pointCloudTopic_;
   std::string robotPoseTopic_;
 
-  Eigen::Vector3d trackPoint_;
+  kindr::phys_quant::eigen_impl::Position3D trackPoint_;
 
   int robotPoseCacheSize_;
 
