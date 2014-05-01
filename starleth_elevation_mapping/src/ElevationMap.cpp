@@ -90,7 +90,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       // No prior information in elevation map, use measurement.
       elevation = point.z;
       variance = pointVariance.z();
-      horizontalVarianceX = pointVariance.x();
+      horizontalVarianceX = pointVariance.x(); // TODO Work only with 1d variances, and add here variance from discretization.
       horizontalVarianceY = pointVariance.y();
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
@@ -405,6 +405,23 @@ bool ElevationMap::reset()
 Eigen::Array2i ElevationMap::getBufferSize()
 {
   return Array2i(elevationRawData_.rows(), elevationRawData_.cols());
+}
+
+bool ElevationMap::getPositionInParentFrameFromIndex(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& positionInParentFrame)
+{
+  double height = elevationRawData_(index(0), index(1));
+  if(std::isnan(height)) return false;
+
+  Vector2d positionInGrid;
+  starleth_elevation_msg::getPositionFromIndex(positionInGrid, index, length_, resolution_, getBufferSize(), bufferStartIndex_);
+
+  positionInParentFrame << positionInGrid.x(),
+                           positionInGrid.y(),
+                           height;
+
+  positionInParentFrame = pose_.transform(positionInParentFrame);
+
+  return true;
 }
 
 bool ElevationMap::clean()

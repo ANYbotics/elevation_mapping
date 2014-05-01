@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include "ElevationMap.hpp"
+
 // Eigen
 #include <Eigen/Core>
 
@@ -34,11 +36,9 @@ class CovarianceMapUpdater
    * @param[out] horizontalVarianceUpdateY the update of the horizonal variances in y-direction.
    * @return true if successful.
    */
-  bool computeUpdate(const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
-                     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-                     Eigen::MatrixXf& varianceUpdate,
-                     Eigen::MatrixXf& horizontalVarianceUpdateX,
-                     Eigen::MatrixXf& horizontalVarianceUpdateY);
+  bool update(ElevationMap& map,
+              const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
+              const Eigen::Matrix<double, 6, 6>& robotPoseCovariance);
 
  private:
   Eigen::Matrix<double, 6, 6> previousRobotPoseCovariance_;

@@ -92,7 +92,7 @@ bool PrimeSenseSensorProcessor::updateTransformations(std::string sensorFrameId,
 {
   try
   {
-    transformListener_.waitForTransform(sensorFrameId, mapFrameId_, timeStamp, Duration(1.0));
+    transformListener_.waitForTransform(sensorFrameId, mapFrameId_, timeStamp, Duration(1.0)); // TODO Make duration as parameter.
 
     StampedTransform transformTf;
     transformListener_.lookupTransform(mapFrameId_, sensorFrameId, timeStamp, transformTf);
@@ -136,6 +136,8 @@ bool PrimeSenseSensorProcessor::computeVariances(
     Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances)
 {
   variances.resize(pointCloud->size(), dimensionOfVariances);
+
+  // TODO TODO TODO Double check with latest version from paper.
 
   // Projection vector (P).
   const RowVector3f projectionVector = RowVector3f::UnitZ();

@@ -10,8 +10,14 @@
 // STD
 #include <iostream>
 
+// Kindr
+#include <kindr/rotations/RotationEigen.hpp>
+#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
+#include <kindr/linear_algebra/LinearAlgebra.hpp>
+
 using namespace std;
 using namespace Eigen;
+using namespace kindr::rotations::eigen_impl;
 
 namespace starleth_elevation_mapping {
 
@@ -25,29 +31,71 @@ CovarianceMapUpdater::~CovarianceMapUpdater()
 
 }
 
-bool CovarianceMapUpdater::computeUpdate(
-    const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
-    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-    Eigen::MatrixXf& varianceUpdate,
-    Eigen::MatrixXf& horizontalVarianceUpdateX,
-    Eigen::MatrixXf& horizontalVarianceUpdateY)
+bool CovarianceMapUpdater::update(
+    ElevationMap& map, const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
+    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance)
 {
-  // TODO TODO TODO
+  // Initialize update data.
+  Array2i size = map.getBufferSize();
+  MatrixXf varianceUpdate(size(0), size(1));
+  MatrixXf horizontalVarianceUpdateX(size(0), size(1));
+  MatrixXf horizontalVarianceUpdateY(size(0), size(1));
 
-  varianceUpdate.setZero();
-  horizontalVarianceUpdateX.setZero();
-  horizontalVarianceUpdateY.setZero();
+  // Covariance matrices.
+  Matrix3d previousPositionCovariance = previousRobotPoseCovariance_.topLeftCorner<3, 3>();
+  Matrix3d positionCovariance = robotPoseCovariance.topLeftCorner<3, 3>();
+  Matrix3d previousRotationCovariance = previousRobotPoseCovariance_.bottomRightCorner<3, 3>();
+  Matrix3d rotationCovariance = robotPoseCovariance.bottomRightCorner<3, 3>();
 
-  Vector3d previousPositionVariance = previousRobotPoseCovariance_.diagonal().head(3);
-  Vector3d positionVariance = robotPoseCovariance.diagonal().head(3);
+  // Parent to elevation map frame rotation (C_IM^T = C_SM^T * C_IS^T)
+  Matrix3d parentToMapRotation = RotationMatrixPD(map.getPose().getRotation()).matrix().transpose();
 
-  Vector3f variancePrediction = (positionVariance - previousPositionVariance).cast<float>();
+  // Translation Jacobian (J_r)
+  Matrix3d translationJacobian = -parentToMapRotation;
 
-  // Generate map update data.
-  varianceUpdate = (varianceUpdate.array() + variancePrediction.z()).matrix();
+  // Translation variance update (for all points the same).
+  Vector3f translationVarianceUpdate = (translationJacobian *
+                                        (positionCovariance - previousPositionCovariance) *
+                                        translationJacobian.transpose()).diagonal().cast<float>();
 
-  horizontalVarianceUpdateX = (horizontalVarianceUpdateX.array() + variancePrediction.x()).matrix();
-  horizontalVarianceUpdateY = (horizontalVarianceUpdateY.array() + variancePrediction.y()).matrix();
+  // Robot/sensor position (I_r_IS, for all points the same).
+  kindr::phys_quant::eigen_impl::Position3D robotPosition = robotPose.getPosition();
+
+  // For each cell in map.
+  for (unsigned int i = 0; i < size(0); ++i)
+  {
+    for (unsigned int j = 0; j < size(1); ++j)
+    {
+      kindr::phys_quant::eigen_impl::Position3D cellPosition; // I_r_IP
+
+      if (map.getPositionInParentFrameFromIndex(Array2i(i, j), cellPosition))
+      {
+        // Rotation Jacobian (J_q)
+        Matrix3d rotationJacobian = parentToMapRotation
+            * kindr::linear_algebra::getSkewMatrixFromVector((cellPosition - robotPosition).vector());
+
+        // Rotation variance update.
+        Vector3f rotationVarianceUpdate = (rotationJacobian *
+                                           (rotationCovariance - previousRotationCovariance) *
+                                           rotationJacobian.transpose()).diagonal().cast<float>();
+
+        // Variance update.
+        varianceUpdate(i, j) = translationVarianceUpdate.z() + rotationVarianceUpdate.z();
+        horizontalVarianceUpdateX(i, j) = translationVarianceUpdate.x() + rotationVarianceUpdate.x();
+        horizontalVarianceUpdateY(i, j) = translationVarianceUpdate.y() + rotationVarianceUpdate.y();
+      }
+      else
+      {
+        // Cell invalid.
+        varianceUpdate(i, j) = numeric_limits<float>::infinity();
+        horizontalVarianceUpdateX(i, j) = numeric_limits<float>::infinity();
+        horizontalVarianceUpdateY(i, j) = numeric_limits<float>::infinity();
+      }
+
+    }
+  }
+
+  map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
 
   previousRobotPoseCovariance_ = robotPoseCovariance;
 

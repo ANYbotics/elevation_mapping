@@ -237,7 +237,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-  // Variance from motion prediction
+  // Get robot pose at requested time.
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
   if (!poseMessage)
   {
@@ -245,30 +245,14 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-  kindr::phys_quant::eigen_impl::Position3D robotPosition(poseMessage->pose.pose.position.x,
-                                                          poseMessage->pose.pose.position.y,
-                                                          poseMessage->pose.pose.position.z);
-
-  kindr::rotations::eigen_impl::RotationQuaternionPD robotRotation(
-                          poseMessage->pose.pose.orientation.w,
-                          poseMessage->pose.pose.orientation.x,
-                          poseMessage->pose.pose.orientation.y,
-                          poseMessage->pose.pose.orientation.z);
-
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose(robotPosition, robotRotation);
-
+  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose;
+  kindr::poses::eigen_impl::convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
   Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
 
-  Array2i size = map_.getBufferSize();
-  MatrixXf varianceUpdate(size(0), size(1));
-  MatrixXf horizontalVarianceUpdateX(size(0), size(1));
-  MatrixXf horizontalVarianceUpdateY(size(0), size(1));
-  mapUpdater_.computeUpdate(robotPose, robotPoseCovariance, varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
+  // Compute map variance update from motion prediction.
+  mapUpdater_.update(map_, robotPose, robotPoseCovariance);
 
-  // Update map.
-  map_.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
   timeOfLastUpdate_ = time;
-
   return true;
 }
 

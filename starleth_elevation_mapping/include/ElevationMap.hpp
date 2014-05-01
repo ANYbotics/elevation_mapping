@@ -18,6 +18,7 @@
 
 // Kindr
 #include <kindr/poses/PoseEigen.hpp>
+#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 
 // Schweizer-Messer
 #include <sm/timing/Timer.hpp>
@@ -85,6 +86,8 @@ class ElevationMap
 
   Eigen::Array2i getBufferSize();
 
+  bool getPositionInParentFrameFromIndex(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& positionInParentFrame);
+
   // Parameters
   double minVariance_;
   double maxVariance_;
@@ -123,6 +126,7 @@ class ElevationMap
   Eigen::MatrixXf varianceData_;
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
+  //! Pose of the elevation map w.r.t. the parent frame.
   kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
 
   //! Circular buffer start indeces.
