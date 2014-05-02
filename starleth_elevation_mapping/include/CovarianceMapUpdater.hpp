@@ -28,12 +28,11 @@ class CovarianceMapUpdater
   virtual ~CovarianceMapUpdater();
 
   /*!
-   * Computes and returns the update based on the pose covariance.
+   * Computes the model update for the elevation map based on the pose covariance and
+   * adds the update to the map.
+   * @param[in] map the elevation map to be updated.
    * @param[in] robotPose the latest pose.
    * @param[in] robotPoseCovariance the latest pose covariance matrix.
-   * @param[out] varianceUpdate the update of the variance.
-   * @param[out] horizontalVarianceUpdateX the update of the horizonal variances in x-direction.
-   * @param[out] horizontalVarianceUpdateY the update of the horizonal variances in y-direction.
    * @return true if successful.
    */
   bool update(ElevationMap& map,

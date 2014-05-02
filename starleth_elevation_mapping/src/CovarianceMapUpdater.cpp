@@ -7,9 +7,6 @@
  */
 #include "CovarianceMapUpdater.hpp"
 
-// STD
-#include <iostream>
-
 // Kindr
 #include <kindr/rotations/RotationEigen.hpp>
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
@@ -35,6 +32,9 @@ bool CovarianceMapUpdater::update(
     ElevationMap& map, const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance)
 {
+  // Check if update necessary.
+  if ((robotPoseCovariance - previousRobotPoseCovariance_).all() == 0) return false;
+
   // Initialize update data.
   Array2i size = map.getBufferSize();
   MatrixXf varianceUpdate(size(0), size(1));
