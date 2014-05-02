@@ -103,7 +103,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       // Fuse measurement with elevation map data.
       elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
       variance =  (pointVariance * variance) / (pointVariance + variance);
-      // TODO add color fusion
+      // TODO Add color fusion.
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
@@ -259,7 +259,6 @@ bool ElevationMap::fuse()
 
       float mean = (weights * means).sum() / weights.sum();
       float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
-      if(variance < 0.0) variance = 0.0; // TODO Why is this necessary?
 
       if (!(std::isfinite(variance) && std::isfinite(mean)))
       {
@@ -323,6 +322,7 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPos
 bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& position)
 {
   // TODO Add height shift.
+
   Array2i indexShift;
   Vector2d positionShift = position.vector().head(2) - pose_.getPosition().vector().head(2);
   starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);

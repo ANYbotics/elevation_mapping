@@ -20,7 +20,7 @@ MapRegionVisualization::MapRegionVisualization(ros::NodeHandle& nodeHandle)
 
 MapRegionVisualization::~MapRegionVisualization()
 {
-  // TODO Auto-generated destructor stub
+
 }
 
 bool MapRegionVisualization::initialize()

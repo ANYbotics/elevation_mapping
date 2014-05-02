@@ -52,7 +52,6 @@ class ElevationVisualization
 
   bool setColorFromHeight(std_msgs::ColorRGBA& color, const double& height);
 
-  // TODO: Move this somewhere to a math library.
   double computeLinearMapping(
       const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
       const double& mapLowerValue, const double& mapUpperValue);
@@ -70,7 +69,6 @@ class ElevationVisualization
 
   MapRegionVisualization mapRegionVisualization_;
 
-  // TODO Add struct for parameters
   std::string mapTopic_;
   double markerHeight_;
   double sigmaBound_;

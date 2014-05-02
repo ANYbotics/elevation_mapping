@@ -38,7 +38,7 @@ ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)
 
 ElevationVisualization::~ElevationVisualization()
 {
-  // TODO Auto-generated destructor stub
+
 }
 
 bool ElevationVisualization::readParameters()
@@ -276,7 +276,5 @@ double ElevationVisualization::computeLinearMapping(
   }
   return mapValue;
 }
-
-
 
 } /* namespace starleth_elevation_visualization */

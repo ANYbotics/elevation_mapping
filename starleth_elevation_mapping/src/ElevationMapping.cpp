@@ -256,20 +256,13 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   return true;
 }
 
-// TODO Combine these two methods.
 bool ElevationMapping::publishRawElevationMap()
 {
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
 
   starleth_elevation_msg::ElevationMap elevationMapMessage;
-
   elevationMapMessage.header.stamp = timeOfLastUpdate_;
-  elevationMapMessage.header.frame_id = elevationMapFrameId_;
-  elevationMapMessage.resolution = map_.getResolution();
-  elevationMapMessage.lengthInX = map_.getLength()(0);
-  elevationMapMessage.lengthInY = map_.getLength()(1);
-  elevationMapMessage.outerStartIndex = map_.getBufferStartIndex()(0);
-  elevationMapMessage.innerStartIndex = map_.getBufferStartIndex()(1);
+  addHeaderDataToElevationMessage(elevationMapMessage);
 
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawElevationData(), elevationMapMessage.elevation);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawVarianceData(), elevationMapMessage.variance);
@@ -287,14 +280,8 @@ bool ElevationMapping::publishElevationMap()
   if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
 
   starleth_elevation_msg::ElevationMap elevationMapMessage;
-
   elevationMapMessage.header.stamp = timeOfLastFusion_;
-  elevationMapMessage.header.frame_id = elevationMapFrameId_;
-  elevationMapMessage.resolution = map_.getResolution();
-  elevationMapMessage.lengthInX = map_.getLength()(0);
-  elevationMapMessage.lengthInY = map_.getLength()(1);
-  elevationMapMessage.outerStartIndex = map_.getBufferStartIndex()(0);
-  elevationMapMessage.innerStartIndex = map_.getBufferStartIndex()(1);
+  addHeaderDataToElevationMessage(elevationMapMessage);
 
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
   starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getVarianceData(), elevationMapMessage.variance);
@@ -305,6 +292,16 @@ bool ElevationMapping::publishElevationMap()
   ROS_DEBUG("Elevation map (fused) has been published.");
 
   return true;
+}
+
+void ElevationMapping::addHeaderDataToElevationMessage(starleth_elevation_msg::ElevationMap& elevationMapMessage)
+{
+  elevationMapMessage.header.frame_id = elevationMapFrameId_;
+  elevationMapMessage.resolution = map_.getResolution();
+  elevationMapMessage.lengthInX = map_.getLength()(0);
+  elevationMapMessage.lengthInY = map_.getLength()(1);
+  elevationMapMessage.outerStartIndex = map_.getBufferStartIndex()(0);
+  elevationMapMessage.innerStartIndex = map_.getBufferStartIndex()(1);
 }
 
 bool ElevationMapping::updateMapLocation()
@@ -350,7 +347,8 @@ bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Reques
 
   map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
   map_.getSubmap(submapVariance, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getVarianceData(), requestedSubmapPosition, requestedSubmapLength);
-//  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength); // TODO
+  // TODO Add color for submaps.
+//  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength);
 
   response.elevation_map.header.stamp = timeOfLastFusion_;
   response.elevation_map.header.frame_id = elevationMapFrameId_;

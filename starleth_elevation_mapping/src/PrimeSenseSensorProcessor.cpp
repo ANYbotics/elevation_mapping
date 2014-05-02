@@ -92,7 +92,7 @@ bool PrimeSenseSensorProcessor::updateTransformations(std::string sensorFrameId,
 {
   try
   {
-    transformListener_.waitForTransform(sensorFrameId, mapFrameId_, timeStamp, Duration(1.0)); // TODO Make duration as parameter.
+    transformListener_.waitForTransform(sensorFrameId, mapFrameId_, timeStamp, Duration(1.0));
 
     StampedTransform transformTf;
     transformListener_.lookupTransform(mapFrameId_, sensorFrameId, timeStamp, transformTf);

@@ -72,6 +72,8 @@ class ElevationMapping
 
   bool publishElevationMap();
 
+  void addHeaderDataToElevationMessage(starleth_elevation_msg::ElevationMap& elevationMapMessage);
+
   bool updateMapLocation();
 
   bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
@@ -97,9 +99,6 @@ class ElevationMapping
   CovarianceMapUpdater mapUpdater_;
   ros::Time timeOfLastUpdate_;
   ros::Time timeOfLastFusion_;
-
-
-  // Parameters
 
   //! Maximum time that the map will not be updated.
   ros::Duration maxNoUpdateDuration_;
