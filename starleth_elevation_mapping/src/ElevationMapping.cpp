@@ -165,7 +165,7 @@ void ElevationMapping::pointCloudCallback(
 
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
-  Matrix<float, Dynamic, sensorProcessor_.dimensionOfVariances> measurementVariances;
+  VectorXf measurementVariances;
   if(!sensorProcessor_.process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("ElevationMap: Point cloud could not be processed.");

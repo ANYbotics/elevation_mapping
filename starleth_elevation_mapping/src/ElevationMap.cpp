@@ -67,7 +67,7 @@ bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolutio
   return true;
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::Matrix<float, Eigen::Dynamic, 3>& pointCloudVariances)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
@@ -83,15 +83,15 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& horizontalVarianceX = horizontalVarianceRawDataX_(index(0), index(1));
     auto& horizontalVarianceY = horizontalVarianceRawDataY_(index(0), index(1));
     auto& color = colorRawData_(index(0), index(1));
-    RowVector3f pointVariance = pointCloudVariances.row(i);
+    float pointVariance = pointCloudVariances(i);
 
     if (std::isnan(elevation) || std::isinf(variance))
     {
       // No prior information in elevation map, use measurement.
       elevation = point.z;
-      variance = pointVariance.z();
-      horizontalVarianceX = pointVariance.x(); // TODO Work only with 1d variances, and add here variance from discretization.
-      horizontalVarianceY = pointVariance.y();
+      variance = pointVariance;
+      horizontalVarianceX = minHorizontalVariance_;
+      horizontalVarianceY = minHorizontalVariance_;
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
@@ -101,8 +101,8 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     if (mahalanobisDistance < mahalanobisDistanceThreshold_)
     {
       // Fuse measurement with elevation map data.
-      elevation = (variance * point.z + pointVariance.z() * elevation) / (variance + pointVariance.z());
-      variance =  (pointVariance.z() * variance) / (pointVariance.z() + variance);
+      elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
+      variance =  (pointVariance * variance) / (pointVariance + variance);
       // TODO add color fusion
       starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;

@@ -41,9 +41,6 @@ class PrimeSenseSensorProcessor
   PrimeSenseSensorProcessor(tf::TransformListener& transformListener);
   virtual ~PrimeSenseSensorProcessor();
 
-  // TODO Check with ASL Styleguide 48b.
-  constexpr static unsigned int dimensionOfVariances = 3;
-
   /*!
    * Processes the point cloud.
    * @param[in] pointCloudInput the input point cloud.
@@ -56,7 +53,7 @@ class PrimeSenseSensorProcessor
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
       const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
-      Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances);
+      Eigen::VectorXf& variances);
 
   //! TF frame id of the map.
   std::string mapFrameId_;
@@ -95,7 +92,7 @@ class PrimeSenseSensorProcessor
   bool computeVariances(
       const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
       const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-      Eigen::Matrix<float, Eigen::Dynamic, dimensionOfVariances>& variances);
+      Eigen::VectorXf& variances);
 
   tf::TransformListener& transformListener_;
 
