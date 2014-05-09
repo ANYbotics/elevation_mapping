@@ -16,7 +16,7 @@ using namespace std;
 using namespace Eigen;
 using namespace kindr::rotations::eigen_impl;
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 CovarianceMapUpdater::CovarianceMapUpdater()
 {
@@ -102,4 +102,4 @@ bool CovarianceMapUpdater::update(
   return true;
 }
 
-} /* namespace starleth_elevation_mapping */
+} /* namespace */

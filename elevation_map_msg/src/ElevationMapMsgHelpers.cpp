@@ -1,14 +1,14 @@
 /*
- * ElevationMapHelpers.cpp
+ * ElevationMapMsgHelpers.cpp
  *
  *  Created on: Nov 27, 2013
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "ElevationMessageHelpers.hpp"
+#include "ElevationMapMsgHelpers.hpp"
 
-// StarlETH Elevation Map
+// Elevation Map
 #include "TransformationMath.hpp"
 
 // ROS
@@ -17,7 +17,7 @@
 // Boost
 #include <boost/assign.hpp>
 
-namespace starleth_elevation_msg {
+namespace elevation_map_msg {
 
 const int nDimensions()
 {
@@ -33,7 +33,7 @@ bool isRowMajor(const std_msgs::Float32MultiArray& messageData)
   if (messageData.layout.dim[0].label == storageIndexNames[StorageIndices::Column]) return false;
   else if (messageData.layout.dim[0].label == storageIndexNames[StorageIndices::Row]) return true;
 
-  ROS_ERROR("starleth_elevation_msg: isRowMajor() failed because layout label is not set correctly.");
+  ROS_ERROR("elevation_map_msg: isRowMajor() failed because layout label is not set correctly.");
   return false;
 }
 
@@ -51,7 +51,7 @@ unsigned int getRows(const std_msgs::Float32MultiArray& messageData)
 
 unsigned int get1dIndexFrom2dIndex(
     const Eigen::Array2i& index,
-    const starleth_elevation_msg::ElevationMap& map)
+    const elevation_map_msg::ElevationMap& map)
 {
   unsigned int n;
 
@@ -62,7 +62,7 @@ unsigned int get1dIndexFrom2dIndex(
 }
 
 //Eigen::Array2i get2dIndexFrom1dIndex(
-//    unsigned int n, const starleth_elevation_msg::ElevationMap& map)
+//    unsigned int n, const elevation_map_msg::ElevationMap& map)
 //{
 //  Eigen::Vector2i index;
 //  index(1) = n - map.elevation.layout.data_offset % map.elevation.layout.dim[1].stride;
@@ -72,7 +72,7 @@ unsigned int get1dIndexFrom2dIndex(
 
 bool getPositionFromIndex(Eigen::Vector2d& position,
                           const Eigen::Array2i& index,
-                          const starleth_elevation_msg::ElevationMap& map)
+                          const elevation_map_msg::ElevationMap& map)
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
   Array2i bufferSize = (getBufferOrderToMapFrameAlignment() * Vector2i(getRows(map.elevation), getCols(map.elevation))).array();
@@ -82,7 +82,7 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
 
 bool getIndexFromPosition(Eigen::Array2i& index,
                           const Eigen::Vector2d& position,
-                          const starleth_elevation_msg::ElevationMap& map)
+                          const elevation_map_msg::ElevationMap& map)
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
   Array2i bufferSize = (getBufferOrderToMapFrameAlignment() * Vector2i(getRows(map.elevation), getCols(map.elevation))).array();

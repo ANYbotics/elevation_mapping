@@ -10,7 +10,7 @@
 // ROS
 #include <geometry_msgs/Point32.h>
 
-namespace starleth_elevation_visualization {
+namespace elevation_map_visualization {
 
 MapRegionVisualization::MapRegionVisualization(ros::NodeHandle& nodeHandle)
 : nodeHandle_(nodeHandle)
@@ -36,7 +36,7 @@ bool MapRegionVisualization::initialize()
 }
 
 bool MapRegionVisualization::update(
-    const starleth_elevation_msg::ElevationMap& map)
+    const elevation_map_msg::ElevationMap& map)
 {
   mapRegionPolygon_.header = map.header;
 
@@ -66,4 +66,4 @@ unsigned int MapRegionVisualization::getNPoints()
   return 4;
 }
 
-} /* namespace starleth_elevation_visualization */
+} /* namespace */

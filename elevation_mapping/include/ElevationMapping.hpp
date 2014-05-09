@@ -8,8 +8,8 @@
 
 #pragma once
 
-// StarlETH Navigation
-#include <starleth_elevation_msg/ElevationSubmap.h>
+// Elevation Mapping
+#include <elevation_map_msg/ElevationSubmap.h>
 #include <EigenConversions.hpp>
 #include "ElevationMap.hpp"
 #include "PrimeSenseSensorProcessor.hpp"
@@ -36,7 +36,7 @@
 // STD
 #include <limits>
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 /*
  *
@@ -72,11 +72,11 @@ class ElevationMapping
 
   bool publishElevationMap();
 
-  void addHeaderDataToElevationMessage(starleth_elevation_msg::ElevationMap& elevationMapMessage);
+  void addHeaderDataToElevationMessage(elevation_map_msg::ElevationMap& elevationMapMessage);
 
   bool updateMapLocation();
 
-  bool getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response);
+  bool getSubmap(elevation_map_msg::ElevationSubmap::Request& request, elevation_map_msg::ElevationSubmap::Response& response);
 
   void resetMapUpdateTimer();
 
@@ -119,4 +119,4 @@ class ElevationMapping
 
 };
 
-} /* namespace starleth_elevation_map */
+} /* namespace */

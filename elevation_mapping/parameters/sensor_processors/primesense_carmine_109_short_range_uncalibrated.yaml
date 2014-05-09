@@ -1,4 +1,4 @@
-# Manual tuned for PrimeSense Carmine 1.09.
+# Manual tuned for uncalibrated PrimeSense Carmine 1.09.
 # Also includes uncertainties with non perpedicular surfaces and
 # biases/warp at further distances.
 # Coefficients for lateral model taken from kinect_nguyen_et_al.yaml

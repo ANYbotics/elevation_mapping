@@ -1,5 +1,5 @@
 /*
- * starleth_elevation_visualization_node.cpp
+ * elevation_map_visualization_node.cpp
  *
  *  Created on: Oct 3, 2013
  *      Author: Péter Fankhauser
@@ -7,11 +7,11 @@
  */
 
 #include <ros/ros.h>
-#include "ElevationVisualization.hpp"
+#include "ElevationMapVisualization.hpp"
 
 int main(int argc, char** argv)
 {
-  ros::init(argc, argv, "starleth_elevation_visualization");
+  ros::init(argc, argv, "elevation_map_visualization");
 
   // Logger
   log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
@@ -19,7 +19,7 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle("~");
 
-  starleth_elevation_visualization::ElevationVisualization elevationVisualization(nodeHandle);
+  elevation_map_visualization::ElevationMapVisualization elevationMapVisualization(nodeHandle);
 
   ros::spin();
   return 0;

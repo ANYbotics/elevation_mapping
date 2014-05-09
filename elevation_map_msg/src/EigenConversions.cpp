@@ -11,19 +11,19 @@
 // ROS
 #include <ros/ros.h>
 
-namespace starleth_elevation_msg {
+namespace elevation_map_msg {
 
 bool multiArrayMessageToMatrixEigen(std_msgs::Float32MultiArray& m, Eigen::MatrixXf& e)
 {
-  if (e.IsRowMajor != starleth_elevation_msg::isRowMajor(m))
+  if (e.IsRowMajor != elevation_map_msg::isRowMajor(m))
   {
-    ROS_ERROR("starleth_elevation_msg: multiArrayMessageToMatrixEigen() failed because the storage order is not compatible.");
+    ROS_ERROR("elevation_map_msg: multiArrayMessageToMatrixEigen() failed because the storage order is not compatible.");
     return false;
   }
 
-  e.resize(starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
+  e.resize(elevation_map_msg::getRows(m), elevation_map_msg::getCols(m));
 
-  e = Eigen::Map<MatrixXf>(m.data.data(), starleth_elevation_msg::getRows(m), starleth_elevation_msg::getCols(m));
+  e = Eigen::Map<MatrixXf>(m.data.data(), elevation_map_msg::getRows(m), elevation_map_msg::getCols(m));
 
   return true;
 }

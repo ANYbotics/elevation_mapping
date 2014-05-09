@@ -1,5 +1,5 @@
 /*
- * ElevationMap.cpp
+ * ElevationMapping.cpp
  *
  *  Created on: Nov 12, 2013
  *      Author: Péter Fankhauser
@@ -7,9 +7,9 @@
  */
 #include "ElevationMapping.hpp"
 
-// StarlETH Navigation
-#include <ElevationMessageHelpers.hpp>
-#include <starleth_elevation_msg/ElevationMap.h>
+// Elevation Mapping
+#include <ElevationMapMsgHelpers.hpp>
+#include <elevation_map_msg/ElevationMap.h>
 #include <EigenConversions.hpp>
 #include <TransformationMath.hpp>
 
@@ -31,17 +31,17 @@ using namespace kindr::poses::eigen_impl;
 using namespace kindr::phys_quant::eigen_impl;
 using namespace kindr::rotations::eigen_impl;
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       sensorProcessor_(transformListener_)
 {
-  ROS_INFO("StarlETH elevation map node started.");
+  ROS_INFO("Elevation mapping node started.");
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
-  elevationMapRawPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map_raw", 1);
-  elevationMapPublisher_ = nodeHandle_.advertise<starleth_elevation_msg::ElevationMap>("elevation_map", 1);
+  elevationMapRawPublisher_ = nodeHandle_.advertise<elevation_map_msg::ElevationMap>("elevation_map_raw", 1);
+  elevationMapPublisher_ = nodeHandle_.advertise<elevation_map_msg::ElevationMap>("elevation_map", 1);
   robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(robotPoseCacheSize_);
@@ -59,14 +59,14 @@ ElevationMapping::~ElevationMapping()
 bool ElevationMapping::readParameters()
 {
   // ElevationMapping parameters.
-  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/depth_registered/points"));
+  nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/points"));
   nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
   nodeHandle_.param("elevation_map_frame_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/odom"));
   nodeHandle_.param("track_point_x", trackPoint_.x(), 0.0);
   nodeHandle_.param("track_point_y", trackPoint_.y(), 0.0);
   nodeHandle_.param("track_point_z", trackPoint_.z(), 0.0);
-  nodeHandle_.param("robot_pose_topic", robotPoseTopic_, string("/starleth/robot_state/pose"));
+  nodeHandle_.param("robot_pose_topic", robotPoseTopic_, string("robot_state/pose"));
 
   nodeHandle_.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
   ROS_ASSERT(robotPoseCacheSize_ >= 0);
@@ -101,7 +101,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
 
   // SensorProcessor parameters.
-  nodeHandle_.param("base_frame_id", sensorProcessor_.baseFrameId_, string("/starleth/BASE"));
+  nodeHandle_.param("base_frame_id", sensorProcessor_.baseFrameId_, string("/robot"));
   nodeHandle_.param("sensor_cutoff_min_depth", sensorProcessor_.sensorCutoffMinDepth_, 0.2);
   ROS_ASSERT(sensorProcessor_.sensorCutoffMinDepth_ >= 0.0);
   nodeHandle_.param("sensor_cutoff_max_depth", sensorProcessor_.sensorCutoffMaxDepth_, 2.0);
@@ -121,7 +121,7 @@ bool ElevationMapping::readParameters()
 
 bool ElevationMapping::initialize()
 {
-  ROS_INFO("StarlETH elevation map node initializing ... ");
+  ROS_INFO("Elevation mapping node initializing ... ");
   timeOfLastUpdate_ = Time::now();
   timeOfLastFusion_.fromSec(0.0);
   broadcastElevationMapTransform(Time::now());
@@ -260,13 +260,13 @@ bool ElevationMapping::publishRawElevationMap()
 {
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
 
-  starleth_elevation_msg::ElevationMap elevationMapMessage;
+  elevation_map_msg::ElevationMap elevationMapMessage;
   elevationMapMessage.header.stamp = timeOfLastUpdate_;
   addHeaderDataToElevationMessage(elevationMapMessage);
 
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawElevationData(), elevationMapMessage.elevation);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawVarianceData(), elevationMapMessage.variance);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getRawColorData(), elevationMapMessage.color);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getRawElevationData(), elevationMapMessage.elevation);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getRawVarianceData(), elevationMapMessage.variance);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getRawColorData(), elevationMapMessage.color);
 
   elevationMapRawPublisher_.publish(elevationMapMessage);
 
@@ -279,13 +279,13 @@ bool ElevationMapping::publishElevationMap()
 {
   if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
 
-  starleth_elevation_msg::ElevationMap elevationMapMessage;
+  elevation_map_msg::ElevationMap elevationMapMessage;
   elevationMapMessage.header.stamp = timeOfLastFusion_;
   addHeaderDataToElevationMessage(elevationMapMessage);
 
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getVarianceData(), elevationMapMessage.variance);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(map_.getColorData(), elevationMapMessage.color);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getVarianceData(), elevationMapMessage.variance);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getColorData(), elevationMapMessage.color);
 
   elevationMapPublisher_.publish(elevationMapMessage);
 
@@ -294,7 +294,7 @@ bool ElevationMapping::publishElevationMap()
   return true;
 }
 
-void ElevationMapping::addHeaderDataToElevationMessage(starleth_elevation_msg::ElevationMap& elevationMapMessage)
+void ElevationMapping::addHeaderDataToElevationMessage(elevation_map_msg::ElevationMap& elevationMapMessage)
 {
   elevationMapMessage.header.frame_id = elevationMapFrameId_;
   elevationMapMessage.resolution = map_.getResolution();
@@ -330,7 +330,7 @@ bool ElevationMapping::updateMapLocation()
   return map_.relocate(position);
 }
 
-bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Request& request, starleth_elevation_msg::ElevationSubmap::Response& response)
+bool ElevationMapping::getSubmap(elevation_map_msg::ElevationSubmap::Request& request, elevation_map_msg::ElevationSubmap::Response& response)
 {
   // Request
   Vector2d requestedSubmapPosition(request.positionInX, request.positionInY);
@@ -358,8 +358,8 @@ bool ElevationMapping::getSubmap(starleth_elevation_msg::ElevationSubmap::Reques
   response.elevation_map.outerStartIndex = 0;
   response.elevation_map.innerStartIndex = 0;
 
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(submapElevation, response.elevation_map.elevation);
-  starleth_elevation_msg::matrixEigenToMultiArrayMessage(submapVariance, response.elevation_map.variance);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(submapElevation, response.elevation_map.elevation);
+  elevation_map_msg::matrixEigenToMultiArrayMessage(submapVariance, response.elevation_map.variance);
 
   ROS_DEBUG("Elevation submap responded with timestamp %f.", timeOfLastFusion_.toSec());
 
@@ -378,4 +378,4 @@ void ElevationMapping::stopMapUpdateTimer()
   mapUpdateTimer_.stop();
 }
 
-} /* namespace starleth_elevation_map */
+} /* namespace */

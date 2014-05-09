@@ -23,7 +23,7 @@
 #include <kindr/rotations/RotationEigen.hpp>
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 /*
  * Sensor processor for PrimeSense structured light sensors.
@@ -113,4 +113,4 @@ class PrimeSenseSensorProcessor
 
 };
 
-} /* namespace starleth_elevation_mapping */
+} /* namespace */

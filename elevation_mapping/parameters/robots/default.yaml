@@ -1,0 +1,8 @@
+point_cloud_topic: "/points"
+robot_pose_topic: "/robot_state/pose"
+map_frame_id: "/odometry"
+robot_pose_cache_size: 200
+track_point_frame_id: "/robot"
+track_point_x: 0.0
+track_point_y: 0.0
+track_point_z: 0.0

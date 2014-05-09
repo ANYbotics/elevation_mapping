@@ -1,5 +1,5 @@
 /*
- * test_starleth_elevation_msg.cpp
+ * test_elevation_map_msg.cpp
  *
  *  Created on: Feb 10, 2014
  *      Author: Péter Fankhauser

@@ -17,7 +17,7 @@
 using namespace Eigen;
 using namespace std;
 
-namespace starleth_elevation_msg {
+namespace elevation_map_msg {
 
 namespace internal {
 

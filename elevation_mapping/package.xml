@@ -1,51 +1,20 @@
 <?xml version="1.0"?>
 <package>
-  <name>starleth_elevation_mapping</name>
-  <version>0.0.0</version>
-  <description>The starleth_elevation_mapping package</description>
-
-  <!-- One maintainer tag required, multiple allowed, one person per tag --> 
-  <!-- Example:  -->
-  <!-- <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer> -->
+  <name>elevation_mapping</name>
+  <version>0.1.0</version>
+  <description>The elevation_mapping package</description>
   <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer>
-
-
-  <!-- One license tag required, multiple allowed, one license per tag -->
-  <!-- Commonly used license strings: -->
-  <!--   BSD, MIT, Boost Software License, GPLv2, GPLv3, LGPLv2.1, LGPLv3 -->
-  <license>TODO</license>
-
-
-  <!-- Url tags are optional, but mutiple are allowed, one per tag -->
-  <!-- Optional attribute type can be: website, bugtracker, or repository -->
-  <!-- Example: -->
-  <url type="website">https://bitbucket.org/ethz-asl-lr/c_starleth_navigation</url>
-
-
-  <!-- Author tags are optional, mutiple are allowed, one per tag -->
-  <!-- Authors do not have to be maintianers, but could be -->
-  <!-- Example: -->
+  <license>MIT</license>
+  <url type="website">http://github.com/ethz-asl/elevation_mapping</url>
+  <url type="bugtracker">http://github.com/ethz-asl/elevation_mapping/issues</url>
   <author email="pfankhauser@ethz.ch">Peter Fankhauser</author>
-
-
-  <!-- The *_depend tags are used to specify dependencies -->
-  <!-- Dependencies can be catkin packages or system dependencies -->
-  <!-- Examples: -->
-  <!-- Use build_depend for packages you need at compile time: -->
-  <!--   <build_depend>message_generation</build_depend> -->
-  <!-- Use buildtool_depend for build tool packages: -->
-  <!--   <buildtool_depend>catkin</buildtool_depend> -->
-  <!-- Use run_depend for packages you need at runtime: -->
-  <!--   <run_depend>message_runtime</run_depend> -->
-  <!-- Use test_depend for packages you need only for testing: -->
-  <!--   <test_depend>gtest</test_depend> -->
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>message_filters</build_depend>
   <build_depend>pcl_ros</build_depend>
   <build_depend>sensor_msgs</build_depend>
   <build_depend>std_msgs</build_depend>
-  <build_depend>starleth_elevation_msg</build_depend>
+  <build_depend>elevation_map_msg</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>tf_conversions</build_depend>
   <run_depend>roscpp</run_depend>
@@ -53,17 +22,7 @@
   <run_depend>pcl_ros</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>std_msgs</run_depend>
-  <run_depend>starleth_elevation_msg</run_depend>
+  <run_depend>elevation_map_msg</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>tf_conversions</run_depend>
-
-
-  <!-- The export tag contains other, unspecified, tags -->
-  <export>
-    <!-- You can specify that this package is a metapackage here: -->
-    <!-- <metapackage/> -->
-
-    <!-- Other tools can request additional information be placed here -->
-
-  </export>
 </package>

@@ -1,7 +1,0 @@
-<launch>
- 	<node pkg="starleth_elevation_mapping" type="starleth_elevation_mapping" name="starleth_elevation_mapping" output="screen">
-    	 <rosparam command="load" file="$(find starleth_elevation_mapping)/parameters/robots/starleth.yaml" />
-    	 <rosparam command="load" file="$(find starleth_elevation_mapping)/parameters/elevation_maps/starleth_default.yaml" />
-    	 <rosparam command="load" file="$(find starleth_elevation_mapping)/parameters/sensor_processors/primesense_carmine_109_short_range_tuned.yaml" />
-    </node>
-</launch>

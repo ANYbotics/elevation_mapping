@@ -1,6 +1,6 @@
 <launch>
- 	<node pkg="starleth_elevation_visualization" type="starleth_elevation_visualization" name="starleth_elevation_visualization" output="screen">
- 		 <param name="elevation_map_topic" value="/starleth_elevation_mapping/elevation_map" />
+ 	<node pkg="elevation_map_visualization" type="elevation_map_visualization" name="elevation_map_visualization" output="screen">
+ 		 <param name="elevation_map_topic" value="/elevation_mapping/elevation_map" />
  		 <param name="sigma_bound" value="0.0" />	 
  		 <param name="set_color_from_map" value="false" />
     	 <param name="set_color_from_variance" value="true" />

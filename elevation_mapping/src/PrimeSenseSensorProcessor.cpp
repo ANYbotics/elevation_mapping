@@ -29,7 +29,7 @@ using namespace tf;
 using namespace ros;
 using namespace kindr;
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 PrimeSenseSensorProcessor::PrimeSenseSensorProcessor(tf::TransformListener& transformListener)
     : transformListener_(transformListener)
@@ -187,4 +187,4 @@ bool PrimeSenseSensorProcessor::computeVariances(
   return true;
 }
 
-} /* namespace starleth_elevation_mapping */
+} /* namespace */

@@ -23,7 +23,7 @@
 // Schweizer-Messer
 #include <sm/timing/Timer.hpp>
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 /*
  * Elevation map stored as planar grid holding elevation height and variance.
@@ -139,4 +139,4 @@ class ElevationMap
   double resolution_;
 };
 
-} /* namespace starleth_elevation_mapping */
+} /* namespace */

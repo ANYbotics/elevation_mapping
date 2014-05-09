@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(starleth_elevation_msg)
+project(elevation_map_msg)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 
@@ -55,7 +55,7 @@ generate_messages(
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
     INCLUDE_DIRS include
-    LIBRARIES transformation_math eigen_conversions elevation_message_helpers
+    LIBRARIES transformation_math eigen_conversions elevation_map_msg_helpers
     CATKIN_DEPENDS roscpp std_msgs message_runtime
     DEPENDS Eigen Boost
 )
@@ -83,25 +83,24 @@ add_library(eigen_conversions
    src/EigenConversions.cpp
 )
 
-add_library(elevation_message_helpers
-   src/ElevationMessageHelpers.cpp
+add_library(elevation_map_msg_helpers
+   src/ElevationMapMsgHelpers.cpp
 )
 
 ## Declare a cpp executable
 #add_executable(
-#	starleth_elevation_map
-#	src/starleth_elevation_map_node.cpp
-#	src/ElevationMap.cpp
+#	elevation_map_msg
+#	src/elevation_map_msg_node.cpp
 #)
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(starleth_elevation_map_node starleth_elevation_map_generate_messages_cpp)
-add_dependencies(elevation_message_helpers transformation_math)
+# add_dependencies(elevation_map_msg_node elevation_map_msg_generate_messages_cpp)
+add_dependencies(elevation_map_msg_helpers transformation_math)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
-  elevation_message_helpers
+  elevation_map_msg_helpers
   transformation_math
 )
 
@@ -120,7 +119,7 @@ target_link_libraries(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS starleth_elevation_map starleth_elevation_map_node
+# install(TARGETS elevation_map_msg elevation_map_msg_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -145,7 +144,7 @@ target_link_libraries(
 #############
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ## Add gtest based cpp test target and link libraries
-catkin_add_gtest(${PROJECT_NAME}-test test/test_starleth_elevation_msg.cpp test/TransformationMathTest.cpp)
+catkin_add_gtest(${PROJECT_NAME}-test test/test_elevation_map_msg.cpp test/TransformationMathTest.cpp)
 if(TARGET ${PROJECT_NAME}-test)
   target_link_libraries(${PROJECT_NAME}-test transformation_math)
 endif()

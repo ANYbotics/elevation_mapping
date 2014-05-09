@@ -1,7 +1,0 @@
-length_in_x: 3.5
-length_in_y: 3.5
-resolution: 0.01
-min_variance: 0.000009
-max_variance: 0.01
-mahalanobis_distance_threshold: 2.5
-multi_height_noise: 0.0000009

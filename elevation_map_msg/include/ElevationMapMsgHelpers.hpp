@@ -1,5 +1,5 @@
 /*
- * ElevationMapHelpers.hpp
+ * ElevationMapMsgHelpers.hpp
  *
  *  Created on: Nov 27, 2013
  *      Author: Péter Fankhauser
@@ -8,8 +8,8 @@
 
 #pragma once
 
-// StarlETH Elevation Map
-#include <starleth_elevation_msg/ElevationMap.h>
+// Elevation Map
+#include <elevation_map_msg/ElevationMap.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -22,7 +22,7 @@
 
 using namespace Eigen;
 
-namespace starleth_elevation_msg {
+namespace elevation_map_msg {
 
 const int nDimensions();
 
@@ -47,7 +47,7 @@ unsigned int getRows(const std_msgs::Float32MultiArray& messageData);
  */
 unsigned int get1dIndexFrom2dIndex(
     const Eigen::Array2i& index,
-    const starleth_elevation_msg::ElevationMap& map);
+    const elevation_map_msg::ElevationMap& map);
 
 /*!
  * Returns the 2d matrix indeces based on the 1d array index (NOT TESTED!).
@@ -56,7 +56,7 @@ unsigned int get1dIndexFrom2dIndex(
  * @return 2d matrix indeces.
  */
 //Eigen::Array2i get2dIndexFrom1dIndex(
-//    unsigned int n, const starleth_elevation_msg::ElevationMap& map);
+//    unsigned int n, const elevation_map_msg::ElevationMap& map);
 
 /*!
  * Gets the position of the center of the cell in the map coordinate system
@@ -68,7 +68,7 @@ unsigned int get1dIndexFrom2dIndex(
  */
 bool getPositionFromIndex(Eigen::Vector2d& position,
                           const Eigen::Array2i& index,
-                          const starleth_elevation_msg::ElevationMap& map);
+                          const elevation_map_msg::ElevationMap& map);
 
 /*!
  * Gets the index of the cell which contains a position in the map frame.
@@ -79,7 +79,7 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
  */
 bool getIndexfromPosition(Eigen::Array2i& index,
                           const Eigen::Vector2d& position,
-                          const starleth_elevation_msg::ElevationMap& map);
+                          const elevation_map_msg::ElevationMap& map);
 
 /*!
  * Gets the color vector (RGB from 0-255) from a color value (concatenated RGB values).

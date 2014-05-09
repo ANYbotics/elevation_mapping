@@ -1,5 +1,5 @@
 /*
- * ElevationVisualization.hpp
+ * ElevationMapVisualization.hpp
  *
  *  Created on: Nov 19, 2013
  *      Author: Péter Fankhauser
@@ -9,9 +9,9 @@
 
 #pragma once
 
-// StarlETH Navigation
+// Elevation Mapping
 #include "MapRegionVisualization.hpp"
-#include <starleth_elevation_msg/ElevationMap.h>
+#include <elevation_map_msg/ElevationMap.h>
 
 // ROS
 #include <ros/ros.h>
@@ -20,24 +20,24 @@
 // Eigen
 #include <Eigen/Core>
 
-namespace starleth_elevation_visualization {
+namespace elevation_map_visualization {
 
 /*
  *
  */
-class ElevationVisualization
+class ElevationMapVisualization
 {
  public:
-  ElevationVisualization(ros::NodeHandle& nodeHandle);
+  ElevationMapVisualization(ros::NodeHandle& nodeHandle);
 
-  virtual ~ElevationVisualization();
+  virtual ~ElevationMapVisualization();
 
-  void elevationMapCallback(const starleth_elevation_msg::ElevationMap& map);
+  void elevationMapCallback(const elevation_map_msg::ElevationMap& map);
 
  private:
   bool readParameters();
   bool initializeVisualization();
-  bool generateVisualization(const starleth_elevation_msg::ElevationMap& map);
+  bool generateVisualization(const elevation_map_msg::ElevationMap& map);
   bool setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell);
   bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
   bool setColorChannelFromVariance(float& color, const double& variance, bool invert = false);
@@ -88,4 +88,4 @@ class ElevationVisualization
   double maxMarkerAlpha_;
 };
 
-} /* namespace starleth_elevation_visualization */
+} /* namespace */

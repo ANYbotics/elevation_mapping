@@ -1,0 +1,7 @@
+<launch>
+ 	<node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/robots/default.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/default.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/kinect_nguyen_et_al.yaml" />
+    </node>
+</launch>

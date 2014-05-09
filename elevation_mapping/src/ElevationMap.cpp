@@ -7,10 +7,10 @@
  */
 #include "ElevationMap.hpp"
 
-// StarlETH Navigation
+// Elevation Mapping
 #include "ElevationMapFunctors.hpp"
 #include <TransformationMath.hpp>
-#include <ElevationMessageHelpers.hpp>
+#include <ElevationMapMsgHelpers.hpp>
 
 // Math
 #include <math.h>
@@ -23,7 +23,7 @@ using namespace Eigen;
 using namespace sm;
 using namespace sm::timing;
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 ElevationMap::ElevationMap()
 {
@@ -74,7 +74,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& point = pointCloud->points[i];
 
     Array2i index;
-    if (!starleth_elevation_msg::getIndexFromPosition(
+    if (!elevation_map_msg::getIndexFromPosition(
         index, Vector2d(point.x, point.y), length_, resolution_, getBufferSize(), bufferStartIndex_))
       continue; // Skip this point if it does not lie within the elevation map
 
@@ -92,7 +92,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       variance = pointVariance;
       horizontalVarianceX = minHorizontalVariance_;
       horizontalVarianceY = minHorizontalVariance_;
-      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      elevation_map_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
 
@@ -104,7 +104,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
       variance =  (pointVariance * variance) / (pointVariance + variance);
       // TODO Add color fusion.
-      starleth_elevation_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      elevation_map_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
 
@@ -175,7 +175,7 @@ bool ElevationMap::fuse()
 
       // Requested position (center) of submap in map.
       Vector2d requestedSubmapPosition;
-      starleth_elevation_msg::getPositionFromIndex(requestedSubmapPosition, Array2i(i, j),
+      elevation_map_msg::getPositionFromIndex(requestedSubmapPosition, Array2i(i, j),
                                                    length_, resolution_,
                                                    getBufferSize(), bufferStartIndex_);
 
@@ -200,7 +200,7 @@ bool ElevationMap::fuse()
 
       // Position of center index in submap.
       Vector2d centerInSubmap;
-      starleth_elevation_msg::getPositionFromIndex(centerInSubmap, requestedIndex, submapLength, resolution_, submapBufferSize,
+      elevation_map_msg::getPositionFromIndex(centerInSubmap, requestedIndex, submapLength, resolution_, submapBufferSize,
                                                    Array2i(0, 0));
 
       unsigned int n = 0;
@@ -224,7 +224,7 @@ bool ElevationMap::fuse()
 
           // Compute weight from probability.
           Vector2d positionInSubmap;
-          starleth_elevation_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
+          elevation_map_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
                                                        submapLength, resolution_,
                                                        submapBufferSize, Array2i(0, 0));
 
@@ -289,14 +289,14 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPos
 {
   Array2i topLeftIndex;
 
-  starleth_elevation_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap,
+  elevation_map_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap,
                                                requestedSubmapPosition, requestedSubmapLength, length_, resolution_,
                                                getBufferSize(), bufferStartIndex_);
 
   std::vector<Eigen::Array2i> submapIndeces;
   std::vector<Eigen::Array2i> submapSizes;
 
-  if(!starleth_elevation_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftIndex, submapBufferSize, getBufferSize(), bufferStartIndex_))
+  if(!elevation_map_msg::getBufferRegionsForSubmap(submapIndeces, submapSizes, topLeftIndex, submapBufferSize, getBufferSize(), bufferStartIndex_))
   {
      ROS_ERROR("Cannot access submap of this size.");
      return false;
@@ -325,9 +325,9 @@ bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& pos
 
   Array2i indexShift;
   Vector2d positionShift = position.vector().head(2) - pose_.getPosition().vector().head(2);
-  starleth_elevation_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);
+  elevation_map_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);
   Vector2d alignedPositionShift;
-  starleth_elevation_msg::getPositionShiftFromIndexShift(alignedPositionShift, indexShift, resolution_);
+  elevation_map_msg::getPositionShiftFromIndexShift(alignedPositionShift, indexShift, resolution_);
 
   // Delete fields that fall out of map (and become empty cells).
   for (int i = 0; i < indexShift.size(); i++)
@@ -348,7 +348,7 @@ bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& pos
         int nCells = abs(indexShift[i]);
 
         int index = (sign > 0 ? startIndex : endIndex);
-        starleth_elevation_msg::mapIndexWithinRange(index, getBufferSize()[i]);
+        elevation_map_msg::mapIndexWithinRange(index, getBufferSize()[i]);
 
         if (index + nCells <= getBufferSize()[i])
         {
@@ -375,7 +375,7 @@ bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& pos
 
   // Update information.
   bufferStartIndex_ += indexShift;
-  starleth_elevation_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
+  elevation_map_msg::mapIndexWithinRange(bufferStartIndex_, getBufferSize());
   pose_.getPosition() += kindr::phys_quant::eigen_impl::Position3D(alignedPositionShift.x(), alignedPositionShift.y(), 0.0);
 
   if (indexShift.all() != 0)
@@ -413,7 +413,7 @@ bool ElevationMap::getPositionInParentFrameFromIndex(const Eigen::Array2i& index
   if(std::isnan(height)) return false;
 
   Vector2d positionInGrid;
-  starleth_elevation_msg::getPositionFromIndex(positionInGrid, index, length_, resolution_, getBufferSize(), bufferStartIndex_);
+  elevation_map_msg::getPositionFromIndex(positionInGrid, index, length_, resolution_, getBufferSize(), bufferStartIndex_);
 
   positionInParentFrame << positionInGrid.x(),
                            positionInGrid.y(),
@@ -504,4 +504,4 @@ float ElevationMap::cumulativeDistributionFunction(float x, float mean, float st
   return 0.5 * erfc(-(x-mean)/(standardDeviation*sqrt(2.0)));
 }
 
-} /* namespace starleth_elevation_mapping */
+} /* namespace */

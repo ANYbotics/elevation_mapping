@@ -8,7 +8,7 @@
 
 #pragma once
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 template<typename Scalar>
 struct VarianceClampOperator
@@ -25,4 +25,4 @@ struct VarianceClampOperator
   Scalar minVariance_, maxVariance_;
 };
 
-} /* namespace starleth_elevation_map */
+} /* namespace */

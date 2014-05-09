@@ -16,7 +16,7 @@
 // Kindr
 #include <kindr/poses/eigen/HomogeneousTransformation.hpp>
 
-namespace starleth_elevation_mapping {
+namespace elevation_mapping {
 
 /*
  * Computes the map variance update from the pose covariance of the robot.
@@ -43,4 +43,4 @@ class CovarianceMapUpdater
   Eigen::Matrix<double, 6, 6> previousRobotPoseCovariance_;
 };
 
-} /* namespace starleth_elevation_mapping */
+} /* namespace */

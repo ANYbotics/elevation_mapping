@@ -22,7 +22,7 @@
 
 using namespace std;
 using namespace Eigen;
-using namespace starleth_elevation_msg;
+using namespace elevation_map_msg;
 
 TEST(PositionFromIndex, Simple)
 {

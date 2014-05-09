@@ -1,16 +1,16 @@
 /*
- * ElevationVisualization.cpp
+ * ElevationMapVisualization.cpp
  *
  *  Created on: Nov 19, 2013
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "ElevationVisualization.hpp"
+#include "ElevationMapVisualization.hpp"
 
-// StarlETH Navigation
-#include "ElevationVisualizationHelpers.hpp"
-#include <ElevationMessageHelpers.hpp>
+// Elevation Mapping
+#include "ElevationMapVisualizationHelpers.hpp"
+#include <ElevationMapMsgHelpers.hpp>
 
 // ROS
 #include <geometry_msgs/Point.h>
@@ -23,27 +23,27 @@ using namespace std;
 using namespace ros;
 using namespace Eigen;
 
-namespace starleth_elevation_visualization {
+namespace elevation_map_visualization {
 
-ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)
+ElevationMapVisualization::ElevationMapVisualization(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       mapRegionVisualization_(nodeHandle_)
 {
-  ROS_INFO("StarlETH elevation visualization node started.");
+  ROS_INFO("Elevation map visualization node started.");
   readParameters();
-  mapSubscriber_ = nodeHandle_.subscribe(mapTopic_, 1, &ElevationVisualization::elevationMapCallback, this);
+  mapSubscriber_ = nodeHandle_.subscribe(mapTopic_, 1, &ElevationMapVisualization::elevationMapCallback, this);
   mapMarkerArrayPublisher_ = nodeHandle_.advertise<visualization_msgs::MarkerArray>("elevation_map_marker_array", 1, true);
   initializeVisualization();
 }
 
-ElevationVisualization::~ElevationVisualization()
+ElevationMapVisualization::~ElevationMapVisualization()
 {
 
 }
 
-bool ElevationVisualization::readParameters()
+bool ElevationMapVisualization::readParameters()
 {
-  nodeHandle_.param("elevation_map_topic", mapTopic_, string("/starleth_elevation_mapping/elevation_map"));
+  nodeHandle_.param("elevation_map_topic", mapTopic_, string("/elevation_mapping/elevation_map"));
   nodeHandle_.param("marker_height", markerHeight_, 0.25);
   nodeHandle_.param("sigma_bound", sigmaBound_, 0.0);
   nodeHandle_.param("set_color_from_map", isSetColorFromMap_, true);
@@ -64,7 +64,7 @@ bool ElevationVisualization::readParameters()
   return true;
 }
 
-bool ElevationVisualization::initializeVisualization()
+bool ElevationMapVisualization::initializeVisualization()
 {
   mapMarkerArrayMessage_.markers.resize((int)MarkerTypes::Count); // Could add more marker types here
 
@@ -78,12 +78,12 @@ bool ElevationVisualization::initializeVisualization()
 
   mapRegionVisualization_.initialize();
 
-  ROS_INFO("StarlETH elevation visualization initialized.");
+  ROS_INFO("Elevation map visualization initialized.");
   return true;
 }
 
-void ElevationVisualization::elevationMapCallback(
-    const starleth_elevation_msg::ElevationMap& map)
+void ElevationMapVisualization::elevationMapCallback(
+    const elevation_map_msg::ElevationMap& map)
 {
   if (mapMarkerArrayPublisher_.getNumSubscribers () < 1) return;
 
@@ -105,8 +105,8 @@ void ElevationVisualization::elevationMapCallback(
   mapRegionVisualization_.publish();
 }
 
-bool ElevationVisualization::generateVisualization(
-    const starleth_elevation_msg::ElevationMap& map)
+bool ElevationMapVisualization::generateVisualization(
+    const elevation_map_msg::ElevationMap& map)
 {
   unsigned int nCells = map.elevation.layout.dim.at(0).stride;
   ROS_DEBUG("ElevationVisualization: Elevation data has has %i cells.", nCells);
@@ -123,13 +123,13 @@ bool ElevationVisualization::generateVisualization(
 
   float markerHeightOffset = static_cast<float>(markerHeight_/2.0);
 
-  for (unsigned int i = 0; i < starleth_elevation_msg::getRows(map.elevation); ++i)
+  for (unsigned int i = 0; i < elevation_map_msg::getRows(map.elevation); ++i)
   {
-    for (unsigned int j = 0; j < starleth_elevation_msg::getCols(map.elevation); ++j)
+    for (unsigned int j = 0; j < elevation_map_msg::getCols(map.elevation); ++j)
     {
       // Getting elevation value
       Vector2i cellIndex(i, j);
-      unsigned int dataIndex = starleth_elevation_msg::get1dIndexFrom2dIndex(cellIndex, map);
+      unsigned int dataIndex = elevation_map_msg::get1dIndexFrom2dIndex(cellIndex, map);
       const auto& elevation = map.elevation.data[dataIndex];
       const auto& variance = map.variance.data[dataIndex];
       const auto& color = map.color.data[dataIndex];
@@ -145,7 +145,7 @@ bool ElevationVisualization::generateVisualization(
 
       // Getting position of cell
       Vector2d position;
-      starleth_elevation_msg::getPositionFromIndex(position, Array2i(i, j), map);
+      elevation_map_msg::getPositionFromIndex(position, Array2i(i, j), map);
 
       // Add marker point
       geometry_msgs::Point point;
@@ -164,7 +164,7 @@ bool ElevationVisualization::generateVisualization(
   return true;
 }
 
-bool ElevationVisualization::setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell)
+bool ElevationMapVisualization::setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell)
 {
   color.r = 0.0;
   color.g = 0.0;
@@ -198,15 +198,15 @@ bool ElevationVisualization::setColor(std_msgs::ColorRGBA& color, const double& 
   return true;
 }
 
-bool ElevationVisualization::setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue)
+bool ElevationMapVisualization::setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue)
 {
   Vector3f colorVector;
-  starleth_elevation_msg::copyColorValueToVector(colorValue, colorVector);
+  elevation_map_msg::copyColorValueToVector(colorValue, colorVector);
   getColorMessageFromColorVector(color, colorVector);
   return true;
 }
 
-bool ElevationVisualization::setColorChannelFromVariance(float& colorChannel, const double& variance, bool invert)
+bool ElevationMapVisualization::setColorChannelFromVariance(float& colorChannel, const double& variance, bool invert)
 {
   double lowestVarianceValue = 0.0;
   double highestVarianceValue = 1.0;
@@ -224,7 +224,7 @@ bool ElevationVisualization::setColorChannelFromVariance(float& colorChannel, co
   return true;
 }
 
-bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
+bool ElevationMapVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
 {
   const Eigen::Array3f HspFactors(.299, .587, .114); // see http://alienryderflex.com/hsp.html
   float saturationChange = static_cast<float>(computeLinearMapping(variance, varianceLowerValue_, varianceUpperValue_, maxMarkerSaturation_, minMarkerSaturation_));
@@ -237,7 +237,7 @@ bool ElevationVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& colo
   return true;
 }
 
-bool ElevationVisualization::setColorFromHeight(std_msgs::ColorRGBA& color, const double& height)
+bool ElevationMapVisualization::setColorFromHeight(std_msgs::ColorRGBA& color, const double& height)
 {
   Vector3f hsl; // Hue: [0, 2 Pi], Saturation and Lightness: [0, 1]
   Vector3f rgb;
@@ -257,7 +257,7 @@ bool ElevationVisualization::setColorFromHeight(std_msgs::ColorRGBA& color, cons
   return true;
 }
 
-double ElevationVisualization::computeLinearMapping(
+double ElevationMapVisualization::computeLinearMapping(
     const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
     const double& mapLowerValue, const double& mapUpperValue)
 {
@@ -277,4 +277,4 @@ double ElevationVisualization::computeLinearMapping(
   return mapValue;
 }
 
-} /* namespace starleth_elevation_visualization */
+} /* namespace */

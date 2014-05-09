@@ -1,5 +1,5 @@
 /*
- * ElevationVisualizationHelpers.hpp
+ * ElevationMapVisualizationHelpers.hpp
  *
  *  Created on: Jan 5, 2014
  *      Author: Péter Fankhauser
@@ -15,7 +15,7 @@
 // Eigen
 #include <Eigen/Core>
 
-namespace starleth_elevation_visualization {
+namespace elevation_map_visualization {
 
 inline void getColorMessageFromColorVector(std_msgs::ColorRGBA& colorMessage, const Eigen::Vector3f& colorVector)
 {
@@ -29,4 +29,4 @@ inline void getColorVectorFromColorMessage(Eigen::Vector3f& colorVector, const s
   colorVector << colorMessage.r, colorMessage.g, colorMessage.b;
 }
 
-} /* namespace starleth_elevation_visualization */
+} /* namespace */

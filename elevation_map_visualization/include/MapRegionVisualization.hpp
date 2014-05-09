@@ -8,14 +8,14 @@
 
 #pragma once
 
-// StarlETH Navigation
-#include <starleth_elevation_msg/ElevationMap.h>
+// Elevation Mapping
+#include <elevation_map_msg/ElevationMap.h>
 
 // ROS
 #include <ros/ros.h>
 #include <geometry_msgs/PolygonStamped.h>
 
-namespace starleth_elevation_visualization {
+namespace elevation_map_visualization {
 
 /*
  *
@@ -27,7 +27,7 @@ class MapRegionVisualization
   virtual ~MapRegionVisualization();
 
   bool initialize();
-  bool update(const starleth_elevation_msg::ElevationMap& map);
+  bool update(const elevation_map_msg::ElevationMap& map);
   bool publish();
 
  private:
@@ -40,4 +40,4 @@ class MapRegionVisualization
   geometry_msgs::PolygonStamped mapRegionPolygon_;
 };
 
-} /* namespace starleth_elevation_visualization */
+} /* namespace */

@@ -12,7 +12,7 @@
 #include <vector>
 #include <map>
 
-namespace starleth_elevation_msg {
+namespace elevation_map_msg {
 
 /*!
  * Gets the position of a cell specified by its index in the map frame.

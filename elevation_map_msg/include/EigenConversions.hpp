@@ -8,8 +8,8 @@
 
 #pragma once
 
-// StarlETH Elevation Map
-#include "ElevationMessageHelpers.hpp"
+// Elevation Map Msg
+#include "ElevationMapMsgHelpers.hpp"
 
 // ROS
 #include <std_msgs/Float32MultiArray.h>
@@ -18,7 +18,7 @@
 // Eigen
 #include <Eigen/Core>
 
-namespace starleth_elevation_msg {
+namespace elevation_map_msg {
 
 /*!
  * Converts an Eigen matrix into a ROS MultiArray message.

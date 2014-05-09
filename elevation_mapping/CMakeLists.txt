@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(starleth_elevation_mapping)
+project(elevation_mapping)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x")
 
@@ -7,7 +7,7 @@ set(CMAKE_CXX_FLAGS "-std=c++0x")
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-  starleth_elevation_msg
+  elevation_map_msg
   pcl_ros
   roscpp
   message_filters
@@ -21,7 +21,6 @@ find_package(catkin REQUIRED COMPONENTS
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Kindr REQUIRED)
-
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -62,7 +61,7 @@ find_package(Kindr REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
     INCLUDE_DIRS include
-#  LIBRARIES starleth_elevation_map
+#  LIBRARIES elevation_mapping
 #    CATKIN_DEPENDS message_runtime
 #  DEPENDS system_lib
 )
@@ -84,14 +83,14 @@ include_directories(
 )
 
 ## Declare a cpp library
-# add_library(starleth_elevation_map
-#   src/${PROJECT_NAME}/starleth_elevation_map.cpp
+# add_library(elevation_maping
+#   src/${PROJECT_NAME}/elevation_maping.cpp
 # )
 
 ## Declare a cpp executable
 add_executable(
-	starleth_elevation_mapping
-	src/starleth_elevation_mapping_node.cpp
+	elevation_mapping
+	src/elevation_mapping_node.cpp
 	src/ElevationMapping.cpp
 	src/ElevationMap.cpp
 	src/PrimeSenseSensorProcessor.cpp
@@ -101,11 +100,11 @@ add_executable(
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(starleth_elevation_map_node starleth_elevation_map_generate_messages_cpp)
+# add_dependencies(elevation_mapping_node elevation_mapping_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
-  starleth_elevation_mapping
+  elevation_mapping
   ${catkin_LIBRARIES}
 )
 
@@ -124,7 +123,7 @@ target_link_libraries(
 # )
 
 ## Mark executables and/or libraries for installation
-# install(TARGETS starleth_elevation_map starleth_elevation_map_node
+# install(TARGETS elevation_mapping elevation_mapping_node
 #   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
@@ -149,7 +148,7 @@ target_link_libraries(
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_starleth_elevation_map.cpp)
+# catkin_add_gtest(${PROJECT_NAME}-test test/test_elevation_mapping.cpp)
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
