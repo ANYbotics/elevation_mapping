@@ -37,11 +37,11 @@ Installation
 
 ### Dependencies
 
-This software is built on the Robotic Operating System ([ROS]), which needs to be [installed](http://wiki.ros.org) first.
-
-Additionaly, the Robot-Centric Elevation Mapper depends on following software:
+This software is built on the Robotic Operating System ([ROS]), which needs to be [installed](http://wiki.ros.org) first. Additionaly, the Robot-Centric Elevation Mapper depends on following software:
 
 - [Eigen](http://eigen.tuxfamily.org) linear algebra library,
+- [kindr](),
+- [Schweizer-Messer]().
 
 ### Building
 
@@ -52,9 +52,47 @@ In order to install the Robot-Centric Elevation Mapper, clone the latest version
     cd ../
     catkin_make
 
-### Running the Unit Tests
+### Unit Tests
 
-Bugs
+Run the unit tests with
+
+    catkin_make run_tests
+    
+### Debugging
+
+Build in Debug mode with
+
+    catkin_make -DCMAKE_BUILD_TYPE=Debug
+    
+You can play a bag file with
+
+    rosparam set use_sim_time true
+    rosbag play --clock --rate=1.0 --start=0.0 XXX.bag 
+
+Nodes
+------------
+
+### Node: elevation_mapping
+
+#### Services
+
+##### Trigger Fusion
+
+Fuses complete elevation map.
+
+    rosservice call /elevation_mapping/trigger_fusion
+    
+##### Submap
+
+    rosservice call -- /elevation_mapping/get_submap -0.5 0.0 2.8 2.8 > elevation_map.txt
+
+### Node: elevation_map_visualization
+
+### Node: elevation_map_msg
+
+Definition of the elevation message and services types. It also contains helper functions that facilitate the handling and conversion of elevation messages.
+
+Bugs & Feature Requests
 ------------
 
 Please report bugs and request features using the [Issue Tracker](https://github.com/ethz-asl/elevation_mapping/issues).
