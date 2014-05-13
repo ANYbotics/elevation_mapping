@@ -8,7 +8,7 @@ Overview
 
 This is a collection of [ROS] packages developed for local elevation mapping with a mobile robot. The software is designed for (local) navigation tasks with robots which are equipped with a pose estimation (e.g. IMU & odometry) and a distance sensor (e.g. kinect, laser range sensor). The provided elevation map is limited around the robot and reflects the pose uncertainty that is aggregated through the motion of the robot (robot-centric mapping). This method is developed to explicitly handle drift of the robot pose estimation.
 
-The Robot-Centric Elevation Mapping packages have been tested under ROS-Groovy and Ubuntu 13.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The Robot-Centric Elevation Mapping packages have been tested under ROS Groovy and Ubuntu 13.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 **Author: Peter Fankhauser, pfankhauser@ethz.ch<br />
 Affiliation: Autonomous Systems Lab, ETH Zurich**
@@ -16,7 +16,7 @@ Affiliation: Autonomous Systems Lab, ETH Zurich**
 Citing
 ---------------
 
-The robot-centric elevation mapping methods used in this software are described in the following paper (available [here]()).
+The robot-centric elevation mapping methods used in this software are described in the following paper (available [here]()):
 
 P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
 **"Robot-centric elevation mapping with uncertainty estimates"**,
@@ -39,9 +39,10 @@ Installation
 
 This software is built on the Robotic Operating System ([ROS]), which needs to be [installed](http://wiki.ros.org) first. Additionaly, the Robot-Centric Elevation Mapper depends on following software:
 
-- [Eigen](http://eigen.tuxfamily.org) linear algebra library,
-- [kindr](),
-- [Schweizer-Messer]().
+- [Eigen](http://eigen.tuxfamily.org) (linear algebra library),
+- [kindr](http://github.com/ethz-asl/kindr) (kinematics and dynamics library for robotics),
+- [Schweizer-Messer](http://github.com/ethz-asl/Schweizer-Messer) (programming tools for robotics),
+- [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing).
 
 ### Building
 
@@ -76,15 +77,21 @@ Nodes
 
 #### Services
 
-##### Trigger Fusion
+* **`trigger_fusion`** ([std_srvs/Empty](http://docs.ros.org/api/std_srvs/html/srv/Empty.html))
 
-Fuses complete elevation map.
-
-    rosservice call /elevation_mapping/trigger_fusion
+    Trigger the fusing process for the entire elevation map and publish it.
     
-##### Submap
+    For example, you can trigger the map fusion step from the console with
 
-    rosservice call -- /elevation_mapping/get_submap -0.5 0.0 2.8 2.8 > elevation_map.txt
+        rosservice call /elevation_mapping/trigger_fusion
+    
+* **`get_submap`** (elevation_mapping/GetSubmap)
+
+    Get a fused elevation submap for a requested position and size.
+    
+    For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
+
+        rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2 > elevation_submap.txt
 
 ### Node: elevation_map_visualization
 
