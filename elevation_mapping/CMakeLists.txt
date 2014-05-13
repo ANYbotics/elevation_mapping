@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   message_filters
+  message_generation
   sensor_msgs
   std_msgs
   tf
@@ -38,17 +39,17 @@ find_package(Kindr REQUIRED)
 #)
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  GetSubmap.srv
+)
 
 ## Generate added messages and services with any dependencies listed here
-#generate_messages(
-#  DEPENDENCIES
-#  std_msgs
-#)
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  elevation_map_msg
+)
 
 ###################################
 ## catkin specific configuration ##
