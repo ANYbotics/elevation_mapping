@@ -1,6 +1,6 @@
 point_cloud_topic: "/points"
 robot_pose_topic: "/robot_state/pose"
-map_frame_id: "/odometry"
+parent_frame_id: "/map"
 base_frame_id: "/robot"
 robot_pose_cache_size: 200
 track_point_frame_id: "/robot"

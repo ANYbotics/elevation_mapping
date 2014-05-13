@@ -60,13 +60,13 @@ bool ElevationMapping::readParameters()
 {
   // ElevationMapping parameters.
   nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/points"));
-  nodeHandle_.param("map_frame_id", parentFrameId_, string("/map"));
+  nodeHandle_.param("robot_pose_topic", robotPoseTopic_, string("/robot_state/pose"));
+  nodeHandle_.param("parent_frame_id", parentFrameId_, string("/map"));
   nodeHandle_.param("elevation_map_frame_id", elevationMapFrameId_, string("/elevation_map"));
-  nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/odom"));
+  nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/robot"));
   nodeHandle_.param("track_point_x", trackPoint_.x(), 0.0);
   nodeHandle_.param("track_point_y", trackPoint_.y(), 0.0);
   nodeHandle_.param("track_point_z", trackPoint_.z(), 0.0);
-  nodeHandle_.param("robot_pose_topic", robotPoseTopic_, string("robot_state/pose"));
 
   nodeHandle_.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
   ROS_ASSERT(robotPoseCacheSize_ >= 0);
@@ -90,12 +90,12 @@ bool ElevationMapping::readParameters()
   double resolution;
   nodeHandle_.param("length_in_x", length(0), 1.5);
   nodeHandle_.param("length_in_y", length(1), 1.5);
-  nodeHandle_.param("resolution", resolution, 0.1);
+  nodeHandle_.param("resolution", resolution, 0.01);
   map_.setSize(length, resolution);
 
   nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
   nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
-  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.0);
+  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.5);
   nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
   nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
@@ -114,7 +114,7 @@ bool ElevationMapping::readParameters()
 
   sensorProcessor_.mapFrameId_ = elevationMapFrameId_;
   sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
-  sensorProcessor_.discretizationVariance_ = 0.0;
+  sensorProcessor_.discretizationVariance_ = 0.0; // TODO remove.
 
   return true;
 }
