@@ -1,8 +1,6 @@
 Robot-Centric Elevation Mapping
 ======================
 
-**WARNING: Writing of this document is still under progress!** 
-
 Overview
 ---------------
 
@@ -12,6 +10,7 @@ The Robot-Centric Elevation Mapping packages have been tested under ROS Groovy a
 
 **Author: Peter Fankhauser, pfankhauser@ethz.ch<br />
 Affiliation: Autonomous Systems Lab, ETH Zurich**
+
 
 Citing
 ---------------
@@ -31,6 +30,7 @@ in Climbing and Walking Robots (CLAWAR), 2014.
 
 Watch the [video](http://www.youtube.com/watch?v=I9eP8GrMyNQ) demonstrating the Robot-Centric Elevation Mapper: 
 [![Robot-Centric Elevation Mapping](example.jpg)](http://www.youtube.com/watch?v=I9eP8GrMyNQ)
+
 
 Installation
 ------------
@@ -58,22 +58,28 @@ In order to install the Robot-Centric Elevation Mapper, clone the latest version
 Run the unit tests with
 
     catkin_make run_tests
-    
-### Debugging
 
-Build in Debug mode with
 
-    catkin_make -DCMAKE_BUILD_TYPE=Debug
-    
-You can play a bag file with
+Basic Usage
+------------
 
-    rosparam set use_sim_time true
-    rosbag play --clock --rate=1.0 --start=0.0 XXX.bag 
+In order to get the Robot-Centric Elevation Mapper to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change in `elevation_mapping/parameters/`. Then, change the entries in the launch-file `elevation_mapping/launch/elevation_mapping.launch` to point at your parameter files. You can then launch the elevation mapping node with
+
+	roslaunch elevation_mapping elevation_mapping.launch
+
+Proceed in the same way for the elevation map visualization by adapting the launch-file `elevation_map_visualization/launch/elevation_map_visualization.launch`. You can then launch the elevation map visualization node with
+
+	roslaunch elevation_map_visualization elevation_map_visualization.launch
+
+Use [rviz] to visualize the elevation map. A sample [rviz] configuration file is provded under `/elevation_map_visualization/rviz/rviz_configuration.rviz`.
+
 
 Nodes
 ------------
 
 ### Node: elevation_mapping
+
+This is the main Robot-Centric Elevation Mapping node. It uses the distance sensor measurements and the pose and covariance of the robot to generate an elevation map with variance estimates.
 
 #### Subscribed Topics
 
@@ -95,22 +101,17 @@ Nodes
 
     The entire (raw) elevation map before the fusion step.
 
-
 #### Services
 
 * **`trigger_fusion`** ([std_srvs/Empty])
 
-    Trigger the fusing process for the entire elevation map and publish it.
-    
-    For example, you can trigger the map fusion step from the console with
+    Trigger the fusing process for the entire elevation map and publish it. For example, you can trigger the map fusion step from the console with
 
         rosservice call /elevation_mapping/trigger_fusion
     
 * **`get_submap`** ([elevation_mapping/GetSubmap])
 
-    Get a fused elevation submap for a requested position and size.
-    
-    For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
+    Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
 
         rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2 > elevation_submap.txt
 
@@ -140,7 +141,7 @@ Nodes
  
     The elevation map is moved along with the robot following a *track point*. This is the id of the tf frame in which the track point is defined.
 
-* **`track_point_x`**, **`track_point_y`**, **`track_point_z`** (string, default: 0.0, 0.0, 0.0)
+* **`track_point_x`**, **`track_point_y`**, **`track_point_z`** (double, default: 0.0, 0.0, 0.0)
 
     The elevation map is moved along with the robot following a *track point*. This is the position of the track point in the `track_point_frame_id`.
     
@@ -164,7 +165,7 @@ Nodes
  
     The resolution (cell size in m/cell) of the elevation map.
 
-* **`min_variance`**, **`max_variance`** (double, default: 0.000009, 0.01)
+* **`min_variance`**, **`max_variance`** (double, default: 9.0e-6, 0.01)
 
     The minimum and maximum values for the elevation map variance data.
     
@@ -172,7 +173,7 @@ Nodes
 
     The threshold for the Mahalanobis distance. Decides if measurements are fused with the existing data, overwritten or ignored.
     
-* **`multi_height_noise`** (double, default: 0.0000009)
+* **`multi_height_noise`** (double, default: 9.0e-7)
 
     Added noise for cell with multiple height measurements (e.g. walls).
     
@@ -188,21 +189,55 @@ Nodes
 
     The data for the sensor noise model. 
     
-
 ### Node: elevation_map_visualization
 
-### Node: elevation_map_msg
+This node subscribes to an elevation map topic and publishes the corresponding marker array message that can be visualized in [rviz].
 
-Definition of the elevation message and services types. It also contains helper functions that facilitate the handling and conversion of elevation messages.
+#### Subscribed Topics
+
+* **`/elevation_map`** ([elevation_map_msg/ElevationMap])
+
+    The elevation map (fused or raw) to visualize.
+
+#### Published Topics
+
+* **`/elevation_map_marker_array`** ([visualization_msgs/MarkerArray])
+
+    The elevation map marker array that can be visualized in [rviz].
+
+* **`/elevation_map_region`** ([geometry_msgs/PolygonStamped])
+
+    The elevation map region that can be visualized in [rviz].
+
+#### Parameters
+
+* **`elevation_map_topic`** (string, default: "/elevation_mapping/elevation_map")
+ 
+    The name of the elevation map topic to be visualized.
+
+*Note: There are many more parameters which we skip here as this node will be rewritten soon.*
+
+### Package: elevation_map_msg
+
+Definition of the elevation map message type. It also contains helper functions that facilitate the handling and conversion of elevation map messages.
+
+* **`ElevationMap`** ([elevation_map_msg/ElevationMap])
+
+    Definition of the elevation map message type.
+
 
 Bugs & Feature Requests
 ------------
 
 Please report bugs and request features using the [Issue Tracker](https://github.com/ethz-asl/elevation_mapping/issues).
 
+
 [ROS]: http://www.ros.org
+[rviz]: http://wiki.ros.org/rviz
 [elevation_map_msg/ElevationMap]: elevation_map_msg/msg/ElevationMap.msg
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
 [elevation_mapping/GetSubmap]: elevation_mapping/srv/GetSubmap.srv
+[visualization_msgs/MarkerArray]: http://docs.ros.org/api/visualization_msgs/html/msg/MarkerArray.html
+[geometry_msgs/PolygonStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PolygonStamped.html

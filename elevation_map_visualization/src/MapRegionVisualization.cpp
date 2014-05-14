@@ -15,7 +15,7 @@ namespace elevation_map_visualization {
 MapRegionVisualization::MapRegionVisualization(ros::NodeHandle& nodeHandle)
 : nodeHandle_(nodeHandle)
 {
-  mapRegionPolygonPublisher_ = nodeHandle_.advertise<geometry_msgs::PolygonStamped>("map_region_polygon", 1, true);
+  mapRegionPolygonPublisher_ = nodeHandle_.advertise<geometry_msgs::PolygonStamped>("elevation_map_region", 1, true);
 }
 
 MapRegionVisualization::~MapRegionVisualization()
