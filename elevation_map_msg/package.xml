@@ -2,7 +2,7 @@
 <package>
   <name>elevation_map_msg</name>
   <version>0.1.0</version>
-  <description>The elevation_map_msg package</description>
+  <description>Definition of the elevation_map_msg message type. Includes also helper functions for handling of this message type.</description>
   <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer>
   <license>MIT</license>
   <url type="website">http://github.com/ethz-asl/elevation_mapping</url>

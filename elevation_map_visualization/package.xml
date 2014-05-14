@@ -2,7 +2,7 @@
 <package>
   <name>elevation_map_visualization</name>
   <version>0.1.0</version>
-  <description>The elevation_map_visualization package</description>
+  <description>Subscribes to an elevation map topic and publishes the corresponding marker array message that can be visualized in rviz.</description>
   <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer>
   <license>MIT</license>
   <url type="website">http://github.com/ethz-asl/elevation_mapping</url>
@@ -13,10 +13,8 @@
   <build_depend>elevation_map_msg</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>visualization_msgs</build_depend>
-  <build_depend>sensor_msgs</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>elevation_map_msg</run_depend>
   <run_depend>tf</run_depend>
   <run_depend>visualization_msgs</run_depend>
-  <run_depend>sensor_msgs</run_depend>
 </package>

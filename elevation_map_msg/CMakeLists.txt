@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(elevation_map_msg)
 
-set(CMAKE_CXX_FLAGS "-std=c++0x")
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
@@ -16,12 +14,6 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen REQUIRED)
 
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
-
 #######################################
 ## Declare ROS messages and services ##
 #######################################
@@ -31,11 +23,6 @@ add_message_files(
   FILES
   ElevationMap.msg
 )
-
-## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-# )
 
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
@@ -65,12 +52,11 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${EIGEN_INCLUDE_DIRS}
-  #${Boost_INCLUDE_DIRS}
+  ${Boost_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -86,16 +72,13 @@ add_library(elevation_map_msg_helpers
    src/ElevationMapMsgHelpers.cpp
 )
 
-## Declare a cpp executable
-#add_executable(
-#	elevation_map_msg
-#	src/elevation_map_msg_node.cpp
-#)
-
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(elevation_map_msg_node elevation_map_msg_generate_messages_cpp)
-add_dependencies(elevation_map_msg_helpers transformation_math)
+add_dependencies(
+    elevation_map_msg_helpers
+    transformation_math
+    elevation_map_msg_generate_messages_cpp
+)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
@@ -104,49 +87,11 @@ target_link_libraries(
 )
 
 #############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables and/or libraries for installation
-# install(TARGETS elevation_map_msg elevation_map_msg_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
-
-#############
 ## Testing ##
 #############
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ## Add gtest based cpp test target and link libraries
 catkin_add_gtest(${PROJECT_NAME}-test test/test_elevation_map_msg.cpp test/TransformationMathTest.cpp)
 if(TARGET ${PROJECT_NAME}-test)
   target_link_libraries(${PROJECT_NAME}-test transformation_math)
 endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)

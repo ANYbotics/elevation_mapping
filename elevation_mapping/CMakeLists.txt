@@ -1,11 +1,9 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(elevation_mapping)
 
-set(CMAKE_CXX_FLAGS "-std=c++0x")
+set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
-## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
-## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   elevation_map_msg
   pcl_ros
@@ -17,26 +15,18 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   eigen_conversions
+  sm_common
+  sm_timing
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Kindr REQUIRED)
-
-## Uncomment this if the package has a setup.py. This macro ensures
-## modules and global scripts declared therein get installed
-## See http://ros.org/doc/api/catkin/html/user_guide/setup_dot_py.html
-# catkin_python_setup()
+find_package(Eigen REQUIRED)
 
 #######################################
 ## Declare ROS messages and services ##
 #######################################
-
-## Generate messages in the 'msg' folder
-#add_message_files(
-#  FILES
-#  ElevationMap.msg
-#)
 
 ## Generate services in the 'srv' folder
 add_service_files(
@@ -63,7 +53,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_mapping
-#    CATKIN_DEPENDS message_runtime
+    CATKIN_DEPENDS message_runtime std_msgs sensor_msgs elevation_map_msg
 #  DEPENDS system_lib
 )
 
@@ -73,76 +63,38 @@ catkin_package(
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
-# include_directories(include)
 include_directories(
   include
-  ~/sl_root/schweizer-messer/sm_timing/include
-  ~/sl_root/schweizer-messer/sm_common/include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${Kindr_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
-# add_library(elevation_maping
-#   src/${PROJECT_NAME}/elevation_maping.cpp
+# add_library(elevation_mapping
+#   src/${PROJECT_NAME}/elevation_mapping.cpp
 # )
 
 ## Declare a cpp executable
 add_executable(
-	elevation_mapping
+	${PROJECT_NAME}
 	src/elevation_mapping_node.cpp
 	src/ElevationMapping.cpp
 	src/ElevationMap.cpp
 	src/PrimeSenseSensorProcessor.cpp
 	src/CovarianceMapUpdater.cpp
-	~/sl_root/schweizer-messer/sm_timing/src/Timer.cpp
 )
 
 ## Add cmake target dependencies of the executable/library
 ## as an example, message headers may need to be generated before nodes
-# add_dependencies(elevation_mapping_node elevation_mapping_generate_messages_cpp)
+add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
-  elevation_mapping
+  ${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
-
-#############
-## Install ##
-#############
-
-# all install targets should use catkin DESTINATION variables
-# See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
-
-## Mark executable scripts (Python etc.) for installation
-## in contrast to setup.py, you can choose the destination
-# install(PROGRAMS
-#   scripts/my_python_script
-#   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark executables and/or libraries for installation
-# install(TARGETS elevation_mapping elevation_mapping_node
-#   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-#   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
-# )
-
-## Mark cpp header files for installation
-# install(DIRECTORY include/${PROJECT_NAME}/
-#   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
-#   FILES_MATCHING PATTERN "*.h"
-#   PATTERN ".svn" EXCLUDE
-# )
-
-## Mark other files for installation (e.g. launch and bag files, etc.)
-# install(FILES
-#   # myfile1
-#   # myfile2
-#   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
-# )
 
 #############
 ## Testing ##

@@ -2,7 +2,7 @@
 <package>
   <name>elevation_mapping</name>
   <version>0.1.0</version>
-  <description>The elevation_mapping package</description>
+  <description>Generates an elevation map from distance measurements and robot pose information.</description>
   <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer>
   <license>MIT</license>
   <url type="website">http://github.com/ethz-asl/elevation_mapping</url>
@@ -18,6 +18,9 @@
   <build_depend>elevation_map_msg</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>tf_conversions</build_depend>
+  <build_depend>eigen_conversions</build_depend>
+  <build_depend>sm_common</build_depend>
+  <build_depend>sm_timing</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>message_filters</run_depend>
   <run_depend>message_runtime</run_depend>
