@@ -27,13 +27,9 @@ namespace elevation_mapping {
 
 /*
  * Sensor processor for PrimeSense structured light sensors.
- *
  * Cleans the point cloud, transforms it to a desired frame, and
  * computes the measurement variances based on a sensor model in
  * the desired frame.
- *
- * Note: Make sure to set the public variables correctly before
- * processing point clouds.
  */
 class PrimeSenseSensorProcessor
 {
@@ -55,6 +51,41 @@ class PrimeSenseSensorProcessor
       const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
       Eigen::VectorXf& variances);
 
+  friend class ElevationMapping;
+
+ private:
+  bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+
+  bool updateTransformations(std::string sensorFrameId, ros::Time timeStamp);
+
+  bool transformPointCloud(
+      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
+      pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
+      const std::string& targetFrame);
+
+  bool computeVariances(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+      Eigen::VectorXf& variances);
+
+  //! TF transform listener.
+  tf::TransformListener& transformListener_;
+
+  //! Rotation from Base to Sensor frame (C_SB)
+  kindr::rotations::eigen_impl::RotationMatrixPD rotationBaseToSensor_;
+
+  //! Translation from Base to Sensor in Base frame (B_r_BS)
+  kindr::phys_quant::eigen_impl::Position3D translationBaseToSensorInBaseFrame_;
+
+  //! Rotation from (elevation) Map to Base frame (C_BM)
+  kindr::rotations::eigen_impl::RotationMatrixPD rotationMapToBase_;
+
+  //! Translation from Map to Base in Map frame (M_r_MB)
+  kindr::phys_quant::eigen_impl::Position3D translationMapToBaseInMapFrame_;
+
+  //! Transformation from Sensor to Map frame
+  Eigen::Affine3d transformationSensorToMap_;
+
   //! TF frame id of the map.
   std::string mapFrameId_;
 
@@ -75,41 +106,6 @@ class PrimeSenseSensorProcessor
 
   //! The timeout duration for the lookup of the transformation between sensor frame and target frame.
   ros::Duration transformListenerTimeout_;
-
-  //! Standard horizontal cell variance due to the discretization of the map.
-  double discretizationVariance_;
-
- private:
-  bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
-
-  bool updateTransformations(std::string sensorFrameId, ros::Time timeStamp);
-
-  bool transformPointCloud(
-      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
-      pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
-      const std::string& targetFrame);
-
-  bool computeVariances(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-      Eigen::VectorXf& variances);
-
-  tf::TransformListener& transformListener_;
-
-  //! Rotation from Base to Sensor frame (C_SB)
-  kindr::rotations::eigen_impl::RotationMatrixPD rotationBaseToSensor_;
-
-  //! Translation from Base to Sensor in Base frame (B_r_BS)
-  kindr::phys_quant::eigen_impl::Position3D translationBaseToSensorInBaseFrame_;
-
-  //! Rotation from (elevation) Map to Base frame (C_BM)
-  kindr::rotations::eigen_impl::RotationMatrixPD rotationMapToBase_;
-
-  //! Translation from Map to Base in Map frame (M_r_MB)
-  kindr::phys_quant::eigen_impl::Position3D translationMapToBaseInMapFrame_;
-
-  //! Transformation from Sensor to Map frame
-  Eigen::Affine3d transformationSensorToMap_;
 
 };
 

@@ -43,7 +43,6 @@ PrimeSenseSensorProcessor::PrimeSenseSensorProcessor(tf::TransformListener& tran
   sensorModelNormalFactorB_ = 0.0;
   sensorModelNormalFactorC_ = 0.0;
   sensorModelLateralFactor_ = 0.0;
-  discretizationVariance_ = 0.0;
   transformListenerTimeout_.fromSec(1.0);
 }
 

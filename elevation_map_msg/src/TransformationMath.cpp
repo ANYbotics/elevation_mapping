@@ -110,12 +110,12 @@ inline Eigen::Array2i getIndexFromIndexVector(
   return getBufferIndexFromIndex(index, bufferSize, bufferStartIndex);
 }
 
-inline bufferRegion getMapRegion(const Eigen::Array2i& index, const Eigen::Array2i& bufferStartIndex)
+inline BufferRegion getMapRegion(const Eigen::Array2i& index, const Eigen::Array2i& bufferStartIndex)
 {
-  if (index[0] >= bufferStartIndex[0] && index[1] >= bufferStartIndex[1]) return bufferRegion::TopLeft;
-  if (index[0] >= bufferStartIndex[0] && index[1] <  bufferStartIndex[1]) return bufferRegion::TopRight;
-  if (index[0] <  bufferStartIndex[0] && index[1] >= bufferStartIndex[1]) return bufferRegion::BottomLeft;
-  if (index[0] <  bufferStartIndex[0] && index[1] <  bufferStartIndex[1]) return bufferRegion::BottomRight;
+  if (index[0] >= bufferStartIndex[0] && index[1] >= bufferStartIndex[1]) return BufferRegion::TopLeft;
+  if (index[0] >= bufferStartIndex[0] && index[1] <  bufferStartIndex[1]) return BufferRegion::TopRight;
+  if (index[0] <  bufferStartIndex[0] && index[1] >= bufferStartIndex[1]) return BufferRegion::BottomLeft;
+  if (index[0] <  bufferStartIndex[0] && index[1] <  bufferStartIndex[1]) return BufferRegion::BottomRight;
 }
 
 } // namespace
@@ -240,6 +240,11 @@ void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLe
   position = positionShifted - distanceOfOrigin;
 }
 
+const Eigen::Matrix2i getBufferOrderToMapFrameAlignment()
+{
+  return getBufferOrderToMapFrameTransformation().array().abs().matrix();
+}
+
 bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
                           Eigen::Array2i& submapBufferSize,
                           Eigen::Vector2d& submapPosition,
@@ -313,25 +318,25 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
   Array2i bottomRightIndex = submapIndex + submapBufferSize - Array2i::Ones();
   mapIndexWithinRange(bottomRightIndex, bufferSize);
 
-  bufferRegion mapRegionOfTopLeft = getMapRegion(submapIndex, bufferStartIndex);
-  bufferRegion mapRegionOfBottomRight = getMapRegion(bottomRightIndex, bufferStartIndex);
+  BufferRegion mapRegionOfTopLeft = getMapRegion(submapIndex, bufferStartIndex);
+  BufferRegion mapRegionOfBottomRight = getMapRegion(bottomRightIndex, bufferStartIndex);
 
-  unsigned int topLeft = bufferRegionIndeces[bufferRegion::TopLeft];
-  unsigned int topRight = bufferRegionIndeces[bufferRegion::TopRight];
-  unsigned int bottomLeft= bufferRegionIndeces[bufferRegion::BottomLeft];
-  unsigned int bottomRight= bufferRegionIndeces[bufferRegion::BottomRight];
+  unsigned int topLeft = bufferRegionIndeces[BufferRegion::TopLeft];
+  unsigned int topRight = bufferRegionIndeces[BufferRegion::TopRight];
+  unsigned int bottomLeft= bufferRegionIndeces[BufferRegion::BottomLeft];
+  unsigned int bottomRight= bufferRegionIndeces[BufferRegion::BottomRight];
 
-  if (mapRegionOfTopLeft == bufferRegion::TopLeft)
+  if (mapRegionOfTopLeft == BufferRegion::TopLeft)
   {
 
-    if (mapRegionOfBottomRight == bufferRegion::TopLeft)
+    if (mapRegionOfBottomRight == BufferRegion::TopLeft)
     {
       submapIndeces[topLeft] = submapIndex;
       submapSizes[topLeft] = submapBufferSize;
       return true;
     }
 
-    if (mapRegionOfBottomRight == bufferRegion::TopRight)
+    if (mapRegionOfBottomRight == BufferRegion::TopRight)
     {
       submapIndeces[topLeft] = submapIndex;
       submapSizes[topLeft](0) = submapBufferSize(0);
@@ -344,7 +349,7 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
       return true;
     }
 
-    if (mapRegionOfBottomRight == bufferRegion::BottomLeft)
+    if (mapRegionOfBottomRight == BufferRegion::BottomLeft)
     {
       submapIndeces[topLeft] = submapIndex;
       submapSizes[topLeft](0) = bufferSize(0) - submapIndex(0);
@@ -357,7 +362,7 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
       return true;
     }
 
-    if (mapRegionOfBottomRight == bufferRegion::BottomRight)
+    if (mapRegionOfBottomRight == BufferRegion::BottomRight)
     {
       submapIndeces[topLeft] = submapIndex;
       submapSizes[topLeft](0) = bufferSize(0) - submapIndex(0);
@@ -380,17 +385,17 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     }
 
   }
-  else if (mapRegionOfTopLeft == bufferRegion::TopRight)
+  else if (mapRegionOfTopLeft == BufferRegion::TopRight)
   {
 
-    if (mapRegionOfBottomRight == bufferRegion::TopRight)
+    if (mapRegionOfBottomRight == BufferRegion::TopRight)
     {
       submapIndeces[topRight] = submapIndex;
       submapSizes[topRight] = submapBufferSize;
       return true;
     }
 
-    if (mapRegionOfBottomRight == bufferRegion::BottomRight)
+    if (mapRegionOfBottomRight == BufferRegion::BottomRight)
     {
       submapIndeces[topRight] = submapIndex;
       submapSizes[topRight](0) = bufferSize(0) - submapIndex(0);
@@ -404,17 +409,17 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     }
 
   }
-  else if (mapRegionOfTopLeft == bufferRegion::BottomLeft)
+  else if (mapRegionOfTopLeft == BufferRegion::BottomLeft)
   {
 
-    if (mapRegionOfBottomRight == bufferRegion::BottomLeft)
+    if (mapRegionOfBottomRight == BufferRegion::BottomLeft)
     {
       submapIndeces[bottomLeft] = submapIndex;
       submapSizes[bottomLeft] = submapBufferSize;
       return true;
     }
 
-    if (mapRegionOfBottomRight == bufferRegion::BottomRight)
+    if (mapRegionOfBottomRight == BufferRegion::BottomRight)
     {
       submapIndeces[bottomLeft] = submapIndex;
       submapSizes[bottomLeft](0) = submapBufferSize(0);
@@ -428,10 +433,10 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
     }
 
   }
-  else if (mapRegionOfTopLeft == bufferRegion::BottomRight)
+  else if (mapRegionOfTopLeft == BufferRegion::BottomRight)
   {
 
-    if (mapRegionOfBottomRight == bufferRegion::BottomRight)
+    if (mapRegionOfBottomRight == BufferRegion::BottomRight)
     {
       submapIndeces[bottomRight] = submapIndex;
       submapSizes[bottomRight] = submapBufferSize;
@@ -443,9 +448,38 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
   return false;
 }
 
-const Eigen::Matrix2i getBufferOrderToMapFrameAlignment()
+bool incrementIndexForSubmap(Eigen::Array2i& submapIndex, Eigen::Array2i& index, const Eigen::Array2i& submapTopLeftIndex,
+                             const Eigen::Array2i& submapBufferSize, const Eigen::Array2i& bufferSize,
+                             const Eigen::Array2i& bufferStartIndex)
 {
-  return getBufferOrderToMapFrameTransformation().array().abs().matrix();
+  // Copy the data fist, only copy it back if everything is within range.
+  Array2i tempIndex = index;
+  Array2i tempSubmapIndex = submapIndex;
+
+  // Increment submap index.
+  if (tempSubmapIndex[1] + 1 < submapBufferSize[1])
+  {
+    // Same row.
+    tempSubmapIndex[1]++;
+  }
+  else
+  {
+    // Next row.
+    tempSubmapIndex[0]++;
+    tempSubmapIndex[1] = 0;
+  }
+
+  // End of iterations reached.
+  if (!checkIfIndexWithinRange(tempSubmapIndex, submapBufferSize)) return false;
+
+  // Get corresponding index in map.
+  Array2i unwrappedSubmapTopLeftIndex = getIndexFromBufferIndex(submapTopLeftIndex, bufferSize, bufferStartIndex);
+  tempIndex = getBufferIndexFromIndex(unwrappedSubmapTopLeftIndex + tempSubmapIndex, bufferSize, bufferStartIndex);
+
+  // Copy data back.
+  index = tempIndex;
+  submapIndex = tempSubmapIndex;
+  return true;
 }
 
 }  // namespace

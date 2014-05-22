@@ -83,7 +83,7 @@ add_executable(
 	src/ElevationMapping.cpp
 	src/ElevationMap.cpp
 	src/PrimeSenseSensorProcessor.cpp
-	src/CovarianceMapUpdater.cpp
+	src/RobotMotionMapUpdater.cpp
 )
 
 ## Add cmake target dependencies of the executable/library

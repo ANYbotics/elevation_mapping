@@ -1,11 +1,11 @@
 /*
- * CovarianceMapUpdater.cpp
+ * RobotMotionMapUpdater.cpp
  *
  *  Created on: Feb 5, 2014
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "CovarianceMapUpdater.hpp"
+#include "RobotMotionMapUpdater.hpp"
 
 // Kindr
 #include <kindr/rotations/RotationEigen.hpp>
@@ -18,19 +18,19 @@ using namespace kindr::rotations::eigen_impl;
 
 namespace elevation_mapping {
 
-CovarianceMapUpdater::CovarianceMapUpdater()
+RobotMotionMapUpdater::RobotMotionMapUpdater()
 {
   previousRobotPoseCovariance_.setZero();
 }
 
-CovarianceMapUpdater::~CovarianceMapUpdater()
+RobotMotionMapUpdater::~RobotMotionMapUpdater()
 {
 
 }
 
-bool CovarianceMapUpdater::update(
+bool RobotMotionMapUpdater::update(
     ElevationMap& map, const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
-    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance)
+    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, const ros::Time& time)
 {
   // Check if update necessary.
   if ((robotPoseCovariance - previousRobotPoseCovariance_).all() == 0) return false;
@@ -68,7 +68,7 @@ bool CovarianceMapUpdater::update(
     {
       kindr::phys_quant::eigen_impl::Position3D cellPosition; // I_r_IP
 
-      if (map.getPositionInParentFrameFromIndex(Array2i(i, j), cellPosition))
+      if (map.getDataPointPositionInParentFrame(Array2i(i, j), cellPosition))
       {
         // Rotation Jacobian (J_q)
         Matrix3d rotationJacobian = parentToMapRotation
@@ -95,7 +95,7 @@ bool CovarianceMapUpdater::update(
     }
   }
 
-  map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY);
+  map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, time);
 
   previousRobotPoseCovariance_ = robotPoseCovariance;
 

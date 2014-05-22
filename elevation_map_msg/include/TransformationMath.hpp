@@ -116,6 +116,13 @@ void mapIndexWithinRange(int& index, const int& bufferSize);
 void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLength);
 
 /*!
+ * Provides the alignment transformation from the buffer order (outer/inner storage)
+ * and the map frame (x/y-coordinate).
+ * @return the alignment transformation.
+ */
+const Eigen::Matrix2i getBufferOrderToMapFrameAlignment();
+
+/*!
  * Given a map and a desired submap (defined by position and size), this function computes
  * various information about the submap. The returned submap might be smaller than the requested
  * size as it respects the boundaries of the map.
@@ -164,16 +171,29 @@ bool getBufferRegionsForSubmap(std::vector<Eigen::Array2i>& submapIndeces,
                                const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
 
 /*!
- * Provides the alignment transformation from the buffer order (outer/inner storage)
- * and the map frame (x/y-coordinate).
- * @return the alignment transformation.
+ * Increases the index by one to iterate through the cells of a submap.
+ * Increments either to the neighboring index to the right or to
+ * the start of the lower row. Returns false if end of iterations are reached.
+ *
+ * Note: This function does not check if submap actually fits to the map. This needs
+ * to be checked before separately.
+ *
+ * @param[in/out] submapIndex the index in the submap that is incremented.
+ * @param[out] index the index in the map that is incremented (corrected for the circular buffer).
+ * @param[in] submapTopLefIndex the top left index of the submap.
+ * @param[in] submapBufferSize the submap buffer size.
+ * @param[in] bufferSize the map buffer size.
+ * @param[in] bufferStartIndex the map buffer start index.
+ * @return true if successfully incremented indeces, false if end of iteration limits are reached.
  */
-const Eigen::Matrix2i getBufferOrderToMapFrameAlignment();
+bool incrementIndexForSubmap(Eigen::Array2i& submapIndex, Eigen::Array2i& index, const Eigen::Array2i& submapTopLeftIndex,
+                             const Eigen::Array2i& submapBufferSize, const Eigen::Array2i& bufferSize,
+                             const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
 
 /*!
  * The definition of the buffer regions.
  */
-enum class bufferRegion
+enum class BufferRegion
 {
   TopLeft,
   TopRight,
@@ -184,11 +204,11 @@ enum class bufferRegion
 /*!
  * The definition of the position in the list for the buffer regions.
  */
-static std::map<bufferRegion, int> bufferRegionIndeces =
+static std::map<BufferRegion, int> bufferRegionIndeces =
 {
-{ bufferRegion::TopLeft, 0 },
-{ bufferRegion::TopRight, 1 },
-{ bufferRegion::BottomLeft, 2 },
-{ bufferRegion::BottomRight, 3 } };
+{ BufferRegion::TopLeft, 0 },
+{ BufferRegion::TopRight, 1 },
+{ BufferRegion::BottomLeft, 2 },
+{ BufferRegion::BottomRight, 3 } };
 
 } // namespace

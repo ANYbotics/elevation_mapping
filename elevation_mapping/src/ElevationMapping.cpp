@@ -46,7 +46,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(robotPoseCacheSize_);
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
-  fusionTriggerService_ = nodeHandle_.advertiseService("trigger_fusion", &ElevationMapping::fuseMap, this);
+  fusionTriggerService_ = nodeHandle_.advertiseService("trigger_fusion", &ElevationMapping::fuseEntireMap, this);
   submapService_ = nodeHandle_.advertiseService("get_submap", &ElevationMapping::getSubmap, this);
   initialize();
 }
@@ -114,7 +114,6 @@ bool ElevationMapping::readParameters()
 
   sensorProcessor_.mapFrameId_ = elevationMapFrameId_;
   sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
-  sensorProcessor_.discretizationVariance_ = 0.0; // TODO remove.
 
   return true;
 }
@@ -122,8 +121,6 @@ bool ElevationMapping::readParameters()
 bool ElevationMapping::initialize()
 {
   ROS_INFO("Elevation mapping node initializing ... ");
-  timeOfLastUpdate_ = Time::now();
-  timeOfLastFusion_.fromSec(0.0);
   broadcastElevationMapTransform(Time::now());
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
@@ -184,7 +181,6 @@ void ElevationMapping::pointCloudCallback(
   // Publish raw elevation map.
   if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
 
-  timeOfLastUpdate_ = time;
   resetMapUpdateTimer();
 }
 
@@ -210,10 +206,9 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   resetMapUpdateTimer();
 }
 
-bool ElevationMapping::fuseMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
-  map_.fuse();
-  timeOfLastFusion_ = timeOfLastUpdate_;
+  map_.fuseAll();
   publishElevationMap();
   return true;
 }
@@ -231,9 +226,9 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 {
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
 
-  if (time < timeOfLastUpdate_)
+  if (time < map_.getTimeOfLastUpdate())
   {
-    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), timeOfLastUpdate_.toSec());
+    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), map_.getTimeOfLastUpdate().toSec());
     return false;
   }
 
@@ -250,9 +245,8 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Compute map variance update from motion prediction.
-  mapUpdater_.update(map_, robotPose, robotPoseCovariance);
+  robotMotionMapUpdater_.update(map_, robotPose, robotPoseCovariance, time);
 
-  timeOfLastUpdate_ = time;
   return true;
 }
 
@@ -261,7 +255,7 @@ bool ElevationMapping::publishRawElevationMap()
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
 
   elevation_map_msg::ElevationMap elevationMapMessage;
-  elevationMapMessage.header.stamp = timeOfLastUpdate_;
+  elevationMapMessage.header.stamp = map_.getTimeOfLastUpdate();
   addHeaderDataToElevationMessage(elevationMapMessage);
 
   elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getRawElevationData(), elevationMapMessage.elevation);
@@ -280,7 +274,7 @@ bool ElevationMapping::publishElevationMap()
   if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
 
   elevation_map_msg::ElevationMap elevationMapMessage;
-  elevationMapMessage.header.stamp = timeOfLastFusion_;
+  elevationMapMessage.header.stamp = map_.getTimeOfLastFusion();
   addHeaderDataToElevationMessage(elevationMapMessage);
 
   elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
@@ -345,12 +339,13 @@ bool ElevationMapping::getSubmap(elevation_map_msg::ElevationSubmap::Request& re
   Array2i submapBufferSize;
   Array2i requestedIndexInSubmap;
 
+  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
   map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
   map_.getSubmap(submapVariance, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getVarianceData(), requestedSubmapPosition, requestedSubmapLength);
   // TODO Add color for submaps.
 //  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength);
 
-  response.elevation_map.header.stamp = timeOfLastFusion_;
+  response.elevation_map.header.stamp = map_.getTimeOfLastFusion();
   response.elevation_map.header.frame_id = elevationMapFrameId_;
   response.elevation_map.resolution = map_.getResolution();
   response.elevation_map.lengthInX = submapLength(0);
@@ -361,7 +356,7 @@ bool ElevationMapping::getSubmap(elevation_map_msg::ElevationSubmap::Request& re
   elevation_map_msg::matrixEigenToMultiArrayMessage(submapElevation, response.elevation_map.elevation);
   elevation_map_msg::matrixEigenToMultiArrayMessage(submapVariance, response.elevation_map.variance);
 
-  ROS_DEBUG("Elevation submap responded with timestamp %f.", timeOfLastFusion_.toSec());
+  ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
 
   return true;
 }
@@ -369,7 +364,7 @@ bool ElevationMapping::getSubmap(elevation_map_msg::ElevationSubmap::Request& re
 void ElevationMapping::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
-  mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - (Time::now() - timeOfLastUpdate_));
+  mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - (Time::now() - map_.getTimeOfLastUpdate()));
   mapUpdateTimer_.start();
 }
 

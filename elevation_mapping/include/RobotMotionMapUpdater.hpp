@@ -1,5 +1,5 @@
 /*
- * CovarianceMapUpdater.hpp
+ * RobotMotionMapUpdater.hpp
  *
  *  Created on: Feb 5, 2014
  *      Author: Péter Fankhauser
@@ -8,6 +8,7 @@
 
 #pragma once
 
+// Elevation Mapping
 #include "ElevationMap.hpp"
 
 // Eigen
@@ -16,16 +17,27 @@
 // Kindr
 #include <kindr/poses/eigen/HomogeneousTransformation.hpp>
 
+// ROS (time)
+#include <ros/ros.h>
+
 namespace elevation_mapping {
 
-/*
+/*!
  * Computes the map variance update from the pose covariance of the robot.
  */
-class CovarianceMapUpdater
+class RobotMotionMapUpdater
 {
  public:
-  CovarianceMapUpdater();
-  virtual ~CovarianceMapUpdater();
+
+  /*!
+   * Constructor.
+   */
+  RobotMotionMapUpdater();
+
+  /*!
+   * Destructor.
+   */
+  virtual ~RobotMotionMapUpdater();
 
   /*!
    * Computes the model update for the elevation map based on the pose covariance and
@@ -33,13 +45,19 @@ class CovarianceMapUpdater
    * @param[in] map the elevation map to be updated.
    * @param[in] robotPose the latest pose.
    * @param[in] robotPoseCovariance the latest pose covariance matrix.
+   * @param[in] time the time of the update.
    * @return true if successful.
    */
   bool update(ElevationMap& map,
               const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
-              const Eigen::Matrix<double, 6, 6>& robotPoseCovariance);
+              const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+              const ros::Time& time);
 
  private:
+
+  /*!
+   * Robot pose covariance from the previous update.
+   */
   Eigen::Matrix<double, 6, 6> previousRobotPoseCovariance_;
 };
 

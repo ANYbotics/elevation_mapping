@@ -517,10 +517,10 @@ TEST(getSubmapInformation, CircularBuffer)
 
 TEST(getBufferRegionsForSubmap, Trivial)
 {
-  unsigned int topLeft = bufferRegionIndeces[bufferRegion::TopLeft];
-  unsigned int topRight = bufferRegionIndeces[bufferRegion::TopRight];
-  unsigned int bottomLeft= bufferRegionIndeces[bufferRegion::BottomLeft];
-  unsigned int bottomRight= bufferRegionIndeces[bufferRegion::BottomRight];
+  unsigned int topLeft = bufferRegionIndeces[BufferRegion::TopLeft];
+  unsigned int topRight = bufferRegionIndeces[BufferRegion::TopRight];
+  unsigned int bottomLeft= bufferRegionIndeces[BufferRegion::BottomLeft];
+  unsigned int bottomRight= bufferRegionIndeces[BufferRegion::BottomRight];
 
   Eigen::Array2i bufferSize(5, 4);
   vector<Eigen::Array2i> submapIndeces, submapSizes;
@@ -546,10 +546,10 @@ TEST(getBufferRegionsForSubmap, Trivial)
 
 TEST(getBufferRegionsForSubmap, Simple)
 {
-  unsigned int topLeft = bufferRegionIndeces[bufferRegion::TopLeft];
-  unsigned int topRight = bufferRegionIndeces[bufferRegion::TopRight];
-  unsigned int bottomLeft= bufferRegionIndeces[bufferRegion::BottomLeft];
-  unsigned int bottomRight= bufferRegionIndeces[bufferRegion::BottomRight];
+  unsigned int topLeft = bufferRegionIndeces[BufferRegion::TopLeft];
+  unsigned int topRight = bufferRegionIndeces[BufferRegion::TopRight];
+  unsigned int bottomLeft= bufferRegionIndeces[BufferRegion::BottomLeft];
+  unsigned int bottomRight= bufferRegionIndeces[BufferRegion::BottomRight];
 
   Eigen::Array2i submapIndex;
   Eigen::Array2i submapSize;
@@ -573,10 +573,10 @@ TEST(getBufferRegionsForSubmap, Simple)
 
 TEST(getBufferRegionsForSubmap, CircularBuffer)
 {
-  unsigned int topLeft = bufferRegionIndeces[bufferRegion::TopLeft];
-  unsigned int topRight = bufferRegionIndeces[bufferRegion::TopRight];
-  unsigned int bottomLeft= bufferRegionIndeces[bufferRegion::BottomLeft];
-  unsigned int bottomRight= bufferRegionIndeces[bufferRegion::BottomRight];
+  unsigned int topLeft = bufferRegionIndeces[BufferRegion::TopLeft];
+  unsigned int topRight = bufferRegionIndeces[BufferRegion::TopRight];
+  unsigned int bottomLeft= bufferRegionIndeces[BufferRegion::BottomLeft];
+  unsigned int bottomRight= bufferRegionIndeces[BufferRegion::BottomRight];
 
   Eigen::Array2i submapIndex;
   Eigen::Array2i submapSize;
@@ -647,4 +647,95 @@ TEST(getBufferRegionsForSubmap, CircularBuffer)
   EXPECT_EQ(0, submapIndeces[bottomRight][1]);
   EXPECT_EQ(3, submapSizes[bottomRight][0]);
   EXPECT_EQ(1, submapSizes[bottomRight][1]);
+}
+
+TEST(checkIncrementIndexForSubmap, Simple)
+{
+  Eigen::Array2i submapIndex(0, 0);
+  Eigen::Array2i index;
+  Eigen::Array2i submapTopLeftIndex(3, 1);
+  Eigen::Array2i submapBufferSize(2, 4);
+  Eigen::Array2i bufferSize(8, 5);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+  EXPECT_EQ(0, submapIndex[0]);
+  EXPECT_EQ(1, submapIndex[1]);
+  EXPECT_EQ(3, index[0]);
+  EXPECT_EQ(2, index[1]);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+  EXPECT_EQ(0, submapIndex[0]);
+  EXPECT_EQ(2, submapIndex[1]);
+  EXPECT_EQ(3, index[0]);
+  EXPECT_EQ(3, index[1]);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+  EXPECT_EQ(0, submapIndex[0]);
+  EXPECT_EQ(3, submapIndex[1]);
+  EXPECT_EQ(3, index[0]);
+  EXPECT_EQ(4, index[1]);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+  EXPECT_EQ(1, submapIndex[0]);
+  EXPECT_EQ(0, submapIndex[1]);
+  EXPECT_EQ(4, index[0]);
+  EXPECT_EQ(1, index[1]);
+
+  submapIndex << 1, 2;
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+  EXPECT_EQ(1, submapIndex[0]);
+  EXPECT_EQ(3, submapIndex[1]);
+  EXPECT_EQ(4, index[0]);
+  EXPECT_EQ(4, index[1]);
+
+  EXPECT_FALSE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+
+  submapIndex << 2, 0;
+  EXPECT_FALSE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize));
+}
+
+TEST(checkIncrementIndexForSubmap, CircularBuffer)
+{
+  Eigen::Array2i submapIndex(0, 0);
+  Eigen::Array2i index;
+  Eigen::Array2i submapTopLeftIndex(6, 3);
+  Eigen::Array2i submapBufferSize(2, 4);
+  Eigen::Array2i bufferSize(8, 5);
+  Eigen::Array2i bufferStartIndex(3, 2);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
+  EXPECT_EQ(0, submapIndex[0]);
+  EXPECT_EQ(1, submapIndex[1]);
+  EXPECT_EQ(6, index[0]);
+  EXPECT_EQ(4, index[1]);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
+  EXPECT_EQ(0, submapIndex[0]);
+  EXPECT_EQ(2, submapIndex[1]);
+  EXPECT_EQ(6, index[0]);
+  EXPECT_EQ(0, index[1]);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
+  EXPECT_EQ(0, submapIndex[0]);
+  EXPECT_EQ(3, submapIndex[1]);
+  EXPECT_EQ(6, index[0]);
+  EXPECT_EQ(1, index[1]);
+
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
+  EXPECT_EQ(1, submapIndex[0]);
+  EXPECT_EQ(0, submapIndex[1]);
+  EXPECT_EQ(7, index[0]);
+  EXPECT_EQ(3, index[1]);
+
+  submapIndex << 1, 2;
+  EXPECT_TRUE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
+  EXPECT_EQ(1, submapIndex[0]);
+  EXPECT_EQ(3, submapIndex[1]);
+  EXPECT_EQ(7, index[0]);
+  EXPECT_EQ(1, index[1]);
+
+  EXPECT_FALSE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
+
+  submapIndex << 2, 0;
+  EXPECT_FALSE(incrementIndexForSubmap(submapIndex, index, submapTopLeftIndex, submapBufferSize, bufferSize, bufferStartIndex));
 }
