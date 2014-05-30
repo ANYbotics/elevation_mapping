@@ -23,6 +23,13 @@ namespace internal {
 
 unsigned int nBufferRegions = 4;
 
+/*!
+ * Gets the distance from the center of the map to the origin
+ * of the map data structure.
+ * @param[out] distance the offset from the center of the map the origin of the map data structure.
+ * @param[in] mapLength the lengths in x and y direction.
+ * @return true if successful.
+ */
 inline bool getDistanceOfOrigin(Eigen::Vector2d& distance,
                                 const Eigen::Array2d& mapLength)
 {
@@ -31,11 +38,11 @@ inline bool getDistanceOfOrigin(Eigen::Vector2d& distance,
 }
 
 /*!
- * Gets the distance from the center of the map for the center
+ * Gets the distance from the center of the map to the center
  * of the first cell of the map data.
- * @param [out] distance the offset of the center of the cell to the center of the map.
- * @param [in] mapLength the lengths in x and y direction.
- * @param [in] resolution the resolution of the map.
+ * @param[out] distance the offset of the center of the cell to the center of the map.
+ * @param[in] mapLength the lengths in x and y direction.
+ * @param[in] resolution the resolution of the map.
  * @return true if successful.
  */
 inline bool getDistanceOfFirstCell(Eigen::Vector2d& distance,
@@ -125,6 +132,7 @@ using namespace internal;
 bool getPositionFromIndex(Eigen::Vector2d& position,
                           const Eigen::Array2i& index,
                           const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition,
                           const double& resolution,
                           const Eigen::Array2i& bufferSize,
                           const Eigen::Array2i& bufferStartIndex)
@@ -132,31 +140,33 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
   if (!checkIfIndexWithinRange(index, bufferSize)) return false;
   Vector2d offset;
   getDistanceOfFirstCell(offset, mapLength, resolution);
-  position = offset + resolution * getIndexVectorFromIndex(index, bufferSize, bufferStartIndex);
+  position = mapPosition + offset + resolution * getIndexVectorFromIndex(index, bufferSize, bufferStartIndex);
   return true;
 }
 
 bool getIndexFromPosition(Eigen::Array2i& index,
                           const Eigen::Vector2d& position,
                           const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition,
                           const double& resolution,
                           const Eigen::Array2i& bufferSize,
                           const Eigen::Array2i& bufferStartIndex)
 {
-  if (!checkIfPositionWithinMap(position, mapLength)) return false;
+  if (!checkIfPositionWithinMap(position, mapLength, mapPosition)) return false;
   Vector2d offset;
   getDistanceOfOrigin(offset, mapLength);
-  Vector2d indexVector = ((position - offset).array() / resolution).matrix();
+  Vector2d indexVector = ((position - offset - mapPosition).array() / resolution).matrix();
   index = getIndexFromIndexVector(indexVector, bufferSize, bufferStartIndex);
   return true;
 }
 
 bool checkIfPositionWithinMap(const Eigen::Vector2d& position,
-                              const Eigen::Array2d& mapLength)
+                              const Eigen::Array2d& mapLength,
+                              const Eigen::Vector2d& mapPosition)
 {
   Vector2d offset;
   getDistanceOfOrigin(offset, mapLength);
-  Vector2d positionTransformed = getMapFrameToBufferOrderTransformation().cast<double>() * (position - offset);
+  Vector2d positionTransformed = getMapFrameToBufferOrderTransformation().cast<double>() * (position - mapPosition - offset);
 
   if(positionTransformed.x() >= 0.0 && positionTransformed.y() >= 0.0
      && positionTransformed.x() <= mapLength(0) && positionTransformed.y() <= mapLength(1))
@@ -214,11 +224,11 @@ void mapIndexWithinRange(int& index, const int& bufferSize)
   index = index % bufferSize;
 }
 
-void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLength)
+void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLength, const Eigen::Vector2d& mapPosition)
 {
   Vector2d distanceOfOrigin;
   getDistanceOfOrigin(distanceOfOrigin, mapLength);
-  Vector2d positionShifted = position + distanceOfOrigin;
+  Vector2d positionShifted = position - mapPosition + distanceOfOrigin;
 
   // We have to make sure to stay inside the map.
   Vector2d epsilon = mapLength * numeric_limits<double>::epsilon();
@@ -237,7 +247,7 @@ void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLe
     }
   }
 
-  position = positionShifted - distanceOfOrigin;
+  position = positionShifted + mapPosition - distanceOfOrigin;
 }
 
 const Eigen::Matrix2i getBufferOrderToMapFrameAlignment()
@@ -253,6 +263,7 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
                           const Eigen::Vector2d& requestedSubmapPosition,
                           const Eigen::Vector2d& requestedSubmapLength,
                           const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition,
                           const double& resolution,
                           const Eigen::Array2i& bufferSize,
                           const Eigen::Array2i& bufferStartIndex)
@@ -262,22 +273,22 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
 
   // Corners of submap.
   Vector2d topLeftPosition = requestedSubmapPosition - transform * 0.5 * requestedSubmapLength;
-  limitPositionToRange(topLeftPosition, mapLength);
-  if(!getIndexFromPosition(submapTopLeftIndex, topLeftPosition, mapLength, resolution, bufferSize, bufferStartIndex))
+  limitPositionToRange(topLeftPosition, mapLength, mapPosition);
+  if(!getIndexFromPosition(submapTopLeftIndex, topLeftPosition, mapLength, mapPosition, resolution, bufferSize, bufferStartIndex))
     return false;
   Array2i topLeftIndex;
   topLeftIndex = getIndexFromBufferIndex(submapTopLeftIndex, bufferSize, bufferStartIndex);
 
   Vector2d bottomRightPosition = requestedSubmapPosition + transform * 0.5 * requestedSubmapLength;
-  limitPositionToRange(bottomRightPosition, mapLength);
+  limitPositionToRange(bottomRightPosition, mapLength, mapPosition);
   Array2i bottomRightIndex;
-  if(!getIndexFromPosition(bottomRightIndex, bottomRightPosition, mapLength, resolution, bufferSize, bufferStartIndex))
+  if(!getIndexFromPosition(bottomRightIndex, bottomRightPosition, mapLength, mapPosition, resolution, bufferSize, bufferStartIndex))
     return false;
   bottomRightIndex = getIndexFromBufferIndex(bottomRightIndex, bufferSize, bufferStartIndex);
 
   // Get the position of the top left corner of the generated submap.
   Vector2d topLeftCorner;
-  if(!getPositionFromIndex(topLeftCorner, submapTopLeftIndex, mapLength, resolution, bufferSize, bufferStartIndex))
+  if(!getPositionFromIndex(topLeftCorner, submapTopLeftIndex, mapLength, mapPosition, resolution, bufferSize, bufferStartIndex))
     return false;
   topLeftCorner -= transform * Vector2d::Constant(0.5 * resolution);
 
@@ -294,8 +305,7 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
 
   // Get the index of the cell which corresponds the requested
   // position of the submap.
-  Vector2d requestedPositionInSubmap = requestedSubmapPosition - submapPosition;
-  if(!getIndexFromPosition(requestedIndexInSubmap, requestedPositionInSubmap, submapLength, resolution, submapBufferSize))
+  if(!getIndexFromPosition(requestedIndexInSubmap, requestedSubmapPosition, submapLength, submapPosition, resolution, submapBufferSize))
     return false;
 
   return true;

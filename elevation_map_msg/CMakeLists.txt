@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   std_msgs
+  geometry_msgs
   message_generation
 )
 
@@ -28,6 +29,7 @@ add_message_files(
 generate_messages(
   DEPENDENCIES
   std_msgs
+  geometry_msgs
 )
 
 ###################################
@@ -42,7 +44,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
     LIBRARIES transformation_math eigen_conversions elevation_map_msg_helpers
-    CATKIN_DEPENDS roscpp std_msgs message_runtime
+    CATKIN_DEPENDS roscpp std_msgs geometry_msgs message_runtime
     DEPENDS Eigen Boost
 )
 
@@ -51,7 +53,6 @@ catkin_package(
 ###########
 
 ## Specify additional locations of header files
-## Your package locations should be listed before other locations
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
@@ -60,35 +61,44 @@ include_directories(
 )
 
 ## Declare a cpp library
+
+# Transformation math
 add_library(transformation_math
    src/TransformationMath.cpp
 )
 
+# Eigen conversions
 add_library(eigen_conversions
    src/EigenConversions.cpp
 )
 
+target_link_libraries(eigen_conversions
+  ${catkin_LIBRARIES}
+)
+
+add_dependencies(eigen_conversions
+    elevation_map_msg_helpers
+)
+
+# Elevation map msg helpers
 add_library(elevation_map_msg_helpers
    src/ElevationMapMsgHelpers.cpp
 )
 
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-add_dependencies(
-    elevation_map_msg_helpers
-    transformation_math
-    elevation_map_msg_generate_messages_cpp
+target_link_libraries(elevation_map_msg_helpers
+  transformation_math
+  ${catkin_LIBRARIES}
 )
 
-## Specify libraries to link a library or executable target against
-target_link_libraries(
-  elevation_map_msg_helpers
-  transformation_math
+add_dependencies(elevation_map_msg_helpers
+    transformation_math
+    ${PROJECT_NAME}_generate_messages_cpp
 )
 
 #############
 ## Testing ##
 #############
+
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 ## Add gtest based cpp test target and link libraries
 catkin_add_gtest(${PROJECT_NAME}-test test/test_elevation_map_msg.cpp test/TransformationMathTest.cpp)

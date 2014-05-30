@@ -78,12 +78,12 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(
-	${PROJECT_NAME}
-	src/elevation_mapping_node.cpp
-	src/ElevationMapping.cpp
-	src/ElevationMap.cpp
-	src/PrimeSenseSensorProcessor.cpp
-	src/RobotMotionMapUpdater.cpp
+  ${PROJECT_NAME}
+  src/elevation_mapping_node.cpp
+  src/ElevationMapping.cpp
+  src/ElevationMap.cpp
+  src/RobotMotionMapUpdater.cpp
+  src/PrimeSenseSensorProcessor.cpp
 )
 
 ## Add cmake target dependencies of the executable/library
@@ -95,16 +95,3 @@ target_link_libraries(
   ${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
-
-#############
-## Testing ##
-#############
-
-## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_elevation_mapping.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
-
-## Add folders to be run by python nosetests
-# catkin_add_nosetests(test)

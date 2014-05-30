@@ -1,5 +1,7 @@
 length_in_x: 2.5
 length_in_y: 2.5
+position_x: 0.0
+position_y: 0.0
 resolution: 0.01
 min_variance: 0.000009
 max_variance: 0.01

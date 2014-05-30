@@ -19,6 +19,7 @@ namespace elevation_map_msg {
  * @param[out] position the position of the center of the cell in the map frame.
  * @param[in] index of the cell.
  * @param[in] mapLength the lengths in x and y direction.
+ * @param[in] mapPosition the position of the map.
  * @param[in] resolution the resolution of the map.
  * @param[in] bufferSize the size of the buffer (optional).
  * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
@@ -27,6 +28,7 @@ namespace elevation_map_msg {
 bool getPositionFromIndex(Eigen::Vector2d& position,
                           const Eigen::Array2i& index,
                           const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition,
                           const double& resolution,
                           const Eigen::Array2i& bufferSize,
                           const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
@@ -36,6 +38,7 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
  * @param[out] index of the cell.
  * @param[in] position the position in the map frame.
  * @param[in] mapLength the lengths in x and y direction.
+ * @param[in] mapPosition the position of the map.
  * @param[in] resolution the resolution of the map.
  * @param[in] bufferSize the size of the buffer (optional).
  * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
@@ -44,6 +47,7 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
 bool getIndexFromPosition(Eigen::Array2i& index,
                           const Eigen::Vector2d& position,
                           const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition,
                           const double& resolution,
                           const Eigen::Array2i& bufferSize,
                           const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());
@@ -52,11 +56,12 @@ bool getIndexFromPosition(Eigen::Array2i& index,
  * Checks if position is within the map boundaries.
  * @param[in] position the position which is to be checked.
  * @param[in] mapLength the length of the map.
+ * @param[in] mapPosition the position of the map.
  * @return true if position is within map, false otherwise.
  */
 bool checkIfPositionWithinMap(const Eigen::Vector2d& position,
-                              const Eigen::Array2d& mapLength);
-
+                              const Eigen::Array2d& mapLength,
+                              const Eigen::Vector2d& mapPosition);
 
 /*!
  * Computes how many cells/indeces the map is moved based on a position shift in
@@ -112,8 +117,11 @@ void mapIndexWithinRange(int& index, const int& bufferSize);
  * Limits (cuts off) the position to lie inside the map.
  * @param[in/out] position the position to be limited.
  * @param[in] mapLength the lengths in x and y direction.
+ * @param[in] mapPosition the position of the map.
  */
-void limitPositionToRange(Eigen::Vector2d& position, const Eigen::Array2d& mapLength);
+void limitPositionToRange(Eigen::Vector2d& position,
+                          const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition);
 
 /*!
  * Provides the alignment transformation from the buffer order (outer/inner storage)
@@ -135,6 +143,7 @@ const Eigen::Matrix2i getBufferOrderToMapFrameAlignment();
  * @param[in] requestedSubmapPosition the requested submap position (center) in the map frame.
  * @param[in] requestedSubmapLength the requested submap length.
  * @param[in] mapLength the lengths in x and y direction.
+ * @param[in] mapPosition the position of the map.
  * @param[in] resolution the resolution of the map.
  * @param[in] bufferSize the buffer size of the map.
  * @param[in] bufferStartIndex the index of the starting point of the circular buffer (optional).
@@ -148,6 +157,7 @@ bool getSubmapInformation(Eigen::Array2i& submapTopLeftIndex,
                           const Eigen::Vector2d& requestedSubmapPosition,
                           const Eigen::Vector2d& requestedSubmapLength,
                           const Eigen::Array2d& mapLength,
+                          const Eigen::Vector2d& mapPosition,
                           const double& resolution,
                           const Eigen::Array2i& bufferSize,
                           const Eigen::Array2i& bufferStartIndex = Eigen::Array2i::Zero());

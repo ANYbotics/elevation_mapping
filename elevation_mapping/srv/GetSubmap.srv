@@ -10,9 +10,13 @@ float32 lengthInX
 # Requested submap width in y-direction [m].
 float32 lengthInY
 
----
+# Optionally, get color data.
+bool computeColor
 
-# Position of submap TODO
+# Optionally, get the surface normals.
+bool computeSurfaceNormal
+
+---
 
 # Submap
 elevation_map_msg/ElevationMap elevation_map

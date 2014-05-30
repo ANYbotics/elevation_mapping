@@ -41,7 +41,7 @@ ElevationMap::~ElevationMap()
 
 }
 
-bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolution)
+bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position, const double& resolution)
 {
   ROS_ASSERT(length(0) > 0.0);
   ROS_ASSERT(length(1) > 0.0);
@@ -62,6 +62,7 @@ bool ElevationMap::setSize(const Eigen::Array2d& length, const double& resolutio
 
   resolution_ = resolution;
   length_ = (Array2i(nRows, nCols).cast<double>() * resolution_).matrix();
+  position_ = position;
 
   ROS_DEBUG_STREAM("Elevation map matrix resized to " << elevationRawData_.rows() << " rows and "  << elevationRawData_.cols() << " columns.");
   return true;
@@ -77,7 +78,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
     Array2i index;
     if (!elevation_map_msg::getIndexFromPosition(
-        index, Vector2d(point.x, point.y), length_, resolution_, getBufferSize(), bufferStartIndex_))
+        index, Vector2d(point.x, point.y), length_, position_.vector().head(2), resolution_, getBufferSize(), bufferStartIndex_))
       continue; // Skip this point if it does not lie within the elevation map
 
     auto& elevation = elevationRawData_(index(0), index(1));
@@ -90,7 +91,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     if (std::isnan(elevation) || std::isinf(variance))
     {
       // No prior information in elevation map, use measurement.
-      elevation = point.z;
+      elevation = position_.z() + point.z;
       variance = pointVariance;
       horizontalVarianceX = minHorizontalVariance_;
       horizontalVarianceY = minHorizontalVariance_;
@@ -103,7 +104,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     if (mahalanobisDistance < mahalanobisDistanceThreshold_)
     {
       // Fuse measurement with elevation map data.
-      elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
+      elevation = (variance * (position_.z() + point.z) + pointVariance * elevation) / (variance + pointVariance);
       variance =  (pointVariance * variance) / (pointVariance + variance);
       // TODO Add color fusion.
       elevation_map_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
@@ -168,8 +169,8 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
   Array2i requestedIndexInSubmap;
 
   elevation_map_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength,
-                                          requestedIndexInSubmap, position, length, length_, resolution_,
-                                          getBufferSize(), bufferStartIndex_);
+                                          requestedIndexInSubmap, position, length, length_, position_.vector().head(2),
+                                          resolution_, getBufferSize(), bufferStartIndex_);
 
   return fuse(topLeftIndex, submapBufferSize);
 }
@@ -223,9 +224,8 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     // Requested position (center) of submap in map.
     Vector2d requestedSubmapPosition;
-    elevation_map_msg::getPositionFromIndex(requestedSubmapPosition, Array2i(i, j),
-                                                 length_, resolution_,
-                                                 getBufferSize(), bufferStartIndex_);
+    elevation_map_msg::getPositionFromIndex(requestedSubmapPosition, Array2i(i, j), length_, position_.vector().head(2),
+                                            resolution_, getBufferSize(), bufferStartIndex_);
 
     // Get submap data.
     MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
@@ -248,7 +248,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     // Position of center index in submap.
     Vector2d centerInSubmap;
-    elevation_map_msg::getPositionFromIndex(centerInSubmap, requestedIndex, submapLength, resolution_, submapBufferSize,
+    elevation_map_msg::getPositionFromIndex(centerInSubmap, requestedIndex, submapLength, Vector2d::Zero(), resolution_, submapBufferSize,
                                                  Array2i(0, 0));
 
     unsigned int n = 0;
@@ -273,7 +273,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
         // Compute weight from probability.
         Vector2d positionInSubmap;
         elevation_map_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
-                                                     submapLength, resolution_,
+                                                     submapLength, Vector2d::Zero(), resolution_,
                                                      submapBufferSize, Array2i(0, 0));
 
         Vector2d distanceToCenter = (positionInSubmap - centerInSubmap).cwiseAbs();
@@ -339,7 +339,7 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPos
   Array2i topLeftIndex;
 
   elevation_map_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap,
-                                               requestedSubmapPosition, requestedSubmapLength, length_, resolution_,
+                                               requestedSubmapPosition, requestedSubmapLength, length_, position_.vector().head(2), resolution_,
                                                getBufferSize(), bufferStartIndex_);
 
   std::vector<Eigen::Array2i> submapIndeces;
@@ -368,12 +368,12 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPos
   return true;
 }
 
-bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& position)
+bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& mapFramePosition)
 {
   // TODO Add height shift.
 
   Array2i indexShift;
-  Vector2d positionShift = position.vector().head(2) - pose_.getPosition().vector().head(2);
+  Vector2d positionShift = mapFramePosition.vector().head(2) - pose_.getPosition().vector().head(2);
   elevation_map_msg::getIndexShiftFromPositionShift(indexShift, positionShift, resolution_);
   Vector2d alignedPositionShift;
   elevation_map_msg::getPositionShiftFromIndexShift(alignedPositionShift, indexShift, resolution_);
@@ -436,6 +436,7 @@ bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& pos
 bool ElevationMap::reset()
 {
   pose_.setIdentity();
+  position_.setZero();
   elevationRawData_.setConstant(NAN);
   varianceRawData_.setConstant(numeric_limits<float>::infinity());
   horizontalVarianceRawDataX_.setConstant(numeric_limits<float>::infinity());
@@ -473,7 +474,7 @@ bool ElevationMap::getDataPointPositionInParentFrame(const Eigen::Array2i& index
   if(std::isnan(height)) return false;
 
   Vector2d positionInGrid;
-  elevation_map_msg::getPositionFromIndex(positionInGrid, index, length_, resolution_, getBufferSize(), bufferStartIndex_);
+  elevation_map_msg::getPositionFromIndex(positionInGrid, index, length_, position_.vector().head(2), resolution_, getBufferSize(), bufferStartIndex_);
 
   positionInParentFrame << positionInGrid.x(),
                            positionInGrid.y(),
@@ -510,14 +511,19 @@ void ElevationMap::resetRows(unsigned int index, unsigned int nRows)
   elevationRawData_.block(0, index, getBufferSize()[0], nRows).setConstant(NAN);
 }
 
-double ElevationMap::getResolution()
-{
-  return resolution_;
-}
-
 const Eigen::Array2d& ElevationMap::getLength()
 {
   return length_;
+}
+
+const kindr::phys_quant::eigen_impl::Position3D& ElevationMap::getPosition()
+{
+  return position_;
+}
+
+double ElevationMap::getResolution()
+{
+  return resolution_;
 }
 
 const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& ElevationMap::getPose()

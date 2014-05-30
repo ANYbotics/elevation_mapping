@@ -75,9 +75,10 @@ bool getPositionFromIndex(Eigen::Vector2d& position,
                           const elevation_map_msg::ElevationMap& map)
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
+  Vector2d mapPosition(map.position.x, map.position.y);
   Array2i bufferSize = (getBufferOrderToMapFrameAlignment() * Vector2i(getRows(map.elevation), getCols(map.elevation))).array();
   Array2i bufferStartIndex = (getBufferOrderToMapFrameAlignment() * Vector2i(map.outerStartIndex, map.innerStartIndex)).array();
-  return getPositionFromIndex(position, index, mapLength, map.resolution, bufferSize, bufferStartIndex);
+  return getPositionFromIndex(position, index, mapLength, mapPosition, map.resolution, bufferSize, bufferStartIndex);
 }
 
 bool getIndexFromPosition(Eigen::Array2i& index,
@@ -85,9 +86,10 @@ bool getIndexFromPosition(Eigen::Array2i& index,
                           const elevation_map_msg::ElevationMap& map)
 {
   Array2d mapLength(map.lengthInX, map.lengthInY);
+  Vector2d mapPosition(map.position.x, map.position.y);
   Array2i bufferSize = (getBufferOrderToMapFrameAlignment() * Vector2i(getRows(map.elevation), getCols(map.elevation))).array();
   Array2i bufferStartIndex = (getBufferOrderToMapFrameAlignment() * Vector2i(map.outerStartIndex, map.innerStartIndex)).array();
-  return getIndexFromPosition(index, position, mapLength, map.resolution, bufferSize, bufferStartIndex);
+  return getIndexFromPosition(index, position, mapLength, mapPosition, map.resolution, bufferSize, bufferStartIndex);
 }
 
 bool copyColorValueToVector(const unsigned long& colorValue,

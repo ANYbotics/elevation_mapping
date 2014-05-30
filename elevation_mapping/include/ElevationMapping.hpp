@@ -9,8 +9,9 @@
 #pragma once
 
 // Elevation Mapping
-#include <elevation_map_msg/ElevationSubmap.h>
+#include <elevation_map_msg/ElevationMap.h>
 #include <EigenConversions.hpp>
+#include <elevation_mapping/GetSubmap.h>
 #include "ElevationMap.hpp"
 #include "PrimeSenseSensorProcessor.hpp"
 #include "RobotMotionMapUpdater.hpp"
@@ -85,7 +86,7 @@ class ElevationMapping
    * @param response the ROS service response containing the requested submap.
    * @return true if successful.
    */
-  bool getSubmap(elevation_map_msg::ElevationSubmap::Request& request, elevation_map_msg::ElevationSubmap::Response& response);
+  bool getSubmap(elevation_mapping::GetSubmap::Request& request, elevation_mapping::GetSubmap::Response& response);
 
  private:
 
@@ -187,7 +188,6 @@ class ElevationMapping
 
   //! Elevation map.
   ElevationMap map_;
-  std::string elevationMapFrameId_;
 
   //! Sensor processors.
   PrimeSenseSensorProcessor sensorProcessor_;

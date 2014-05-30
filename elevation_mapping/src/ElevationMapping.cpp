@@ -62,7 +62,6 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/points"));
   nodeHandle_.param("robot_pose_topic", robotPoseTopic_, string("/robot_state/pose"));
   nodeHandle_.param("parent_frame_id", parentFrameId_, string("/map"));
-  nodeHandle_.param("elevation_map_frame_id", elevationMapFrameId_, string("/elevation_map"));
   nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/robot"));
   nodeHandle_.param("track_point_x", trackPoint_.x(), 0.0);
   nodeHandle_.param("track_point_y", trackPoint_.y(), 0.0);
@@ -86,12 +85,17 @@ bool ElevationMapping::readParameters()
   }
 
   // ElevationMap parameters.
+  nodeHandle_.param("elevation_map_frame_id", map_.frameId_, string("/elevation_map"));
+
   Eigen::Array2d length;
+  kindr::phys_quant::eigen_impl::Position3D position;
   double resolution;
   nodeHandle_.param("length_in_x", length(0), 1.5);
   nodeHandle_.param("length_in_y", length(1), 1.5);
+  nodeHandle_.param("position_x", position(0), 0.0);
+  nodeHandle_.param("position_y", position(1), 0.0);
   nodeHandle_.param("resolution", resolution, 0.01);
-  map_.setSize(length, resolution);
+  map_.setGeometry(length, position, resolution);
 
   nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
   nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
@@ -112,7 +116,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("sensor_model_normal_factor_c", sensorProcessor_.sensorModelNormalFactorC_, 0.25);
   nodeHandle_.param("sensor_model_lateral_factor", sensorProcessor_.sensorModelLateralFactor_, 0.004);
 
-  sensorProcessor_.mapFrameId_ = elevationMapFrameId_;
+  sensorProcessor_.mapFrameId_ = map_.frameId_;
   sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
 
   return true;
@@ -217,7 +221,7 @@ bool ElevationMapping::broadcastElevationMapTransform(const ros::Time& time)
 {
   tf::Transform tfTransform;
   convertToRosTf(map_.getPose(), tfTransform);
-  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, elevationMapFrameId_));
+  transformBroadcaster_.sendTransform(tf::StampedTransform(tfTransform, time, parentFrameId_, map_.frameId_));
   ROS_DEBUG("Published transform for elevation map in parent frame at time %f.", time.toSec());
   return true;
 }
@@ -290,10 +294,12 @@ bool ElevationMapping::publishElevationMap()
 
 void ElevationMapping::addHeaderDataToElevationMessage(elevation_map_msg::ElevationMap& elevationMapMessage)
 {
-  elevationMapMessage.header.frame_id = elevationMapFrameId_;
-  elevationMapMessage.resolution = map_.getResolution();
+  elevationMapMessage.header.frame_id = map_.frameId_;
   elevationMapMessage.lengthInX = map_.getLength()(0);
   elevationMapMessage.lengthInY = map_.getLength()(1);
+  elevationMapMessage.position.x = map_.getPosition().x();
+  elevationMapMessage.position.y = map_.getPosition().y();
+  elevationMapMessage.resolution = map_.getResolution();
   elevationMapMessage.outerStartIndex = map_.getBufferStartIndex()(0);
   elevationMapMessage.innerStartIndex = map_.getBufferStartIndex()(1);
 }
@@ -324,7 +330,7 @@ bool ElevationMapping::updateMapLocation()
   return map_.relocate(position);
 }
 
-bool ElevationMapping::getSubmap(elevation_map_msg::ElevationSubmap::Request& request, elevation_map_msg::ElevationSubmap::Response& response)
+bool ElevationMapping::getSubmap(elevation_mapping::GetSubmap::Request& request, elevation_mapping::GetSubmap::Response& response)
 {
   // Request
   Vector2d requestedSubmapPosition(request.positionInX, request.positionInY);
@@ -346,7 +352,7 @@ bool ElevationMapping::getSubmap(elevation_map_msg::ElevationSubmap::Request& re
 //  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength);
 
   response.elevation_map.header.stamp = map_.getTimeOfLastFusion();
-  response.elevation_map.header.frame_id = elevationMapFrameId_;
+  response.elevation_map.header.frame_id = map_.frameId_;
   response.elevation_map.resolution = map_.getResolution();
   response.elevation_map.lengthInX = submapLength(0);
   response.elevation_map.lengthInY = submapLength(1);

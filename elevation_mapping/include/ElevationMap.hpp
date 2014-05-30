@@ -46,12 +46,13 @@ class ElevationMap
   virtual ~ElevationMap();
 
   /*!
-   * Change the size of the elevation map. Resets the data.
-   * @param length the side lengths in x, and y-direction of the elevation map.
+   * Set the geometry of the elevation map. Resets the data.
+   * @param length the side lengths in x, and y-direction of the elevation map [m].
+   * @param position the position of the elevation map in the map frame [m].
    * @param resolution the cell size in [m/cell].
    * @return true if successful.
    */
-  bool setSize(const Eigen::Array2d& length, const double& resolution);
+  bool setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position, const double& resolution);
 
   /*!
    * Add new measurements to the elevation map.
@@ -105,11 +106,13 @@ class ElevationMap
                  const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapLength);
 
   /*!
-   * Move elevation map to a different position. Takes care of all the data handling.
-   * @param position the new location of the elevation map.
+   * Relocate the elevation map frame w.r.t. the parent frame. Use this to move
+   * the elevation map boundaries without moving the elevation map data. Takes care
+   * of all the data handling, such that the elevation map is stationary in the parent frame.
+   * @param mapFramePosition the new location of the elevation map frame in the parent frame.
    * @return true if successful.
    */
-  bool relocate(const kindr::phys_quant::eigen_impl::Position3D& position);
+  bool relocate(const kindr::phys_quant::eigen_impl::Position3D& mapFramePosition);
 
   /*!
    * Reset all data of the elevation map (data, lengths, resolution etc.)
@@ -117,10 +120,28 @@ class ElevationMap
    */
   bool reset();
 
-  double getResolution();
-
+  /*!
+   * Get the side length of the map.
+   * @return side length of the map.
+   */
   const Eigen::Array2d& getLength();
 
+  /*!
+   * Get the position of the map in the elevation map frame.
+   * @return position of the map in the elevation map frame.
+   */
+  const kindr::phys_quant::eigen_impl::Position3D& getPosition();
+
+  /*!
+   * Get the resolution of the elevation map.
+   * @return resolution of the elevation map in the xy plane [m/cell].
+   */
+  double getResolution();
+
+  /*!
+   * Get the pose of the elevation map frame w.r.t. the parent frame.
+   * @return pose of the elevation map frame w.r.t. the parent frame.
+   */
   const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& getPose();
 
   const Eigen::Array2i& getBufferStartIndex();
@@ -141,13 +162,13 @@ class ElevationMap
 
   /*!
    * Gets the time of last map update.
-   * @return the time of the last map update.
+   * @return time of the last map update.
    */
   const ros::Time& getTimeOfLastUpdate();
 
   /*!
    * Gets the time of last map fusion.
-   * @return the time of the last map fusion.
+   * @return time of the last map fusion.
    */
   const ros::Time& getTimeOfLastFusion();
 
@@ -207,6 +228,21 @@ class ElevationMap
    */
   float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
+  //! Frame id of the elevation map.
+  std::string frameId_;
+
+  //! Pose of the elevation map frame w.r.t. the parent frame.
+  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
+
+  //! Map size in x, and y-direction [m].
+  Eigen::Array2d length_;
+
+  //! Map position in the elevation map frame [m].
+  kindr::phys_quant::eigen_impl::Position3D position_;
+
+  //! Map resolution in xy plane [m/cell].
+  double resolution_;
+
   //! Elevation height raw data.
   Eigen::MatrixXf elevationRawData_;
 
@@ -229,17 +265,8 @@ class ElevationMap
   //! The fused map color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
-  //! Pose of the elevation map w.r.t. the parent frame.
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
-
   //! Circular buffer start indeces.
   Eigen::Array2i bufferStartIndex_;
-
-  //! Map size in x, and y-direction [m].
-  Eigen::Array2d length_;
-
-  //! Map resolution in xy plane [m/cell].
-  double resolution_;
 
   //! Time of last map update.
   ros::Time timeOfLastUpdate_;

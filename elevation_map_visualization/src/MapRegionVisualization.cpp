@@ -40,17 +40,17 @@ bool MapRegionVisualization::update(
 {
   mapRegionPolygon_.header = map.header;
 
-  float xPosition = map.lengthInX / 2.0;
-  float yPosition = map.lengthInY / 2.0;
+  float halfLengthX = map.lengthInX / 2.0;
+  float halfLengthY = map.lengthInY / 2.0;
 
-  mapRegionPolygon_.polygon.points[0].x =  xPosition;
-  mapRegionPolygon_.polygon.points[0].y =  yPosition;
-  mapRegionPolygon_.polygon.points[1].x =  xPosition;
-  mapRegionPolygon_.polygon.points[1].y = -yPosition;
-  mapRegionPolygon_.polygon.points[2].x = -xPosition;
-  mapRegionPolygon_.polygon.points[2].y = -yPosition;
-  mapRegionPolygon_.polygon.points[3].x = -xPosition;
-  mapRegionPolygon_.polygon.points[3].y =  yPosition;
+  mapRegionPolygon_.polygon.points[0].x = map.position.x + halfLengthX;
+  mapRegionPolygon_.polygon.points[0].y = map.position.y + halfLengthY;
+  mapRegionPolygon_.polygon.points[1].x = map.position.x + halfLengthX;
+  mapRegionPolygon_.polygon.points[1].y = map.position.y - halfLengthY;
+  mapRegionPolygon_.polygon.points[2].x = map.position.x - halfLengthX;
+  mapRegionPolygon_.polygon.points[2].y = map.position.y - halfLengthY;
+  mapRegionPolygon_.polygon.points[3].x = map.position.x - halfLengthX;
+  mapRegionPolygon_.polygon.points[3].y = map.position.y + halfLengthY;
 
   return true;
 }
