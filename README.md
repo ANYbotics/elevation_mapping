@@ -57,19 +57,13 @@ In order to install the Robot-Centric Elevation Mapper, clone the latest version
 
 Run the unit tests with
 
-    catkin_make run_tests
+    catkin_make run_tests_elevation_map_msg run_tests_elevation_mapping
 
 
 Basic Usage
 ------------
 
-In order to get the Robot-Centric Elevation Mapper to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change in `elevation_mapping/parameters/`. Then, change the entries in the launch-file `elevation_mapping/launch/elevation_mapping.launch` to point at your parameter files. You can then launch the elevation mapping node with
-
-	roslaunch elevation_mapping elevation_mapping.launch
-
-Proceed in the same way for the elevation map visualization by adapting the launch-file `elevation_map_visualization/launch/elevation_map_visualization.launch`. You can then launch the elevation map visualization node with
-
-	roslaunch elevation_map_visualization elevation_map_visualization.launch
+In order to get the Robot-Centric Elevation Mapper to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change in `elevation_mapping/parameters/`. Then, change the entries in the launch-file `elevation_mapping/launch/eisualization elevation_map_visualization.launch
 
 Use [rviz] to visualize the elevation map. A sample [rviz] configuration file is provded under `/elevation_map_visualization/rviz/rviz_configuration.rviz`.
 
@@ -83,7 +77,13 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 #### Subscribed Topics
 
-* **`/points`** ([sensor_msgs/PointCloud2])
+* **`/points`** ([sensor_msgs/Poilevation_mapping.launch` to point at your parameter files. You can then launch the elevation mapping node with
+
+	roslaunch elevation_mapping elevation_mapping.launch
+
+Proceed in the same way for the elevation map visualization by adapting the launch-file `elevation_map_visualization/launch/elevation_map_visualization.launch`. You can then launch the elevation map visualization node with
+
+	roslaunch elevation_map_vntCloud2])
 
     The distance measurements.
     
@@ -113,7 +113,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
 
-        rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2 > elevation_submap.txt
+        rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2 false false> elevation_submap.txt
 
 #### Parameters
 
@@ -160,6 +160,10 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 * **`length_in_x`**, **`length_in_y`** (double, default: 1.5, min: 0.0)
  
     The size of the elevation map.
+
+* **`position_x`**, **`position_y`** (double, default: 0.0)
+ 
+    The position of the elevation map (center) in the elevation map frame.
 
 * **`resolution`** (double, default: 0.01, min: 0.0)
  
