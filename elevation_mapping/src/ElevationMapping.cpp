@@ -333,7 +333,7 @@ bool ElevationMapping::updateMapLocation()
 bool ElevationMapping::getSubmap(elevation_mapping::GetSubmap::Request& request, elevation_mapping::GetSubmap::Response& response)
 {
   // Request
-  Vector2d requestedSubmapPosition(request.positionInX, request.positionInY);
+  Vector2d requestedSubmapPosition(request.positionX, request.positionY);
   Array2d requestedSubmapLength(request.lengthInX, request.lengthInY);
 
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
@@ -353,9 +353,11 @@ bool ElevationMapping::getSubmap(elevation_mapping::GetSubmap::Request& request,
 
   response.elevation_map.header.stamp = map_.getTimeOfLastFusion();
   response.elevation_map.header.frame_id = map_.frameId_;
-  response.elevation_map.resolution = map_.getResolution();
   response.elevation_map.lengthInX = submapLength(0);
   response.elevation_map.lengthInY = submapLength(1);
+  response.elevation_map.position.x = submapPosition.x();
+  response.elevation_map.position.y = submapPosition.y();
+  response.elevation_map.resolution = map_.getResolution();
   response.elevation_map.outerStartIndex = 0;
   response.elevation_map.innerStartIndex = 0;
 
