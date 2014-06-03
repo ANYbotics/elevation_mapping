@@ -113,7 +113,7 @@ Proceed in the same way for the elevation map visualization by adapting the laun
 
     Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
 
-        rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2 false false> elevation_submap.txt
+        rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2 false false > elevation_submap.txt
 
 #### Parameters
 
@@ -229,7 +229,7 @@ Definition of the elevation map message type and services. It also contains help
 
     Definition of the elevation map message type.
 
-* **`ElevationMap`** ([elevation_map_msg/GetSubmap])
+* **`GetSubmap`** ([elevation_map_msg/GetSubmap])
 
     Definition of the service for requesting an elevation submap.
 
