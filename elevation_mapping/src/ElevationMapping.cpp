@@ -22,6 +22,9 @@
 #include <kindr/rotations/RotationEigen.hpp>
 #include <kindr/thirdparty/ros/RosEigen.hpp>
 
+// Boost
+#include <boost/bind.hpp>
+
 using namespace std;
 using namespace Eigen;
 using namespace ros;
@@ -46,14 +49,27 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(robotPoseCacheSize_);
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
-  fusionTriggerService_ = nodeHandle_.advertiseService("trigger_fusion", &ElevationMapping::fuseEntireMap, this);
-  submapService_ = nodeHandle_.advertiseService("get_submap", &ElevationMapping::getSubmap, this);
+
+  // Multi-threading for fusion.
+  AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = AdvertiseServiceOptions::create<std_srvs::Empty>(
+      "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMap, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
+  fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
+
+  AdvertiseServiceOptions advertiseServiceOptionsForGetSubmap = AdvertiseServiceOptions::create<elevation_map_msg::GetSubmap>(
+      "get_submap", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
+  submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
+
   initialize();
 }
 
 ElevationMapping::~ElevationMapping()
 {
-
+  fusionServiceQueue_.clear();
+  fusionServiceQueue_.disable();
+  nodeHandle_.shutdown();
+  fusionServiceThread_.join();
 }
 
 bool ElevationMapping::readParameters()
@@ -126,10 +142,21 @@ bool ElevationMapping::initialize()
 {
   ROS_INFO("Elevation mapping node initializing ... ");
   broadcastElevationMapTransform(Time::now());
+  fusionServiceThread_ = boost::thread(boost::bind(&ElevationMapping::runFusionServiceThread, this));
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
   ROS_INFO("Done.");
   return true;
+}
+
+void ElevationMapping::runFusionServiceThread()
+{
+  static const double timeout = 0.01;
+
+  while(nodeHandle_.ok())
+  {
+    fusionServiceQueue_.callAvailable(ros::WallDuration(timeout));
+  }
 }
 
 void ElevationMapping::pointCloudCallback(

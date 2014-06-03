@@ -34,6 +34,9 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <std_srvs/Empty.h>
 
+// Boost
+#include <boost/thread.hpp>
+
 // STD
 #include <limits>
 
@@ -103,6 +106,11 @@ class ElevationMapping
   bool initialize();
 
   /*!
+   * Separate thread for all fusion service calls.
+   */
+  void runFusionServiceThread();
+
+  /*!
    * Broadcasts the elevation map to parent transformation.
    * @param time the time of the transformation.
    * @return true if successful.
@@ -159,13 +167,25 @@ class ElevationMapping
   ros::Subscriber pointCloudSubscriber_;
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
 
-  //! Cache for the robot pose message.
-  message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
-  int robotPoseCacheSize_;
-
   //! ROS publishers.
   ros::Publisher elevationMapRawPublisher_;
   ros::Publisher elevationMapPublisher_;
+
+  //! ROS service servers.
+  ros::ServiceServer fusionTriggerService_;
+  ros::ServiceServer submapService_;
+
+  //! Callback thread for the fusion services.
+  boost::thread fusionServiceThread_;
+
+  //! Callback queue for fusion service thread.
+  ros::CallbackQueue fusionServiceQueue_;
+
+  //! Cache for the robot pose messages.
+  message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
+
+  //! Size of the cache for the robot pose messages.
+  int robotPoseCacheSize_;
 
   //! TF listener and broadcaster.
   tf::TransformBroadcaster transformBroadcaster_;
@@ -181,10 +201,6 @@ class ElevationMapping
   //! ROS topics for subscriptions.
   std::string pointCloudTopic_;
   std::string robotPoseTopic_;
-
-  //! ROS service servers.
-  ros::ServiceServer fusionTriggerService_;
-  ros::ServiceServer submapService_;
 
   //! Elevation map.
   ElevationMap map_;

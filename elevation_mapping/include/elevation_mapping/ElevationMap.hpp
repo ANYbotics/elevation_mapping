@@ -23,6 +23,9 @@
 // Schweizer-Messer
 #include <sm/timing/Timer.hpp>
 
+// Boost
+#include <boost/thread/recursive_mutex.hpp>
+
 // ROS (time)
 #include <ros/ros.h>
 
@@ -273,6 +276,12 @@ class ElevationMap
 
   //! Time of last map fusion.
   ros::Time timeOfLastFusion_;
+
+  //! Mutex lock for map fusion process.
+  boost::recursive_mutex fusionMutex_;
+
+  //! Mutex lock for raw data handling.
+  boost::recursive_mutex rawDataMutex_;
 
   //! Parameters. Are set through the ElevationMapping class.
   double minVariance_;
