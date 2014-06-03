@@ -151,9 +151,11 @@ bool ElevationMapping::initialize()
 
 void ElevationMapping::runFusionServiceThread()
 {
+  static const double timeout = 0.01;
+
   while(nodeHandle_.ok())
   {
-    fusionServiceQueue_.callAvailable(ros::WallDuration());
+    fusionServiceQueue_.callAvailable(ros::WallDuration(timeout));
   }
 }
 
