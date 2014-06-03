@@ -36,6 +36,7 @@
 
 // Boost
 #include <boost/thread.hpp>
+#include <boost/thread/mutex.hpp>
 
 // STD
 #include <limits>
@@ -181,10 +182,8 @@ class ElevationMapping
   //! Callback queue for fusion service thread.
   ros::CallbackQueue fusionServiceQueue_;
 
-  //! Cache for the robot pose messages.
+  //! Cache for the robot pose message.
   message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
-
-  //! Size of the cache for the robot pose messages.
   int robotPoseCacheSize_;
 
   //! TF listener and broadcaster.
