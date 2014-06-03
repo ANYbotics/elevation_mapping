@@ -6,10 +6,10 @@
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "ElevationMapMsgHelpers.hpp"
+#include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // Elevation Map
-#include "TransformationMath.hpp"
+#include "elevation_map_msg/TransformationMath.hpp""
 
 // ROS
 #include <ros/ros.h>

@@ -5,7 +5,7 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "PrimeSenseSensorProcessor.hpp"
+#include "elevation_mapping/PrimeSenseSensorProcessor.hpp"
 
 // STD
 #include <string>

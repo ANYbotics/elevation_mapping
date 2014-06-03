@@ -5,7 +5,7 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "RobotMotionMapUpdater.hpp"
+#include "elevation_mapping/RobotMotionMapUpdater.hpp"
 
 // Kindr
 #include <kindr/rotations/RotationEigen.hpp>

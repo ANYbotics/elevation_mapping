@@ -6,7 +6,7 @@
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "TransformationMath.hpp"
+#include "elevation_map_msg/TransformationMath.hpp"
 
 // Eigen
 #include <Eigen/Core>

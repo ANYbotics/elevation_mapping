@@ -7,7 +7,7 @@
  */
 
 #include <ros/ros.h>
-#include "ElevationMapVisualization.hpp"
+#include "elevation_map_visualization/ElevationMapVisualization.hpp"
 
 int main(int argc, char** argv)
 {

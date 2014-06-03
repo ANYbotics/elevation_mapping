@@ -5,7 +5,8 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "MapRegionVisualization.hpp"
+
+#include "elevation_map_visualization/MapRegionVisualization.hpp"
 
 // ROS
 #include <geometry_msgs/Point32.h>

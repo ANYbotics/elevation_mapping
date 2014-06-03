@@ -9,7 +9,7 @@
 #pragma once
 
 // Elevation Map Msg
-#include "ElevationMapMsgHelpers.hpp"
+#include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // ROS
 #include <std_msgs/Float32MultiArray.h>

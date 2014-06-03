@@ -109,7 +109,7 @@ Proceed in the same way for the elevation map visualization by adapting the laun
 
         rosservice call /elevation_mapping/trigger_fusion
     
-* **`get_submap`** ([elevation_mapping/GetSubmap])
+* **`get_submap`** ([elevation_map_msg/GetSubmap])
 
     Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
 
@@ -223,11 +223,15 @@ This node subscribes to an elevation map topic and publishes the corresponding m
 
 ### Package: elevation_map_msg
 
-Definition of the elevation map message type. It also contains helper functions that facilitate the handling and conversion of elevation map messages.
+Definition of the elevation map message type and services. It also contains helper functions that facilitate the handling and conversion of elevation map messages.
 
 * **`ElevationMap`** ([elevation_map_msg/ElevationMap])
 
     Definition of the elevation map message type.
+
+* **`ElevationMap`** ([elevation_map_msg/GetSubmap])
+
+    Definition of the service for requesting an elevation submap.
 
 
 Bugs & Feature Requests
@@ -242,6 +246,6 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
-[elevation_mapping/GetSubmap]: elevation_mapping/srv/GetSubmap.srv
+[elevation_map_msg/GetSubmap]: elevation_map_msg/srv/GetSubmap.srv
 [visualization_msgs/MarkerArray]: http://docs.ros.org/api/visualization_msgs/html/msg/MarkerArray.html
 [geometry_msgs/PolygonStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PolygonStamped.html

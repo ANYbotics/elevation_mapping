@@ -6,11 +6,11 @@
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "ElevationMapVisualization.hpp"
+#include "elevation_map_visualization/ElevationMapVisualization.hpp"
 
 // Elevation Mapping
-#include "ElevationMapVisualizationHelpers.hpp"
-#include <ElevationMapMsgHelpers.hpp>
+#include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
+#include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // ROS
 #include <geometry_msgs/Point.h>

@@ -9,7 +9,7 @@
 #pragma once
 
 // Elevation Map
-#include <elevation_map_msg/ElevationMap.h>
+#include "elevation_map_msg/ElevationMap.h"
 
 // Eigen
 #include <Eigen/Core>

@@ -5,13 +5,13 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "ElevationMapping.hpp"
+#include "elevation_mapping/ElevationMapping.hpp"
 
 // Elevation Mapping
-#include <ElevationMapMsgHelpers.hpp>
-#include <elevation_map_msg/ElevationMap.h>
-#include <EigenConversions.hpp>
-#include <TransformationMath.hpp>
+#include "elevation_mapping/ElevationMap.hpp"
+#include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
+#include "elevation_map_msg/EigenConversions.hpp"
+#include "elevation_map_msg/TransformationMath.hpp"
 
 // PCL
 #include <pcl/ros/conversions.h>
@@ -330,7 +330,7 @@ bool ElevationMapping::updateMapLocation()
   return map_.relocate(position);
 }
 
-bool ElevationMapping::getSubmap(elevation_mapping::GetSubmap::Request& request, elevation_mapping::GetSubmap::Response& response)
+bool ElevationMapping::getSubmap(elevation_map_msg::GetSubmap::Request& request, elevation_map_msg::GetSubmap::Response& response)
 {
   // Request
   Vector2d requestedSubmapPosition(request.positionX, request.positionY);

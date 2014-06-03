@@ -25,6 +25,12 @@ add_message_files(
   ElevationMap.msg
 )
 
+## Generate services in the 'srv' folder
+add_service_files(
+  FILES
+  GetSubmap.srv
+)
+
 ## Generate added messages and services with any dependencies listed here
 generate_messages(
   DEPENDENCIES

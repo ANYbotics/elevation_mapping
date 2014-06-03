@@ -9,7 +9,7 @@
 #pragma once
 
 // Elevation Mapping
-#include <elevation_map_msg/ElevationMap.h>
+#include "elevation_map_msg/ElevationMap.h"
 
 // ROS
 #include <ros/ros.h>

@@ -9,7 +9,6 @@ find_package(catkin REQUIRED COMPONENTS
   pcl_ros
   roscpp
   message_filters
-  message_generation
   sensor_msgs
   std_msgs
   tf
@@ -24,23 +23,6 @@ find_package(Boost REQUIRED COMPONENTS system)
 find_package(Kindr REQUIRED)
 find_package(Eigen REQUIRED)
 
-#######################################
-## Declare ROS messages and services ##
-#######################################
-
-## Generate services in the 'srv' folder
-add_service_files(
-  FILES
-  GetSubmap.srv
-)
-
-## Generate added messages and services with any dependencies listed here
-generate_messages(
-  DEPENDENCIES
-  std_msgs
-  elevation_map_msg
-)
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -53,7 +35,7 @@ generate_messages(
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_mapping
-    CATKIN_DEPENDS message_runtime std_msgs sensor_msgs elevation_map_msg
+    CATKIN_DEPENDS std_msgs sensor_msgs elevation_map_msg
 #  DEPENDS system_lib
 )
 
@@ -85,10 +67,6 @@ add_executable(
   src/RobotMotionMapUpdater.cpp
   src/PrimeSenseSensorProcessor.cpp
 )
-
-## Add cmake target dependencies of the executable/library
-## as an example, message headers may need to be generated before nodes
-add_dependencies(${PROJECT_NAME} ${PROJECT_NAME}_generate_messages_cpp)
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(

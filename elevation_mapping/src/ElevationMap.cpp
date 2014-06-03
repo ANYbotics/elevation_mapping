@@ -5,12 +5,12 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "ElevationMap.hpp"
+#include "elevation_mapping/ElevationMap.hpp"
 
 // Elevation Mapping
-#include "ElevationMapFunctors.hpp"
-#include <TransformationMath.hpp>
-#include <ElevationMapMsgHelpers.hpp>
+#include "elevation_mapping/ElevationMapFunctors.hpp"
+#include "elevation_map_msg/TransformationMath.hpp"
+#include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // Math
 #include <math.h>
