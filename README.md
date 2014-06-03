@@ -63,9 +63,15 @@ Run the unit tests with
 Basic Usage
 ------------
 
-In order to get the Robot-Centric Elevation Mapper to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change in `elevation_mapping/parameters/`. Then, change the entries in the launch-file `elevation_mapping/launch/eisualization elevation_map_visualization.launch
+In order to get the Robot-Centric Elevation Mapper to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change in `elevation_mapping/parameters/`. Then, change the entries in the launch-file `elevation_mapping/launch/elevation_mapping.launch` to point at your parameter files. You can then launch the elevation mapping node with
 
-Use [rviz] to visualize the elevation map. A sample [rviz] configuration file is provded under `/elevation_map_visualization/rviz/rviz_configuration.rviz`.
+    roslaunch elevation_mapping elevation_mapping.launch
+
+Proceed in the same way for the elevation map visualization by adapting the launch-file `elevation_map_visualization/launch/elevation_map_visualization.launch`. You can then launch the elevation map visualization node with
+
+    roslaunch elevation_map_visualization elevation_map_visualization.launch
+
+Use [rviz] to visualize the elevation map. A sample [rviz] configuration file is provided under `/elevation_map_visualization/rviz/rviz_configuration.rviz`.
 
 
 Nodes
@@ -77,13 +83,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 #### Subscribed Topics
 
-* **`/points`** ([sensor_msgs/Poilevation_mapping.launch` to point at your parameter files. You can then launch the elevation mapping node with
-
-	roslaunch elevation_mapping elevation_mapping.launch
-
-Proceed in the same way for the elevation map visualization by adapting the launch-file `elevation_map_visualization/launch/elevation_map_visualization.launch`. You can then launch the elevation map visualization node with
-
-	roslaunch elevation_map_vntCloud2])
+* **`/points`** ([sensor_msgs/PointCloud2])
 
     The distance measurements.
     
