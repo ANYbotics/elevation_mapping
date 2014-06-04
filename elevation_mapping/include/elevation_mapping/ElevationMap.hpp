@@ -184,6 +184,18 @@ class ElevationMap
    */
   bool getDataPointPositionInParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& positionInParentFrame);
 
+  /*!
+   * Gets the fused data mutex.
+   * @return reference to the fused data mutex.
+   */
+  boost::recursive_mutex& getFusedDataMutex();
+
+  /*!
+   * Gets the raw data mutex.
+   * @return reference to the raw data mutex.
+   */
+  boost::recursive_mutex& getRawDataMutex();
+
   friend class ElevationMapping;
 
  private:
@@ -277,8 +289,11 @@ class ElevationMap
   //! Time of last map fusion.
   ros::Time timeOfLastFusion_;
 
+  //! Mutex lock for structure of the map.
+  boost::recursive_mutex structureMutex_;
+
   //! Mutex lock for map fusion process.
-  boost::recursive_mutex fusionMutex_;
+  boost::recursive_mutex fusedDataMutex_;
 
   //! Mutex lock for raw data handling.
   boost::recursive_mutex rawDataMutex_;

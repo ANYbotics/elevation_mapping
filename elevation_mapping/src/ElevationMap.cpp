@@ -43,7 +43,8 @@ ElevationMap::~ElevationMap()
 
 bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position, const double& resolution)
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
 
   ROS_ASSERT(length(0) > 0.0);
   ROS_ASSERT(length(1) > 0.0);
@@ -72,8 +73,6 @@ bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_q
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
-
   timeOfLastUpdate_ = pointCloud->header.stamp;
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
@@ -158,7 +157,7 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
 bool ElevationMap::fuseAll()
 {
   ROS_DEBUG("Requested to fuse entire elevation map.");
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
   return fuse(Array2i(0, 0), getBufferSize());
 }
 
@@ -175,7 +174,7 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
   Array2d submapLength;
   Array2i requestedIndexInSubmap;
 
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
 
   elevation_map_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength,
                                           requestedIndexInSubmap, position, length, length_, position_.vector().head(2),
@@ -189,14 +188,14 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 {
   ROS_DEBUG("Fusing elevation map...");
 
+  // Nothing to do.
+  if (size.any() == 0) return false;
+
   // Initializations.
   string timerId = "map_fusion_timer";
   Timer timer(timerId, true);
 
-  // Nothing to do.
-  if (size.any() == 0) return false;
-
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
@@ -341,6 +340,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     // TODO Add fusion of colors.
     colorData_(i, j) = colorRawDataCopy(i, j);
+
     timer.stop();
   }
 
@@ -391,9 +391,10 @@ bool ElevationMap::getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPos
 
 bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& mapFramePosition)
 {
-  // Do not relocate if data fusion is in process.
-  boost::recursive_mutex::scoped_try_lock scopedLock(fusionMutex_);
-  if(!scopedLock.owns_lock()) return false;
+  // Do not relocate if data handling is in process.
+  boost::recursive_mutex::scoped_try_lock scopedLockForFusedData(fusedDataMutex_);
+  boost::recursive_mutex::scoped_try_lock scopedLockForRawData(rawDataMutex_);
+  if(!(scopedLockForFusedData.owns_lock() && scopedLockForRawData)) return false;
 
   // TODO Add height shift.
 
@@ -412,6 +413,7 @@ bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& map
       {
         // Entire map is dropped.
         elevationRawData_.setConstant(NAN);
+        elevationData_.setConstant(NAN);
       }
       else
       {
@@ -460,7 +462,9 @@ bool ElevationMap::relocate(const kindr::phys_quant::eigen_impl::Position3D& map
 
 bool ElevationMap::reset()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
+
   pose_.setIdentity();
   position_.setZero();
   elevationRawData_.setConstant(NAN);
@@ -491,7 +495,7 @@ const ros::Time& ElevationMap::getTimeOfLastUpdate()
 
 const ros::Time& ElevationMap::getTimeOfLastFusion()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
   return timeOfLastFusion_;
 }
 
@@ -512,8 +516,19 @@ bool ElevationMap::getDataPointPositionInParentFrame(const Eigen::Array2i& index
   return true;
 }
 
+boost::recursive_mutex& ElevationMap::getFusedDataMutex()
+{
+  return fusedDataMutex_;
+}
+
+boost::recursive_mutex& ElevationMap::getRawDataMutex()
+{
+  return rawDataMutex_;
+}
+
 bool ElevationMap::clean()
 {
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
   varianceRawData_ = varianceRawData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
   horizontalVarianceRawDataX_ = horizontalVarianceRawDataX_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
   horizontalVarianceRawDataY_ = horizontalVarianceRawDataY_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
@@ -522,7 +537,7 @@ bool ElevationMap::clean()
 
 void ElevationMap::resetFusedData()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
   elevationData_.setConstant(NAN);
   varianceData_.setConstant(numeric_limits<float>::infinity());
   colorData_.setConstant(0);
@@ -532,11 +547,13 @@ void ElevationMap::resetFusedData()
 void ElevationMap::resetCols(unsigned int index, unsigned int nCols)
 {
   elevationRawData_.block(index, 0, nCols, getBufferSize()[1]).setConstant(NAN);
+  elevationData_.block(index, 0, nCols, getBufferSize()[1]).setConstant(NAN);
 }
 
 void ElevationMap::resetRows(unsigned int index, unsigned int nRows)
 {
   elevationRawData_.block(0, index, getBufferSize()[0], nRows).setConstant(NAN);
+  elevationData_.block(0, index, getBufferSize()[0], nRows).setConstant(NAN);
 }
 
 const Eigen::Array2d& ElevationMap::getLength()
@@ -566,19 +583,19 @@ const Eigen::Array2i& ElevationMap::getBufferStartIndex()
 
 const Eigen::MatrixXf& ElevationMap::getElevationData()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
   return elevationData_;
 }
 
 const Eigen::MatrixXf& ElevationMap::getVarianceData()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
   return varianceData_;
 }
 
 const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getColorData()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusionMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
   return colorData_;
 }
 

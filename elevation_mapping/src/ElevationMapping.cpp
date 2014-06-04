@@ -24,6 +24,7 @@
 
 // Boost
 #include <boost/bind.hpp>
+#include <boost/thread/recursive_mutex.hpp>
 
 using namespace std;
 using namespace Eigen;
@@ -164,6 +165,8 @@ void ElevationMapping::pointCloudCallback(
 {
   stopMapUpdateTimer();
 
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
+
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   fromROSMsg(rawPointCloud, *pointCloud);
@@ -210,7 +213,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Publish raw elevation map.
-  if (!publishRawElevationMap()) ROS_INFO("ElevationMap: Elevation map has not been broadcasted.");
+  if (!publishRawElevationMap()) ROS_DEBUG("ElevationMap: Elevation map has not been broadcasted.");
 
   resetMapUpdateTimer();
 }
@@ -218,6 +221,8 @@ void ElevationMapping::pointCloudCallback(
 void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
 {
   ROS_WARN("Elevation map is updated without data from the sensor.");
+
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
   stopMapUpdateTimer();
   Time time = Time::now();
@@ -232,13 +237,14 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& timerEvent)
   }
 
   // Publish raw elevation map.
-  if (!publishRawElevationMap()) ROS_ERROR("ElevationMap: Elevation map has not been broadcasted.");
+  if (!publishRawElevationMap()) ROS_DEBUG("ElevationMap: Elevation map has not been broadcasted.");
 
   resetMapUpdateTimer();
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
   publishElevationMap();
   return true;
@@ -303,6 +309,8 @@ bool ElevationMapping::publishRawElevationMap()
 bool ElevationMapping::publishElevationMap()
 {
   if (elevationMapPublisher_.getNumSubscribers() < 1) return false;
+
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
 
   elevation_map_msg::ElevationMap elevationMapMessage;
   elevationMapMessage.header.stamp = map_.getTimeOfLastFusion();
@@ -371,6 +379,8 @@ bool ElevationMapping::getSubmap(elevation_map_msg::GetSubmap::Request& request,
   Array2d submapLength;
   Array2i submapBufferSize;
   Array2i requestedIndexInSubmap;
+
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
 
   map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
   map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
