@@ -13,8 +13,13 @@
 #include "elevation_map_msg/EigenConversions.hpp"
 #include "elevation_map_msg/TransformationMath.hpp"
 
-// PCL
-#include <pcl/ros/conversions.h>
+//PCL
+#include <pcl/conversions.h>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+
+#include <pcl/PCLPointCloud2.h>
+#include <pcl_conversions/pcl_conversions.h>
 
 // Kindr
 #include <kindr/poses/PoseEigen.hpp>
@@ -138,9 +143,15 @@ void ElevationMapping::pointCloudCallback(
   stopMapUpdateTimer();
 
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
+  pcl::PCLPointCloud2 pcl_pc;
+  pcl_conversions::toPCL(rawPointCloud, pcl_pc);
+
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
-  fromROSMsg(rawPointCloud, *pointCloud);
-  Time& time = pointCloud->header.stamp;
+  pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
+
+  //fromROSMsg(rawPointCloud, *pointCloud);
+  Time time;
+  time.fromNSec(1000.0 * pointCloud->header.stamp);
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
   // Update map location.

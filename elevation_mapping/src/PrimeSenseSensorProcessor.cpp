@@ -61,7 +61,10 @@ bool PrimeSenseSensorProcessor::process(
   copyPointCloud(*pointCloudInput, *pointCloudClean);
   cleanPointCloud(pointCloudClean);
 
-  if (!updateTransformations(pointCloudClean->header.frame_id, pointCloudClean->header.stamp)) return false;
+  Time timeStamp;
+  timeStamp.fromNSec(1000.0 * pointCloudClean->header.stamp);
+
+  if (!updateTransformations(pointCloudClean->header.frame_id, timeStamp)) return false;
 
   if (!transformPointCloud(pointCloudClean, pointCloudOutput, mapFrameId_)) return false;
 
@@ -124,8 +127,9 @@ bool PrimeSenseSensorProcessor::transformPointCloud(
 {
   pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transformationSensorToMap_.cast<float>());
   pointCloudTransformed->header.frame_id = targetFrame;
+
   ROS_DEBUG("ElevationMap: Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),
-            pointCloudTransformed->header.stamp.toSec());
+            ros::Time(pointCloudTransformed->header.stamp).toSec());
   return true;
 }
 

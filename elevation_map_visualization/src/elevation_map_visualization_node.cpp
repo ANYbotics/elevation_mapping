@@ -14,8 +14,8 @@ int main(int argc, char** argv)
   ros::init(argc, argv, "elevation_map_visualization");
 
   // Logger
-  log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
-  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
+  ros::console::set_logger_level("Info", ros::console::levels::Info);
+  ros::console::notifyLoggerLevelsChanged();
 
   ros::NodeHandle nodeHandle("~");
 
