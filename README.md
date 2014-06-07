@@ -18,8 +18,8 @@ Citing
 The robot-centric elevation mapping methods used in this software are described in the following paper (available [here]()):
 
 P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
-**"Robot-centric elevation mapping with uncertainty estimates"**,
-in Climbing and Walking Robots (CLAWAR), 2014.
+**"Robot-Centric Elevation Mapping with Uncertainty Estimates"**,
+in International Conference on Climbing and Walking Robots (CLAWAR), 2014.
 
     @inproceedings{Fankhauser2014RobotCentricElevationMapping,
       author = {Fankhauser, Péter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
