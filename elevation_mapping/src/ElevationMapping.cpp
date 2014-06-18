@@ -38,11 +38,19 @@ using namespace kindr::rotations::eigen_impl;
 
 namespace elevation_mapping {
 
-ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
-    : nodeHandle_(nodeHandle),
-      sensorProcessor_(transformListener_)
+ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType)
+    : nodeHandle_(nodeHandle)
 {
   ROS_INFO("Elevation mapping node started.");
+
+  //Initialize sensor processor
+  switch(sensorType)
+  {
+  case PRIME_SENSE: sensorProcessor_.reset(new PrimeSenseSensorProcessor(transformListener_));
+  break;
+  case ASLAM: sensorProcessor_.reset(new PrimeSenseSensorProcessor(transformListener_));
+  break;
+  }
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
   elevationMapRawPublisher_ = nodeHandle_.advertise<elevation_map_msg::ElevationMap>("elevation_map_raw", 1);
@@ -110,19 +118,17 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
 
   // SensorProcessor parameters.
-  nodeHandle_.param("base_frame_id", sensorProcessor_.baseFrameId_, string("/robot"));
-  nodeHandle_.param("sensor_cutoff_min_depth", sensorProcessor_.sensorCutoffMinDepth_, 0.2);
-  ROS_ASSERT(sensorProcessor_.sensorCutoffMinDepth_ >= 0.0);
-  nodeHandle_.param("sensor_cutoff_max_depth", sensorProcessor_.sensorCutoffMaxDepth_, 2.0);
-  ROS_ASSERT(sensorProcessor_.sensorCutoffMaxDepth_ > sensorProcessor_.sensorCutoffMinDepth_);
+  std::size_t nParameters = sensorProcessor_->sensorParameters_.size();
+  for(std::size_t i = 0; i < nParameters; i++)
+	  nodeHandle_.param(sensorProcessor_->sensorParameterNames_[i].c_str(), sensorProcessor_->sensorParameters_[i], 0.0);
 
-  nodeHandle_.param("sensor_model_normal_factor_a", sensorProcessor_.sensorModelNormalFactorA_, 0.003);
-  nodeHandle_.param("sensor_model_normal_factor_b", sensorProcessor_.sensorModelNormalFactorB_, 0.015);
-  nodeHandle_.param("sensor_model_normal_factor_c", sensorProcessor_.sensorModelNormalFactorC_, 0.25);
-  nodeHandle_.param("sensor_model_lateral_factor", sensorProcessor_.sensorModelLateralFactor_, 0.004);
+  nodeHandle_.param("base_frame_id", sensorProcessor_->baseFrameId_, string("/robot"));
 
-  sensorProcessor_.mapFrameId_ = map_.frameId_;
-  sensorProcessor_.transformListenerTimeout_ = maxNoUpdateDuration_;
+  ROS_ASSERT(sensorProcessor_->sensorParameters_[0] >= 0.0);
+  ROS_ASSERT(sensorProcessor_->sensorParameters_[1] > sensorProcessor_->sensorParameters_[0]);
+
+  sensorProcessor_->setMapFrameId(map_.frameId_);
+  sensorProcessor_->setTransformListenerTimeout(maxNoUpdateDuration_);
 
   return true;
 }
@@ -178,7 +184,7 @@ void ElevationMapping::pointCloudCallback(
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
   VectorXf measurementVariances;
-  if(!sensorProcessor_.process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances))
+  if(!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("ElevationMap: Point cloud could not be processed.");
     resetMapUpdateTimer();
