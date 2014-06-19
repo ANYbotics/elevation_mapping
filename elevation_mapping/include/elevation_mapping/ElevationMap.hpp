@@ -31,8 +31,7 @@ namespace elevation_mapping {
 /*!
  * Elevation map stored as planar grid holding elevation height and variance.
  */
-class ElevationMap
-{
+class ElevationMap {
  public:
 
   /*!
@@ -52,7 +51,9 @@ class ElevationMap
    * @param resolution the cell size in [m/cell].
    * @return true if successful.
    */
-  bool setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position, const double& resolution);
+  bool setGeometry(const Eigen::Array2d& length,
+                   const kindr::phys_quant::eigen_impl::Position3D& position,
+                   const double& resolution);
 
   /*!
    * Add new measurements to the elevation map.
@@ -60,7 +61,8 @@ class ElevationMap
    * @param pointCloudVariances the corresponding variances of the point cloud data.
    * @return true if successful.
    */
-  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances);
+  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
+           Eigen::VectorXf& pointCloudVariances);
 
   /*!
    * Update the elevation map with variance update data.
@@ -70,7 +72,8 @@ class ElevationMap
    * @param time the time of the update.
    * @return true if successful.
    */
-  bool update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX,
+  bool update(Eigen::MatrixXf varianceUpdate,
+              Eigen::MatrixXf horizontalVarianceUpdateX,
               Eigen::MatrixXf horizontalVarianceUpdateY, const ros::Time& time);
 
   /*!
@@ -101,9 +104,12 @@ class ElevationMap
    * @param[in] requestedSubmapLength the requested length of the submap.
    * @return true if successful.
    */
-  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPosition, Eigen::Array2d& submapLength, Eigen::Array2i& submapBufferSize,
-                 Eigen::Array2i& requestedIndexInSubmap, const Eigen::MatrixXf& map,
-                 const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapLength);
+  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPosition,
+                 Eigen::Array2d& submapLength, Eigen::Array2i& submapBufferSize,
+                 Eigen::Array2i& requestedIndexInSubmap,
+                 const Eigen::MatrixXf& map,
+                 const Eigen::Vector2d& requestedSubmapPosition,
+                 const Eigen::Array2d& requestedSubmapLength);
 
   /*!
    * Relocate the elevation map frame w.r.t. the parent frame. Use this to move
@@ -112,7 +118,8 @@ class ElevationMap
    * @param mapFramePosition the new location of the elevation map frame in the parent frame.
    * @return true if successful.
    */
-  bool relocate(const kindr::phys_quant::eigen_impl::Position3D& mapFramePosition);
+  bool relocate(
+      const kindr::phys_quant::eigen_impl::Position3D& mapFramePosition);
 
   /*!
    * Reset all data of the elevation map (data, lengths, resolution etc.)
@@ -179,7 +186,9 @@ class ElevationMap
    * @param positionInParentFrame the position of the data point in the parent frame.
    * @return true if successful, false if no valid data available.
    */
-  bool getDataPointPositionInParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& positionInParentFrame);
+  bool getDataPointPositionInParentFrame(
+      const Eigen::Array2i& index,
+      kindr::phys_quant::eigen_impl::Position3D& positionInParentFrame);
 
   friend class ElevationMapping;
 
@@ -226,7 +235,8 @@ class ElevationMap
    * @param standardDeviation the standardDeviation of the distribution.
    * @return the function value.
    */
-  float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
+  float cumulativeDistributionFunction(float x, float mean,
+                                       float standardDeviation);
 
   //! Frame id of the elevation map.
   std::string frameId_;

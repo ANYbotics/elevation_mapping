@@ -25,8 +25,7 @@ namespace elevation_mapping {
 /*!
  * Computes the map variance update from the pose covariance of the robot.
  */
-class RobotMotionMapUpdater
-{
+class RobotMotionMapUpdater {
  public:
 
   /*!
@@ -48,10 +47,11 @@ class RobotMotionMapUpdater
    * @param[in] time the time of the update.
    * @return true if successful.
    */
-  bool update(ElevationMap& map,
-              const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
-              const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-              const ros::Time& time);
+  bool update(
+      ElevationMap& map,
+      const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+      const ros::Time& time);
 
  private:
 

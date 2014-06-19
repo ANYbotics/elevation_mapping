@@ -18,23 +18,22 @@ namespace elevation_mapping {
  * computes the measurement variances based on a sensor model in
  * the desired frame.
  */
-class AslamSensorProcessor: public SensorProcessor
-{
-public:
-	AslamSensorProcessor(tf::TransformListener& transformListener);
+class AslamSensorProcessor : public SensorProcessor {
+ public:
+  AslamSensorProcessor(tf::TransformListener& transformListener);
 
-	virtual ~AslamSensorProcessor();
+  virtual ~AslamSensorProcessor();
 
-private:
+ private:
 
-	virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  virtual bool cleanPointCloud(
+      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
-	virtual bool computeVariances(
-			const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-			const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-			Eigen::VectorXf& variances);
+  virtual bool computeVariances(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+      Eigen::VectorXf& variances);
 };
-
 
 } /* namespace elevation_mapping */
 
