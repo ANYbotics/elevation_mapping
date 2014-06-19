@@ -12,6 +12,12 @@
 
 namespace elevation_mapping {
 
+/*
+ * Sensor processor for the ASLAM stereo sensor.
+ * Cleans the point cloud, transforms it to a desired frame, and
+ * computes the measurement variances based on a sensor model in
+ * the desired frame.
+ */
 class AslamSensorProcessor: public SensorProcessor
 {
 public:

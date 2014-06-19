@@ -30,6 +30,14 @@
 
 namespace elevation_mapping {
 
+/*!
+* Generic Sensor processor base class. Provides functionalities
+* common to all sensors and defines interface for specialized
+* sensor processor classes.
+* Cleans the point cloud, transforms it to a desired frame, and
+* computes the measurement variances based on a sensor model in
+* the desired frame.
+*/
 class SensorProcessor
 {
 public:
@@ -40,6 +48,14 @@ public:
 
 	virtual ~SensorProcessor();
 
+	/*!
+	 * Processes the point cloud.
+	 * @param[in] pointCloudInput the input point cloud.
+	 * @param[in] targetFrame the frame to which the point cloud should be transformed.
+	 * @param[out] pointCloudOutput the processed point cloud.
+	 * @param[out] variances the measurement variances expressed in the target frame.
+	 * @return true if successful.
+	 */
 	bool process(
 	      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
 	      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
@@ -104,8 +120,10 @@ protected:
 	  //! TF frame id of the base.
 	  std::string baseFrameId_;
 
-	  //! Sensor parameters
+	  //! Sensor parameters. Initialized by ElevationMapping friend class.
 	  std::vector<double> sensorParameters_;
+
+	  //! Sensor parameter names. Must be initialized by derived sensor processor class.
 	  std::vector<std::string> sensorParameterNames_;
 
 };

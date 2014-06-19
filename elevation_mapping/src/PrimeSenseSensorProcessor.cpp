@@ -85,7 +85,7 @@ bool PrimeSenseSensorProcessor::computeVariances(
 		// Compute sensor covariance matrix (Sigma_S) with sensor model.
 		float varianceNormal =
 				pow(sensorParameters_[2] + sensorParameters_[3] *
-						pow(measurementDistance - sensorParameters_[3], 2), 2);
+						pow(measurementDistance - sensorParameters_[4], 2), 2);
 		float varianceLateral = pow(sensorParameters_[5] * measurementDistance, 2);
 		Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
 		sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
