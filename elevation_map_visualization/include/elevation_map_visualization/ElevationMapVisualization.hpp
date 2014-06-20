@@ -11,11 +11,13 @@
 
 // Elevation Mapping
 #include "elevation_map_visualization/MapRegionVisualization.hpp"
+#include "elevation_map_visualization/VarianceVisualization.hpp"
 #include "elevation_map_msg/ElevationMap.h"
 
 // ROS
 #include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <visualization_msgs/Marker.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -56,17 +58,12 @@ class ElevationMapVisualization
       const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
       const double& mapLowerValue, const double& mapUpperValue);
 
-  enum class MarkerTypes
-  {
-    ElevationMap,
-    Count
-  };
-
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber mapSubscriber_;
   ros::Publisher mapMarkerArrayPublisher_;
   visualization_msgs::MarkerArray mapMarkerArrayMessage_;
 
+  VarianceVisualization varianceVisualization_;
   MapRegionVisualization mapRegionVisualization_;
 
   std::string mapTopic_;

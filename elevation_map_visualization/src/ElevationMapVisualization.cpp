@@ -10,6 +10,7 @@
 
 // Elevation Mapping
 #include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
+#include "elevation_map_visualization/VisualizationBase.hpp"
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // ROS
@@ -66,17 +67,20 @@ bool ElevationMapVisualization::readParameters()
 
 bool ElevationMapVisualization::initializeVisualization()
 {
-  mapMarkerArrayMessage_.markers.resize((int)MarkerTypes::Count); // Could add more marker types here
+  mapMarkerArrayMessage_.markers.resize((int)VisualizationBase::MarkerTypes::Count);
 
-  auto& elevationMarker = mapMarkerArrayMessage_.markers.at((int)MarkerTypes::ElevationMap);
-  elevationMarker.id = (int)MarkerTypes::ElevationMap;
-  elevationMarker.ns = "elevation_map";
+  auto& elevationMarker = mapMarkerArrayMessage_.markers.at((int)VisualizationBase::MarkerTypes::Elevation);
+  elevationMarker.id = (int)VisualizationBase::MarkerTypes::Elevation;
+  elevationMarker.ns = "elevation";
   elevationMarker.lifetime = ros::Duration();
   elevationMarker.type = visualization_msgs::Marker::CUBE_LIST;
   elevationMarker.scale.z = markerHeight_;
   elevationMarker.action = visualization_msgs::Marker::ADD;
 
   mapRegionVisualization_.initialize();
+
+  visualization_msgs::Marker& varianceMarker = mapMarkerArrayMessage_.markers.at((int)VisualizationBase::MarkerTypes::Variance);
+  varianceVisualization_.initialize(&varianceMarker);
 
   ROS_INFO("Elevation map visualization initialized.");
   return true;
@@ -95,6 +99,8 @@ void ElevationMapVisualization::elevationMapCallback(
     return;
   }
 
+  varianceVisualization_.generateVisualization(map);
+
   if (!mapRegionVisualization_.update(map))
   {
     ROS_ERROR("ElevationVisualization: Generating map region visualization failed.");
@@ -111,13 +117,13 @@ bool ElevationMapVisualization::generateVisualization(
   unsigned int nCells = map.elevation.layout.dim.at(0).stride;
   ROS_DEBUG("ElevationVisualization: Elevation data has has %i cells.", nCells);
 
-  // Set marker info for elevation map
-  auto& elevationMarker = mapMarkerArrayMessage_.markers.at((int)MarkerTypes::ElevationMap);
+  // Set marker info for elevation.
+  auto& elevationMarker = mapMarkerArrayMessage_.markers.at((int)VisualizationBase::MarkerTypes::Elevation);
   elevationMarker.header = map.header;
   elevationMarker.scale.x = map.resolution;
   elevationMarker.scale.y = map.resolution;
 
-  // Clear points
+  // Clear points.
   elevationMarker.points.clear();
   elevationMarker.colors.clear();
 
@@ -134,7 +140,6 @@ bool ElevationMapVisualization::generateVisualization(
       const auto& variance = map.variance.data[dataIndex];
       const auto& color = map.color.data[dataIndex];
       bool isEmtpyCell = false;
-
 
       if (std::isnan(elevation) || std::isinf(variance))
       {

@@ -51,6 +51,8 @@ add_executable(
 	${PROJECT_NAME}
 	src/elevation_map_visualization_node.cpp
 	src/ElevationMapVisualization.cpp
+	src/VisualizationBase.cpp
+	src/VarianceVisualization.cpp
 	src/MapRegionVisualization.cpp
 )
 
