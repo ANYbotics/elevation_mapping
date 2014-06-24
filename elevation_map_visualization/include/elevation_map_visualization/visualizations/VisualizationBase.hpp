@@ -14,7 +14,6 @@
 
 // Elevation Mapping
 #include "elevation_map_msg/ElevationMap.h"
-#include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
 
 namespace elevation_map_visualization {
 
@@ -28,13 +27,20 @@ class VisualizationBase
 
   /*!
    * Constructor.
+   * @param nodeHandle the ROS node handle.
    */
-  VisualizationBase();
+  VisualizationBase(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.
    */
   virtual ~VisualizationBase();
+
+  /*!
+   * Read parameters from ROS.
+   * @return true if successful.
+   */
+  virtual bool readParameters() = 0;
 
   /*!
    * Initialization.
@@ -51,15 +57,10 @@ class VisualizationBase
    */
   virtual bool generateVisualization(const elevation_map_msg::ElevationMap& map) = 0;
 
-  enum class MarkerTypes
-  {
-    Elevation,
-    Variance,
-    SurfaceNormal,
-    Count
-  };
-
  protected:
+
+  //! ROS node handle.
+  ros::NodeHandle& nodeHandle_;
 
   //! Pointer to the marker.
   // TODO: This could be made nicer with visualization_msgs::MarkerPtr,

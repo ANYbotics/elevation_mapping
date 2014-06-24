@@ -8,28 +8,26 @@
 
 #pragma once
 
-// ROS
-#include <ros/ros.h>
-#include <visualization_msgs/Marker.h>
-
 // Elevation Mapping
-#include "elevation_map_msg/ElevationMap.h"
-#include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
+#include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
+
+// ROS
+#include "std_msgs/ColorRGBA.h"
 
 namespace elevation_map_visualization {
 
 /*!
- * Visualization of the elevation as cubes. Populates a visualization marker with the information
- * from an elevation map message.
+ * Visualization of the elevation as cubes.
  */
-class ElevationVisualization
+class ElevationVisualization : public VisualizationBase
 {
  public:
 
   /*!
    * Constructor.
+   * @param nodeHandle the ROS node handle.
    */
-  ElevationVisualization();
+  ElevationVisualization(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.
@@ -37,11 +35,17 @@ class ElevationVisualization
   virtual ~ElevationVisualization();
 
   /*!
+   * Read parameters from ROS.
+   * @return true if successful.
+   */
+  bool readParameters();
+
+  /*!
    * Initialization.
    * @param marker the pointer to the marker that is populated with visualization
    * information.
    */
-  void initialize(visualization_msgs::Marker* marker);
+  bool initialize(visualization_msgs::Marker* marker);
 
   /*!
    * Generates the visualization.
@@ -50,18 +54,66 @@ class ElevationVisualization
    */
   bool generateVisualization(const elevation_map_msg::ElevationMap& map);
 
-  friend class ElevationMapVisualization;
-
  private:
 
-  //! Pointer to the marker.
-  // TODO: This could be made nicer with visualization_msgs::MarkerPtr,
-  // however we'll need to figure out how to create a shared_pointer
-  // to an existing object in the MarkerArray.
-  visualization_msgs::Marker* marker_;
+  /*!
+   * Set the color for a cell depending on the map information.
+   * @param color the color to be set.
+   * @param elevation the cell elevation data.
+   * @param variance the cell variance data.
+   * @param colorValue the cell color data.
+   * @param isEmtpyCell if the cell is an empty cell.
+   */
+  void setColor(std_msgs::ColorRGBA& color, const double elevation, const double variance, const unsigned long colorValue, bool isEmtpyCell);
 
-  //! Sigma bound that is visualized.
-  double sigmaBound_;
+  //! Height of the cube marker [m].
+  double markerHeight_;
+
+  //! Showing empty cell in visualization.
+  bool showEmptyCells_;
+
+  //! Base color for the map visualization.
+  std_msgs::ColorRGBA baseColor_;
+
+  //! Color for the empty cells of the map.
+  std_msgs::ColorRGBA emptyCellColor_;
+
+  //! Set colors from map color data.
+  bool isSetColorFromMap_;
+
+  //! Set colors from map variance data.
+  bool isSetColorFromVariance_;
+
+  //! Set colors from map elevation data.
+  bool isSetColorFromHeight_;
+
+  //! Set color saturation from map variance data.
+  bool isSetSaturationFromVariance_;
+
+  //! Set color alpha from map variance data.
+  bool isSetAlphaFromVariance_;
+
+  //! Colors for the lower and upper variance values.
+  std_msgs::ColorRGBA lowerVarianceColor_;
+  std_msgs::ColorRGBA upperVarianceColor_;
+
+  //! Lower and upper value of the variance for mapping from
+  //! the variance to color properties.
+  double varianceLowerValue_;
+  double varianceUpperValue_;
+
+  //! Lower and upper value of the elevation for mapping from
+  //! the elevation to color properties.
+  double elevationLowerValue_;
+  double elevationUpperValue_;
+
+  //! Minimum and maximum saturation of the colors.
+  double minMarkerSaturation_;
+  double maxMarkerSaturation_;
+
+  //! Minimum and maximum color alpha values.
+  double minMarkerAlpha_;
+  double maxMarkerAlpha_;
 };
 
 } /* namespace elevation_map_visualization */

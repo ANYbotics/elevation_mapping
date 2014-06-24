@@ -53,6 +53,7 @@ add_executable(
 	src/ElevationMapVisualization.cpp
 	src/ElevationMapVisualizationHelpers.cpp
 	src/visualizations/VisualizationBase.cpp
+	src/visualizations/ElevationVisualization.cpp
 	src/visualizations/VarianceVisualization.cpp
 	src/visualizations/MapRegionVisualization.cpp
 )

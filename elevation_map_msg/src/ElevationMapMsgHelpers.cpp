@@ -49,6 +49,11 @@ unsigned int getRows(const std_msgs::Float32MultiArray& messageData)
   return messageData.layout.dim.at(1).size;
 }
 
+bool isValidCell(const float elevation, const float variance)
+{
+  return !(std::isnan(elevation) || std::isinf(variance));
+}
+
 unsigned int get1dIndexFrom2dIndex(
     const Eigen::Array2i& index,
     const elevation_map_msg::ElevationMap& map)

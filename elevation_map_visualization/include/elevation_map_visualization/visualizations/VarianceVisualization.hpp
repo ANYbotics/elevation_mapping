@@ -10,12 +10,6 @@
 
 // Elevation Mapping
 #include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
-#include "elevation_map_msg/ElevationMap.h"
-#include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
-
-// ROS
-#include <ros/ros.h>
-#include <visualization_msgs/Marker.h>
 
 namespace elevation_map_visualization {
 
@@ -23,19 +17,26 @@ namespace elevation_map_visualization {
  * Visualization of the variances as sigma bounds. Sigma bounds are shown as dots (spheres)
  * above the cells.
  */
-class VarianceVisualization : protected VisualizationBase
+class VarianceVisualization : public VisualizationBase
 {
  public:
 
   /*!
    * Constructor.
+   * @param nodeHandle the ROS node handle.
    */
-  VarianceVisualization();
+  VarianceVisualization(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.
    */
   virtual ~VarianceVisualization();
+
+  /*!
+   * Read parameters from ROS.
+   * @return true if successful.
+   */
+  bool readParameters();
 
   /*!
    * Initialization.
@@ -53,8 +54,35 @@ class VarianceVisualization : protected VisualizationBase
 
  private:
 
+  /*!
+   * Set the color for a variance marker depending on the cell variance.
+   * @param color the color of the marker to be set.
+   * @param variance the cell variance data.
+   */
+  void setColor(std_msgs::ColorRGBA& color, const double variance);
+
+
   //! Sigma bound that is visualized.
   double sigmaBound_;
+
+  //! Size (diameter of the spheres) of the markers [m].
+  double markerSize_;
+
+  //! Base color for the variance visualization.
+  std_msgs::ColorRGBA baseColor_;
+
+  //! Set colors from map variance data.
+  bool isSetColorFromVariance_;
+
+  //! Colors for the lower and upper variance values.
+  std_msgs::ColorRGBA lowerVarianceColor_;
+  std_msgs::ColorRGBA upperVarianceColor_;
+
+  //! Lower and upper value of the variance for mapping from
+  //! the variance to color properties.
+  double varianceLowerValue_;
+  double varianceUpperValue_;
+
 };
 
 } /* namespace elevation_map_visualization */

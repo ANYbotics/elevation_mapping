@@ -1,13 +1,7 @@
 <launch>
  	<node pkg="elevation_map_visualization" type="elevation_map_visualization" name="elevation_map_raw_visualization" output="screen">
  		 <param name="elevation_map_topic" value="/elevation_mapping/elevation_map_raw" />
- 		 <param name="set_color_from_map" value="true" />
-    	 <param name="set_color_from_variance" value="false" />
-    	 <param name="set_color_from_height" value="false" />    	 
-    	 <param name="set_saturation_from_variance" value="false" />
-    	 <param name="set_alpha_from_variance" value="false" />
-		 <param name="show_empty_cells" value="false" />   	 
-		 <param name="variance_lower_value_" value="0.0" /> 
-		 <param name="variance_upper_value_" value="0.0001" /> 
+		 <rosparam command="load" file="$(find elevation_map_visualization)/parameters/elevation/default_raw.yaml" />
+		 <rosparam command="load" file="$(find elevation_map_visualization)/parameters/variance/default.yaml" />
     </node>
 </launch>
