@@ -5,7 +5,7 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
-#include "elevation_map_visualization/VisualizationBase.hpp"
+#include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
 
 // Elevation Mapping
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"

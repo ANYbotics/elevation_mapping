@@ -14,7 +14,8 @@ namespace elevation_map_visualization {
 
 VarianceVisualization::VarianceVisualization()
 {
-  sigmaBound_ = 1.0; // TODO
+  marker_ = nullptr;
+  sigmaBound_ = 1.0;
 }
 
 VarianceVisualization::~VarianceVisualization()
@@ -22,15 +23,17 @@ VarianceVisualization::~VarianceVisualization()
 
 }
 
-bool VarianceVisualization::initialize(visualization_msgs::Marker* marker)
+void VarianceVisualization::initialize(visualization_msgs::Marker* marker)
 {
-  if(!VisualizationBase::initialize(marker)) return false;
+  marker_ = marker;
+  marker_->id = (int)MarkerTypes::Variance;
   marker_->ns = "variance";
+  marker_->lifetime = ros::Duration();
   marker_->type = visualization_msgs::Marker::SPHERE_LIST;
+  marker_->action = visualization_msgs::Marker::ADD;
   marker_->scale.x = 0.003;
   marker_->scale.y = 0.003;
   marker_->scale.z = 0.003;
-  return true;
 }
 
 bool VarianceVisualization::generateVisualization(

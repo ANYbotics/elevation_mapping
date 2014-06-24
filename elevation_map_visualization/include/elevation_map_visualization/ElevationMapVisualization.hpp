@@ -10,8 +10,9 @@
 #pragma once
 
 // Elevation Mapping
-#include "elevation_map_visualization/MapRegionVisualization.hpp"
-#include "elevation_map_visualization/VarianceVisualization.hpp"
+#include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
+#include "elevation_map_visualization/visualizations/MapRegionVisualization.hpp"
+#include "elevation_map_visualization/visualizations/VarianceVisualization.hpp"
 #include "elevation_map_msg/ElevationMap.h"
 
 // ROS
@@ -36,27 +37,12 @@ class ElevationMapVisualization
 
   void elevationMapCallback(const elevation_map_msg::ElevationMap& map);
 
+  bool setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell);
+
  private:
   bool readParameters();
   bool initializeVisualization();
   bool generateVisualization(const elevation_map_msg::ElevationMap& map);
-  bool setColor(std_msgs::ColorRGBA& color, const double& elevation, const double& variance, const unsigned long& colorValue, bool isEmtpyCell);
-  bool setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue);
-  bool setColorChannelFromVariance(float& color, const double& variance, bool invert = false);
-
-  /*!
-   * @note Based on "changeSaturation" function by Darel Rex Finley.
-   * @param color
-   * @param variance
-   * @return
-   */
-  bool setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance);
-
-  bool setColorFromHeight(std_msgs::ColorRGBA& color, const double& height);
-
-  double computeLinearMapping(
-      const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
-      const double& mapLowerValue, const double& mapUpperValue);
 
   ros::NodeHandle& nodeHandle_;
   ros::Subscriber mapSubscriber_;

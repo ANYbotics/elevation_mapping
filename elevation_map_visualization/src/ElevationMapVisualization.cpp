@@ -10,7 +10,6 @@
 
 // Elevation Mapping
 #include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
-#include "elevation_map_visualization/VisualizationBase.hpp"
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // ROS
@@ -188,98 +187,19 @@ bool ElevationMapVisualization::setColor(std_msgs::ColorRGBA& color, const doubl
 
   if (isSetColorFromVariance_)
   {
-    setColorChannelFromVariance(color.r, variance);
-    setColorChannelFromVariance(color.b, variance, true);
+    setColorChannelFromVariance(color.r, variance, varianceUpperValue_, varianceLowerValue_, false);
+    setColorChannelFromVariance(color.b, variance, varianceUpperValue_, varianceLowerValue_, true);
   }
 
   if (isSetColorFromHeight_)
   {
-    setColorFromHeight(color, elevation);
+    setColorFromHeight(color, elevation, elevationLowerValue_, elevationUpperValue_);
   }
 
-  if (isSetSaturationFromVariance_) setSaturationFromVariance(color, variance);
-  if (isSetAlphaFromVariance_) setColorChannelFromVariance(color.a, variance);
+  if (isSetSaturationFromVariance_) setSaturationFromVariance(color, variance, varianceLowerValue_, varianceUpperValue_, maxMarkerSaturation_, minMarkerSaturation_);
+  if (isSetAlphaFromVariance_) setColorChannelFromVariance(color.a, variance, elevationLowerValue_, elevationUpperValue_);
 
   return true;
-}
-
-bool ElevationMapVisualization::setColorFromMap(std_msgs::ColorRGBA& color, const unsigned long& colorValue)
-{
-  Vector3f colorVector;
-  elevation_map_msg::copyColorValueToVector(colorValue, colorVector);
-  getColorMessageFromColorVector(color, colorVector);
-  return true;
-}
-
-bool ElevationMapVisualization::setColorChannelFromVariance(float& colorChannel, const double& variance, bool invert)
-{
-  double lowestVarianceValue = 0.0;
-  double highestVarianceValue = 1.0;
-
-  if (invert)
-  {
-    double tempValue = lowestVarianceValue;
-    lowestVarianceValue = highestVarianceValue;
-    highestVarianceValue = tempValue;
-  }
-
-  colorChannel = static_cast<float>(computeLinearMapping(variance, varianceLowerValue_, varianceUpperValue_, lowestVarianceValue, highestVarianceValue));
-
-
-  return true;
-}
-
-bool ElevationMapVisualization::setSaturationFromVariance(std_msgs::ColorRGBA& color, const double& variance)
-{
-  const Eigen::Array3f HspFactors(.299, .587, .114); // see http://alienryderflex.com/hsp.html
-  float saturationChange = static_cast<float>(computeLinearMapping(variance, varianceLowerValue_, varianceUpperValue_, maxMarkerSaturation_, minMarkerSaturation_));
-  Vector3f colorVector;
-  getColorVectorFromColorMessage(colorVector, color);
-  float perceivedBrightness = sqrt((colorVector.array().square() * HspFactors).sum());
-  colorVector = perceivedBrightness + saturationChange * (colorVector.array() - perceivedBrightness);
-  colorVector = (colorVector.array().min(Array3f::Ones())).matrix();
-  getColorMessageFromColorVector(color, colorVector);
-  return true;
-}
-
-bool ElevationMapVisualization::setColorFromHeight(std_msgs::ColorRGBA& color, const double& height)
-{
-  Vector3f hsl; // Hue: [0, 2 Pi], Saturation and Lightness: [0, 1]
-  Vector3f rgb;
-
-  hsl[0] = static_cast<float>(computeLinearMapping(height, elevationLowerValue_, elevationUpperValue_, 0.0, 2.0 * M_PI));
-  hsl[1] = 1.0;
-  hsl[2] = 1.0;
-
-  float offset = 2.0 / 3.0 * M_PI;
-  Array3f rgbOffset(0, -offset, offset);
-  rgb = ((rgbOffset + hsl[0]).cos() + 0.5).min(Array3f::Ones()).max(Array3f::Zero()) * hsl[2];
-  float white = Vector3f(0.3, 0.59, 0.11).transpose() * rgb;
-  float saturation = 1.0 - hsl[1];
-  rgb = rgb + ((-rgb.array() + white) * saturation).matrix();
-
-  getColorMessageFromColorVector(color, rgb);
-  return true;
-}
-
-double ElevationMapVisualization::computeLinearMapping(
-    const double& sourceValue, const double& sourceLowerValue, const double& sourceUpperValue,
-    const double& mapLowerValue, const double& mapUpperValue)
-{
-  double m = (mapLowerValue - mapUpperValue) / (sourceLowerValue - sourceUpperValue);
-  double b = mapUpperValue - m * sourceUpperValue;
-  double mapValue = m * sourceValue + b;
-  if (mapLowerValue < mapUpperValue)
-  {
-    mapValue = max(mapValue, mapLowerValue);
-    mapValue = min(mapValue, mapUpperValue);
-  }
-  else
-  {
-    mapValue = min(mapValue, mapLowerValue);
-    mapValue = max(mapValue, mapUpperValue);
-  }
-  return mapValue;
 }
 
 } /* namespace */

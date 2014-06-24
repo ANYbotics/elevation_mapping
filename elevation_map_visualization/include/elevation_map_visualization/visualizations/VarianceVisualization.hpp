@@ -9,7 +9,7 @@
 #pragma once
 
 // Elevation Mapping
-#include "elevation_map_visualization/VisualizationBase.hpp"
+#include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
 #include "elevation_map_msg/ElevationMap.h"
 #include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
 

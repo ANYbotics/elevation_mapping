@@ -6,7 +6,7 @@
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "elevation_map_visualization/MapRegionVisualization.hpp"
+#include "elevation_map_visualization/visualizations/MapRegionVisualization.hpp"
 
 // ROS
 #include <geometry_msgs/Point32.h>
