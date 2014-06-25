@@ -73,7 +73,7 @@ bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_q
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  timeOfLastUpdate_ = pointCloud->header.stamp;
+  timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp);
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
