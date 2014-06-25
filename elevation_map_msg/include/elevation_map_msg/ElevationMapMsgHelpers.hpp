@@ -24,6 +24,10 @@ using namespace Eigen;
 
 namespace elevation_map_msg {
 
+/*!
+ * Returns the number of dimensions of the elevation map.
+ * @return the number of dimensions.
+ */
 const int nDimensions();
 
 enum class StorageIndices {
@@ -31,13 +35,37 @@ enum class StorageIndices {
     Row
 };
 
+//! Holds the names of the storage indeces.
 extern std::map<StorageIndices, std::string> storageIndexNames;
 
+/*!
+ * Checks if message data is stored in row-major format.
+ * @param[in] messageData the message data.
+ * @return true if is in row-major format, false if is in column-major format.
+ */
 bool isRowMajor(const std_msgs::Float32MultiArray& messageData);
 
+/*!
+ * Returns the number of columns of the message data.
+ * @param[in] messageData the message data.
+ * @return the number of columns.
+ */
 unsigned int getCols(const std_msgs::Float32MultiArray& messageData);
 
+/*!
+ * Returns the number of rows of the message data.
+ * @param[in] messageData the message data.
+ * @return the number of rows.
+ */
 unsigned int getRows(const std_msgs::Float32MultiArray& messageData);
+
+/*!
+ * Checks if the cell holds valid data.
+ * @param elevation the elevation of the cell.
+ * @param variance the variance of the cell.
+ * @return true if valid cell, false if empty or invalid.
+ */
+bool isValidCell(const float elevation, const float variance);
 
 /*!
  * Returns the 1d array index to access the map data based on the 2d matrix indeces.
