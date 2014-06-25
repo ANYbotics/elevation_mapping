@@ -79,7 +79,7 @@ bool ElevationVisualization::initialize(visualization_msgs::Marker* marker)
 bool ElevationVisualization::generateVisualization(
     const elevation_map_msg::ElevationMap& map)
 {
-  // Set marker info for variance.
+  // Set marker info.
   marker_->header = map.header;
   marker_->scale.x = map.resolution;
   marker_->scale.y = map.resolution;

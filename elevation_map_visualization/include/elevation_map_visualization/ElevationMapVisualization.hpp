@@ -11,7 +11,6 @@
 
 // Elevation Mapping
 #include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
-#include "elevation_map_visualization/visualizations/MapRegionVisualization.hpp"
 #include "elevation_map_msg/ElevationMap.h"
 
 // ROS
@@ -85,9 +84,6 @@ class ElevationMapVisualization
 
   //! Topic name of the elevation map to be visualized.
   std::string mapTopic_;
-
-  // TODO Add to new general framework.
-  MapRegionVisualization mapRegionVisualization_;
 };
 
 } /* elevation_map_visualization */

@@ -11,6 +11,9 @@
 // Elevation Mapping
 #include "elevation_map_visualization/visualizations/VisualizationBase.hpp"
 
+// ROS
+#include "std_msgs/ColorRGBA.h"
+
 namespace elevation_map_visualization {
 
 /*!

@@ -63,7 +63,7 @@ class VisualizationBase
   ros::NodeHandle& nodeHandle_;
 
   //! Pointer to the marker.
-  // TODO: This could be made nicer with visualization_msgs::MarkerPtr,
+  // This could be made nicer with visualization_msgs::MarkerPtr,
   // however we'll need to figure out how to create a shared_pointer
   // to an existing object in the MarkerArray.
   visualization_msgs::Marker* marker_;

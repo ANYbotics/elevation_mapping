@@ -12,6 +12,7 @@
 #include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 #include "elevation_map_visualization/visualizations/ElevationVisualization.hpp"
+#include "elevation_map_visualization/visualizations/MapRegionVisualization.hpp"
 #include "elevation_map_visualization/visualizations/VarianceVisualization.hpp"
 
 // ROS
@@ -29,12 +30,12 @@ namespace elevation_map_visualization {
 
 ElevationMapVisualization::ElevationMapVisualization(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-      nVisualizations_(2),
-      mapRegionVisualization_(nodeHandle_)
+      nVisualizations_(3)
 {
   ROS_INFO("Elevation map visualization node started.");
 
   visualizations_.push_back(unique_ptr<VisualizationBase>(new ElevationVisualization(nodeHandle_)));
+  visualizations_.push_back(unique_ptr<VisualizationBase>(new MapRegionVisualization(nodeHandle_)));
   visualizations_.push_back(unique_ptr<VisualizationBase>(new VarianceVisualization(nodeHandle_)));
   mapMarkerArrayMessage_.markers.resize(nVisualizations_);
 
@@ -65,8 +66,6 @@ bool ElevationMapVisualization::readParameters()
 
 bool ElevationMapVisualization::initialize()
 {
-  mapRegionVisualization_.initialize();
-
   for (unsigned int i = 0; i < nVisualizations_; i++)
   {
     visualization_msgs::Marker& marker = mapMarkerArrayMessage_.markers.at(i);
@@ -90,14 +89,7 @@ void ElevationMapVisualization::elevationMapCallback(
       ROS_ERROR("Generating visualization failed.");
   }
 
-  if (!mapRegionVisualization_.update(map))
-  {
-    ROS_ERROR("Generating map region visualization failed.");
-    return;
-  }
-
   mapMarkerArrayPublisher_.publish(mapMarkerArrayMessage_);
-  mapRegionVisualization_.publish();
 }
 
 } /* namespace */

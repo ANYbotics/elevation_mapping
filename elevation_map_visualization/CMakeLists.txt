@@ -54,8 +54,8 @@ add_executable(
 	src/ElevationMapVisualizationHelpers.cpp
 	src/visualizations/VisualizationBase.cpp
 	src/visualizations/ElevationVisualization.cpp
-	src/visualizations/VarianceVisualization.cpp
 	src/visualizations/MapRegionVisualization.cpp
+	src/visualizations/VarianceVisualization.cpp
 )
 
 ## Add cmake target dependencies of the executable/library
