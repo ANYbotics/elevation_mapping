@@ -73,7 +73,10 @@ bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_q
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp);
+  // Hydro
+//  timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp);
+  // Groovy
+  timeOfLastUpdate_ = pointCloud->header.stamp;
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
@@ -91,7 +94,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& color = colorRawData_(index(0), index(1));
     float pointVariance = pointCloudVariances(i);
 
-    if (std::isnan(elevation) || std::isinf(variance))
+    if (std::isnan(elevation) || std::isinf(variance)) // TODO Replace with standard method.
     {
       // No prior information in elevation map, use measurement.
       elevation = position_.z() + point.z;

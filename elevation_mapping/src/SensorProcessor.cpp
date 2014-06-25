@@ -36,7 +36,10 @@ bool SensorProcessor::process(
 	cleanPointCloud(pointCloudClean);
 
 	ros::Time timeStamp;
-	timeStamp.fromNSec(1000.0 * pointCloudClean->header.stamp);
+  // Hydro
+//  timeStamp.fromNSec(1000.0 * pointCloudClean->header.stamp);
+  // Groovy
+	timeStamp = pointCloudClean->header.stamp;
 
 	if (!updateTransformations(pointCloudClean->header.frame_id, timeStamp)) return false;
 
