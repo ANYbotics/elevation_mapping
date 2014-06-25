@@ -17,7 +17,7 @@
 namespace elevation_map_visualization {
 
 /*!
- * Visualization of the elevation as cubes.
+ * Visualization of the region of the elevation map as border line.
  */
 class MapRegionVisualization : public VisualizationBase
 {

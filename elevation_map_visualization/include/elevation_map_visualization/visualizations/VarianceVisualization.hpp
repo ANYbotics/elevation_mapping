@@ -64,7 +64,6 @@ class VarianceVisualization : public VisualizationBase
    */
   void setColor(std_msgs::ColorRGBA& color, const double variance);
 
-
   //! Sigma bound that is visualized.
   double sigmaBound_;
 

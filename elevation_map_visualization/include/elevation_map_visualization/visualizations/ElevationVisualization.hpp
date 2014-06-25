@@ -66,7 +66,7 @@ class ElevationVisualization : public VisualizationBase
    */
   void setColor(std_msgs::ColorRGBA& color, const double elevation, const double variance, const unsigned long colorValue, bool isEmtpyCell);
 
-  //! Height of the cube marker [m].
+  //! Height of the cube markers [m].
   double markerHeight_;
 
   //! Showing empty cell in visualization.
@@ -98,12 +98,12 @@ class ElevationVisualization : public VisualizationBase
   std_msgs::ColorRGBA upperVarianceColor_;
 
   //! Lower and upper value of the variance for mapping from
-  //! the variance to color properties.
+  //! the variance data to color properties.
   double varianceLowerValue_;
   double varianceUpperValue_;
 
   //! Lower and upper value of the elevation for mapping from
-  //! the elevation to color properties.
+  //! the elevation data to color properties.
   double elevationLowerValue_;
   double elevationUpperValue_;
 

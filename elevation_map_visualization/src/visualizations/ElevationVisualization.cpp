@@ -55,7 +55,7 @@ bool ElevationVisualization::readParameters()
   setColorFromColorValue(emptyCellColor_, emptyCellColorValue, true);
 
   int lowerVarianceColorValue;
-  nodeHandle_.param("elevation/lower_variance_color", lowerVarianceColorValue, 0);
+  nodeHandle_.param("elevation/lower_variance_color", lowerVarianceColorValue, 255);
   setColorFromColorValue(lowerVarianceColor_, lowerVarianceColorValue, true);
 
   int upperVarianceColorValue;
