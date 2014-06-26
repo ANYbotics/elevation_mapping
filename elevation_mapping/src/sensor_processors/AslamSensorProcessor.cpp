@@ -1,20 +1,20 @@
 /*
- * PrimeSenseSensorProcessor.cpp
+ * AslamSensorProcessor.cpp
  *
  *  Created on: Jun 6, 2014
  *      Author: Hannes Keller
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include <elevation_mapping/PrimeSenseSensorProcessor.hpp>
+#include <elevation_mapping/sensor_processors/AslamSensorProcessor.hpp>
 
 #include <pcl/filters/passthrough.h>
 #include <vector>
 
 namespace elevation_mapping {
 
-PrimeSenseSensorProcessor::PrimeSenseSensorProcessor(tf::TransformListener& transformListener):
-				SensorProcessor(transformListener)
+AslamSensorProcessor::AslamSensorProcessor(tf::TransformListener& transformListener):
+				SensorProcessorBase(transformListener)
 {
 	sensorParameterNames_.resize(6);
 	sensorParameters_.resize(6);
@@ -27,11 +27,11 @@ PrimeSenseSensorProcessor::PrimeSenseSensorProcessor(tf::TransformListener& tran
 	sensorParameterNames_[5] = "sensor_model_lateral_factor";
 }
 
-PrimeSenseSensorProcessor::~PrimeSenseSensorProcessor() {}
+AslamSensorProcessor::~AslamSensorProcessor() {}
 
 /* Private */
 
-bool PrimeSenseSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+bool AslamSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
 	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
 	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
@@ -48,7 +48,7 @@ bool PrimeSenseSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::Point
 	return true;
 }
 
-bool PrimeSenseSensorProcessor::computeVariances(
+bool AslamSensorProcessor::computeVariances(
 		const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
 		const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
 		Eigen::VectorXf& variances)

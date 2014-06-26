@@ -1,24 +1,29 @@
 /*
- * AslamSensorProcessor.cpp
+ * KinectSensorProcessor.cpp
  *
- *  Created on: Jun 6, 2014
- *      Author: Hannes Keller
+ *  Created on: Feb 5, 2014
+ *      Author: Péter Fankhauser
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include <elevation_mapping/AslamSensorProcessor.hpp>
+#include <elevation_mapping/sensor_processors/KinectSensorProcessor.hpp>
 
 #include <pcl/filters/passthrough.h>
 #include <vector>
 
 namespace elevation_mapping {
 
-AslamSensorProcessor::AslamSensorProcessor(tf::TransformListener& transformListener):
-				SensorProcessor(transformListener)
+KinectSensorProcessor::KinectSensorProcessor(tf::TransformListener& transformListener):
+				SensorProcessorBase(transformListener)
 {
 	sensorParameterNames_.resize(6);
 	sensorParameters_.resize(6);
 
+  /*! Kinect sensor model:
+   * standardDeviationInNormalDirection = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * (measurementDistance - sensorModelNormalFactorC_)^2;
+   * standardDeviationInLateralDirection = sensorModelLateralFactor_ * measurementDistance
+   * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
+   */
 	sensorParameterNames_[0] = "sensor_cutoff_min_depth";
 	sensorParameterNames_[1] = "sensor_cutoff_max_depth";
 	sensorParameterNames_[2] = "sensor_model_normal_factor_a";
@@ -27,11 +32,9 @@ AslamSensorProcessor::AslamSensorProcessor(tf::TransformListener& transformListe
 	sensorParameterNames_[5] = "sensor_model_lateral_factor";
 }
 
-AslamSensorProcessor::~AslamSensorProcessor() {}
+KinectSensorProcessor::~KinectSensorProcessor() {}
 
-/* Private */
-
-bool AslamSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+bool KinectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
 	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
 	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
@@ -48,7 +51,7 @@ bool AslamSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRG
 	return true;
 }
 
-bool AslamSensorProcessor::computeVariances(
+bool KinectSensorProcessor::computeVariances(
 		const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
 		const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
 		Eigen::VectorXf& variances)
@@ -106,7 +109,3 @@ bool AslamSensorProcessor::computeVariances(
 }
 
 } /* namespace elevation_mapping */
-
-
-
-

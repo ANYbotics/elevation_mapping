@@ -8,17 +8,17 @@
 #ifndef ASLAM_SENSOR_PROCESSOR_HPP_
 #define ASLAM_SENSOR_PROCESSOR_HPP_
 
-#include <elevation_mapping/SensorProcessor.hpp>
+#include <elevation_mapping/sensor_processors/SensorProcessorBase.hpp>
 
 namespace elevation_mapping {
 
-/*
+/*!
  * Sensor processor for the ASLAM stereo sensor.
  * Cleans the point cloud, transforms it to a desired frame, and
  * computes the measurement variances based on a sensor model in
  * the desired frame.
  */
-class AslamSensorProcessor: public SensorProcessor
+class AslamSensorProcessor: public SensorProcessorBase
 {
 public:
 	AslamSensorProcessor(tf::TransformListener& transformListener);

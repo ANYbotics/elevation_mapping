@@ -73,10 +73,11 @@ bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_q
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  // Hydro
-//  timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp);
-  // Groovy
-  timeOfLastUpdate_ = pointCloud->header.stamp;
+  #if ROS_VERSION_MINIMUM(1, 10, 0) // Hydro and newer
+    timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp); // Double check.
+  #else
+    timeOfLastUpdate_ = pointCloud->header.stamp;
+  #endif
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {

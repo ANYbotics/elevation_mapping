@@ -1,12 +1,12 @@
 /*
- * SensorProcessor.hpp
+ * SensorProcessorBase.hpp
  *
  *  Created on: Jun 6, 2014
- *      Author: hannes
+ *      Author: Péter Fankhauser, Hannes Keller
+ *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#ifndef ELEVATION_MAPPING_SENSOR_PROCESSOR_HPP_
-#define ELEVATION_MAPPING_SENSOR_PROCESSOR_HPP_
+#pragma once
 
 // ROS
 #include <ros/ros.h>
@@ -16,37 +16,38 @@
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-
 // Eigen
 #include <Eigen/Core>
 
-// kindr
+// Kindr
 #include <kindr/rotations/RotationEigen.hpp>
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 
-//STL
+// STL
 #include <vector>
 #include <string>
+#include <memory>
 
 namespace elevation_mapping {
 
 /*!
 * Generic Sensor processor base class. Provides functionalities
-* common to all sensors and defines interface for specialized
+* common to all sensors and defines the interface for specialized
 * sensor processor classes.
 * Cleans the point cloud, transforms it to a desired frame, and
 * computes the measurement variances based on a sensor model in
 * the desired frame.
 */
-class SensorProcessor
+class SensorProcessorBase
 {
 public:
-	typedef boost::shared_ptr<SensorProcessor> Ptr;
-	typedef const boost::shared_ptr<SensorProcessor> ConstPtr;
 
-	SensorProcessor(tf::TransformListener& transformListener);
+	typedef std::shared_ptr<SensorProcessorBase> Ptr;
+	typedef const std::shared_ptr<SensorProcessorBase> ConstPtr;
 
-	virtual ~SensorProcessor();
+	SensorProcessorBase(tf::TransformListener& transformListener);
+
+	virtual ~SensorProcessorBase();
 
 	/*!
 	 * Processes the point cloud.
@@ -129,8 +130,3 @@ protected:
 };
 
 } /* namespace elevation_mapping */
-
-
-
-
-#endif /* ELEVATION_MAPPING_SENSOR_PROCESSOR_HPP_ */

@@ -1,11 +1,12 @@
 /*
- * SensorProcessor.cpp
+ * SensorProcessorBase.cpp
  *
- *  Created on: Jun 18, 2014
- *      Author: hannes
+ *  Created on: Jun 6, 2014
+ *      Author: Péter Fankhauser, Hannes Keller
+ *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include <elevation_mapping/SensorProcessor.hpp>
+#include <elevation_mapping/sensor_processors/SensorProcessorBase.hpp>
 
 //PCL
 #include <pcl/common/transforms.h>
@@ -16,16 +17,16 @@
 
 namespace elevation_mapping {
 
-SensorProcessor::SensorProcessor(tf::TransformListener& transformListener):
+SensorProcessorBase::SensorProcessorBase(tf::TransformListener& transformListener):
 				transformListener_(transformListener), mapFrameId_(""), baseFrameId_("")
 {
 	transformationSensorToMap_.setIdentity();
 	transformListenerTimeout_.fromSec(1.0);
 }
 
-SensorProcessor::~SensorProcessor() {}
+SensorProcessorBase::~SensorProcessorBase() {}
 
-bool SensorProcessor::process(
+bool SensorProcessorBase::process(
 		const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
 		const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
 		const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
@@ -36,10 +37,11 @@ bool SensorProcessor::process(
 	cleanPointCloud(pointCloudClean);
 
 	ros::Time timeStamp;
-  // Hydro
-//  timeStamp.fromNSec(1000.0 * pointCloudClean->header.stamp);
-  // Groovy
+#if ROS_VERSION_MINIMUM(1, 10, 0) // Hydro and newer
+	timeStamp.fromNSec(1000.0 * pointCloudClean->header.stamp); // TODO Double check.
+#else
 	timeStamp = pointCloudClean->header.stamp;
+#endif
 
 	if (!updateTransformations(pointCloudClean->header.frame_id, timeStamp)) return false;
 
@@ -51,50 +53,50 @@ bool SensorProcessor::process(
 }
 
 //Frame ID accessors
-void SensorProcessor::setBaseFrameId(std::string baseFrameId)
+void SensorProcessorBase::setBaseFrameId(std::string baseFrameId)
 {
 	baseFrameId_ = baseFrameId;
 }
 
-void SensorProcessor::setMapFrameId(std::string mapFrameId)
+void SensorProcessorBase::setMapFrameId(std::string mapFrameId)
 {
 	mapFrameId_ = mapFrameId;
 }
 
-std::string SensorProcessor::getBaseFrameId() const
+std::string SensorProcessorBase::getBaseFrameId() const
 {
 	return baseFrameId_;
 }
 
-std::string SensorProcessor::getMapFrameId() const
+std::string SensorProcessorBase::getMapFrameId() const
 {
 	return mapFrameId_;
 }
 
 //Sensor parameter accessors
-double SensorProcessor::getSensorParameter(std::size_t index) const
+double SensorProcessorBase::getSensorParameter(std::size_t index) const
 {
 	return sensorParameters_.at(index);
 }
 
-std::string SensorProcessor::getSensorParameterName(std::size_t index) const
+std::string SensorProcessorBase::getSensorParameterName(std::size_t index) const
 {
 	return sensorParameterNames_.at(index);
 }
 
-void SensorProcessor::setTransformListenerTimeout(ros::Duration timeout)
+void SensorProcessorBase::setTransformListenerTimeout(ros::Duration timeout)
 {
 	transformListenerTimeout_ = timeout;
 }
 
-ros::Duration SensorProcessor::getTransformListenerTimeout() const
+ros::Duration SensorProcessorBase::getTransformListenerTimeout() const
 {
 	return transformListenerTimeout_;
 }
 
 /* Private */
 
-bool SensorProcessor::updateTransformations(std::string sensorFrameId, ros::Time timeStamp)
+bool SensorProcessorBase::updateTransformations(std::string sensorFrameId, ros::Time timeStamp)
 {
 	try
 	{
@@ -105,7 +107,7 @@ bool SensorProcessor::updateTransformations(std::string sensorFrameId, ros::Time
 		poseTFToEigen(transformTf, transformationSensorToMap_);
 
 		transformListener_.lookupTransform(baseFrameId_, sensorFrameId, timeStamp, transformTf); // TODO Why wrong direction?
-				Eigen::Affine3d transform;
+		Eigen::Affine3d transform;
 		poseTFToEigen(transformTf, transform);
 		rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
 		translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
@@ -124,7 +126,7 @@ bool SensorProcessor::updateTransformations(std::string sensorFrameId, ros::Time
 	}
 }
 
-bool SensorProcessor::transformPointCloud(
+bool SensorProcessorBase::transformPointCloud(
 		const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
 		const std::string& targetFrame)
