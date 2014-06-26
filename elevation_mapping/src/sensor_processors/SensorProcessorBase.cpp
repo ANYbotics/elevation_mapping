@@ -17,8 +17,10 @@
 
 namespace elevation_mapping {
 
-SensorProcessorBase::SensorProcessorBase(tf::TransformListener& transformListener):
-				transformListener_(transformListener), mapFrameId_(""), baseFrameId_("")
+SensorProcessorBase::SensorProcessorBase(tf::TransformListener& transformListener)
+    : transformListener_(transformListener),
+      mapFrameId_(""),
+      baseFrameId_("")
 {
 	transformationSensorToMap_.setIdentity();
 	transformListenerTimeout_.fromSec(1.0);
@@ -52,51 +54,7 @@ bool SensorProcessorBase::process(
 	return true;
 }
 
-//Frame ID accessors
-void SensorProcessorBase::setBaseFrameId(std::string baseFrameId)
-{
-	baseFrameId_ = baseFrameId;
-}
-
-void SensorProcessorBase::setMapFrameId(std::string mapFrameId)
-{
-	mapFrameId_ = mapFrameId;
-}
-
-std::string SensorProcessorBase::getBaseFrameId() const
-{
-	return baseFrameId_;
-}
-
-std::string SensorProcessorBase::getMapFrameId() const
-{
-	return mapFrameId_;
-}
-
-//Sensor parameter accessors
-double SensorProcessorBase::getSensorParameter(std::size_t index) const
-{
-	return sensorParameters_.at(index);
-}
-
-std::string SensorProcessorBase::getSensorParameterName(std::size_t index) const
-{
-	return sensorParameterNames_.at(index);
-}
-
-void SensorProcessorBase::setTransformListenerTimeout(ros::Duration timeout)
-{
-	transformListenerTimeout_ = timeout;
-}
-
-ros::Duration SensorProcessorBase::getTransformListenerTimeout() const
-{
-	return transformListenerTimeout_;
-}
-
-/* Private */
-
-bool SensorProcessorBase::updateTransformations(std::string sensorFrameId, ros::Time timeStamp)
+bool SensorProcessorBase::updateTransformations(const std::string& sensorFrameId, const ros::Time& timeStamp)
 {
 	try
 	{
@@ -138,6 +96,5 @@ bool SensorProcessorBase::transformPointCloud(
 			ros::Time(pointCloudTransformed->header.stamp).toSec());
 	return true;
 }
+
 } /* namespace elevation_mapping */
-
-

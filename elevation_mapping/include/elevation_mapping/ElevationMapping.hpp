@@ -56,6 +56,7 @@ class ElevationMapping
    * Constructor.
    * @param nodeHandle the ROS node handle.
    */
+  // TODO This could be done more nicely, by allowing to switch sensor from a ROS parameter.
   ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType = KINECT);
 
   /*!

@@ -149,8 +149,8 @@ bool ElevationMapping::readParameters()
   ROS_ASSERT(sensorProcessor_->sensorParameters_[0] >= 0.0);
   ROS_ASSERT(sensorProcessor_->sensorParameters_[1] > sensorProcessor_->sensorParameters_[0]);
 
-  sensorProcessor_->setMapFrameId(map_.frameId_);
-  sensorProcessor_->setTransformListenerTimeout(maxNoUpdateDuration_);
+  sensorProcessor_->mapFrameId_ = map_.frameId_;
+  sensorProcessor_->transformListenerTimeout_ = maxNoUpdateDuration_;
 
   return true;
 }

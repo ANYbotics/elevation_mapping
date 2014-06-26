@@ -32,7 +32,10 @@ KinectSensorProcessor::KinectSensorProcessor(tf::TransformListener& transformLis
 	sensorParameterNames_[5] = "sensor_model_lateral_factor";
 }
 
-KinectSensorProcessor::~KinectSensorProcessor() {}
+KinectSensorProcessor::~KinectSensorProcessor()
+{
+
+}
 
 bool KinectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
@@ -67,7 +70,7 @@ bool KinectSensorProcessor::computeVariances(
 	// Robot rotation covariance matrix (Sigma_q).
 	Eigen::Matrix3f rotationVariance = robotPoseCovariance.bottomRightCorner(3, 3).cast<float>();
 
-	// Preparations for#include <pcl/common/transforms.h> robot rotation Jacobian (J_q) to minimize computation for every point in point cloud.
+	// Preparations for robot rotation Jacobian (J_q) to minimize computation for every point in point cloud.
 	const Eigen::Matrix3f C_BM_transpose = rotationMapToBase_.transposed().toImplementation().cast<float>();
 	const Eigen::RowVector3f P_mul_C_BM_transpose = projectionVector * C_BM_transpose;
 	const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
