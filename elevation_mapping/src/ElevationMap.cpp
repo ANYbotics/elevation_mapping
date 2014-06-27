@@ -73,7 +73,11 @@ bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_q
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  timeOfLastUpdate_ = pointCloud->header.stamp;
+  #if ROS_VERSION_MINIMUM(1, 10, 0) // Hydro and newer
+    timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp); // Double check.
+  #else
+    timeOfLastUpdate_ = pointCloud->header.stamp;
+  #endif
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
@@ -91,7 +95,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& color = colorRawData_(index(0), index(1));
     float pointVariance = pointCloudVariances(i);
 
-    if (std::isnan(elevation) || std::isinf(variance))
+    if (elevation_map_msg::isValidCell(elevation, variance))
     {
       // No prior information in elevation map, use measurement.
       elevation = position_.z() + point.z;

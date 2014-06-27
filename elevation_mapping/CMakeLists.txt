@@ -65,7 +65,9 @@ add_executable(
   src/ElevationMapping.cpp
   src/ElevationMap.cpp
   src/RobotMotionMapUpdater.cpp
-  src/PrimeSenseSensorProcessor.cpp
+  src/sensor_processors/SensorProcessorBase.cpp
+  src/sensor_processors/KinectSensorProcessor.cpp
+  src/sensor_processors/AslamSensorProcessor.cpp
 )
 
 ## Specify libraries to link a library or executable target against

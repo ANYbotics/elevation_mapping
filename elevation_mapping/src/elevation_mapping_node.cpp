@@ -13,9 +13,14 @@ int main(int argc, char** argv)
 {
   ros::init(argc, argv, "elevation_mapping");
 
-  // Logger
+  //Logger
+#if ROS_VERSION_MINIMUM(1, 10, 0) // Hydro and newer
+  ros::console::set_logger_level("Debug", ros::console::levels::Debug);
+  ros::console::notifyLoggerLevelsChanged();
+#else
   log4cxx::LoggerPtr logger = log4cxx::Logger::getLogger(ROSCONSOLE_DEFAULT_NAME);
-  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Info]);
+  logger->setLevel(ros::console::g_level_lookup[ros::console::levels::Debug]);
+#endif
 
   ros::NodeHandle nodeHandle("~");
 

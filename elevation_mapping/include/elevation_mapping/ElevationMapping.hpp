@@ -10,8 +10,8 @@
 
 // Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
-#include "elevation_mapping/PrimeSenseSensorProcessor.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
+#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 #include "elevation_map_msg/ElevationMap.h"
 #include "elevation_map_msg/EigenConversions.hpp"
 #include "elevation_map_msg/GetSubmap.h"
@@ -46,14 +46,18 @@ namespace elevation_mapping {
  * The elevation mapping main class. Coordinates the ROS interfaces, the timing,
  * and the data handling between the other classes.
  */
+
 class ElevationMapping
 {
  public:
+  enum SensorType{KINECT, ASLAM};
+
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
    */
-  ElevationMapping(ros::NodeHandle& nodeHandle);
+  // TODO This could be done more nicely, by allowing to switch sensor from a ROS parameter.
+  ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType = KINECT);
 
   /*!
    * Destructor.
@@ -206,7 +210,7 @@ class ElevationMapping
   ElevationMap map_;
 
   //! Sensor processors.
-  PrimeSenseSensorProcessor sensorProcessor_;
+  SensorProcessorBase::Ptr sensorProcessor_;
 
   //! Robot motion elevation map updater.
   RobotMotionMapUpdater robotMotionMapUpdater_;
