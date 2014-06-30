@@ -95,7 +95,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& color = colorRawData_(index(0), index(1));
     float pointVariance = pointCloudVariances(i);
 
-    if (elevation_map_msg::isValidCell(elevation, variance))
+    if (!elevation_map_msg::isValidCell(elevation, variance))
     {
       // No prior information in elevation map, use measurement.
       elevation = position_.z() + point.z;
