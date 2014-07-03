@@ -9,6 +9,9 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   elevation_map_msg
   visualization_msgs
+  geometric_shapes
+  shape_tools
+  eigen_stl_containers
 )
 
 ## System dependencies are found with CMake's conventions
@@ -54,6 +57,7 @@ add_executable(
 	src/ElevationMapVisualizationHelpers.cpp
 	src/visualizations/VisualizationBase.cpp
 	src/visualizations/ElevationVisualization.cpp
+	src/visualizations/ElevationMeshVisualization.cpp
 	src/visualizations/MapRegionVisualization.cpp
 	src/visualizations/VarianceVisualization.cpp
 )

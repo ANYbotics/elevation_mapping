@@ -15,6 +15,8 @@
 // Eigen
 #include <Eigen/Core>
 
+using namespace Eigen;
+
 namespace elevation_map_visualization {
 
 ElevationVisualization::ElevationVisualization(ros::NodeHandle& nodeHandle)

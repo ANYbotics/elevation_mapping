@@ -12,6 +12,7 @@
 #include "elevation_map_visualization/ElevationMapVisualizationHelpers.hpp"
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 #include "elevation_map_visualization/visualizations/ElevationVisualization.hpp"
+#include "elevation_map_visualization/visualizations/ElevationMeshVisualization.hpp"
 #include "elevation_map_visualization/visualizations/MapRegionVisualization.hpp"
 #include "elevation_map_visualization/visualizations/VarianceVisualization.hpp"
 
@@ -35,6 +36,7 @@ ElevationMapVisualization::ElevationMapVisualization(ros::NodeHandle& nodeHandle
   ROS_INFO("Elevation map visualization node started.");
 
   visualizations_.push_back(unique_ptr<VisualizationBase>(new ElevationVisualization(nodeHandle_)));
+  visualizations_.push_back(unique_ptr<VisualizationBase>(new ElevationMeshVisualization(nodeHandle_)));
   visualizations_.push_back(unique_ptr<VisualizationBase>(new MapRegionVisualization(nodeHandle_)));
   visualizations_.push_back(unique_ptr<VisualizationBase>(new VarianceVisualization(nodeHandle_)));
   mapMarkerArrayMessage_.markers.resize(nVisualizations_);
