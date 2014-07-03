@@ -8,7 +8,7 @@
 
 #include <elevation_mapping/sensor_processors/AslamSensorProcessor.hpp>
 
-#include <pcl/filters/passthrough.h>
+#include <pcl/filters/filter.h>
 #include <vector>
 
 namespace elevation_mapping {
@@ -34,18 +34,14 @@ AslamSensorProcessor::~AslamSensorProcessor() {}
 
 bool AslamSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-//	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
-//	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
-//
-//	passThroughFilter.setInputCloud(pointCloud);
-//	passThroughFilter.setFilterFieldName("z");
-//	passThroughFilter.setFilterLimits(sensorParameters_[0], sensorParameters_[1]);
-//	// This makes the point cloud also dense (no NaN points).
-//	passThroughFilter.filter(tempPointCloud);
-//	tempPointCloud.is_dense = true;
-//	pointCloud->swap(tempPointCloud);
-//
-//	ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+
+	originalWidth_ = pointCloud->width;
+	pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices_);
+	tempPointCloud.is_dense = true;
+	pointCloud->swap(tempPointCloud);
+
+	ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
 	return true;
 }
 
@@ -71,41 +67,48 @@ bool AslamSensorProcessor::computeVariances(
 	const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
 	const Eigen::Matrix3f B_r_BS_skew = kindr::linear_algebra::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
-	for (unsigned int j = 0; j < pointCloud->height; ++j)
+	for (unsigned int i = 0; i < pointCloud->size(); ++i)
 	{
-	  for (unsigned int i = 0; i < pointCloud -> width; ++i)
-	  {
-	    // For every point in point cloud.
+	  // For every point in point cloud.
 
-	    // Preparation.
-	    pcl::PointXYZRGB point = pointCloud->at(i, j);
-	    double disparity = sensorParameters_[6]/point.z;
-	    Eigen::Vector3f pointVector(point.x, point.y, point.z); // S_r_SP
-	    float heightVariance = 0.0; // sigma_p
+	  // Preparation.
+	  pcl::PointXYZRGB point = pointCloud->points[i];
+	  double disparity = sensorParameters_[6]/point.z;
+	  Eigen::Vector3f pointVector(point.x, point.y, point.z); // S_r_SP
+	  float heightVariance = 0.0; // sigma_p
 
-	    // Measurement distance.
-	    float measurementDistance = pointVector.norm();
+	  // Measurement distance.
+	  float measurementDistance = pointVector.norm();
 
-	    // Compute sensor covariance matrix (Sigma_S) with sensor model.
-	    float varianceNormal = pow(sensorParameters_[6]/pow(disparity, 2), 2)*((sensorParameters_[1]*disparity + sensorParameters_[4])*sqrt(pow(sensorParameters_[0]*disparity + sensorParameters_[3]-j, 2) + pow(240 - i, 2)) + sensorParameters_[2]);
-	    float varianceLateral = pow(sensorParameters_[5] * measurementDistance, 2);
-	    Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
-	    sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
+	  // Compute sensor covariance matrix (Sigma_S) with sensor model.
+	  float varianceNormal = pow(sensorParameters_[6]/pow(disparity, 2), 2)*((sensorParameters_[1]*disparity + sensorParameters_[4])*sqrt(pow(sensorParameters_[0]*disparity + sensorParameters_[3]-getJ(i), 2) + pow(240 - getI(i), 2)) + sensorParameters_[2]);
+	  float varianceLateral = pow(sensorParameters_[5] * measurementDistance, 2);
+	  Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
+	  sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
-	    // Robot rotation Jacobian (J_q).
-	    const Eigen::Matrix3f C_SB_transpose_times_S_r_SP_skew = kindr::linear_algebra::getSkewMatrixFromVector(Eigen::Vector3f(C_SB_transpose * pointVector));
-	    Eigen::RowVector3f rotationJacobian = P_mul_C_BM_transpose * (C_SB_transpose_times_S_r_SP_skew + B_r_BS_skew);
+	  // Robot rotation Jacobian (J_q).
+	  const Eigen::Matrix3f C_SB_transpose_times_S_r_SP_skew = kindr::linear_algebra::getSkewMatrixFromVector(Eigen::Vector3f(C_SB_transpose * pointVector));
+	  Eigen::RowVector3f rotationJacobian = P_mul_C_BM_transpose * (C_SB_transpose_times_S_r_SP_skew + B_r_BS_skew);
 
-	    // Measurement variance for map (error propagation law).
-	    heightVariance = rotationJacobian * rotationVariance * rotationJacobian.transpose();
-	    heightVariance += sensorJacobian * sensorVariance * sensorJacobian.transpose();
+	  // Measurement variance for map (error propagation law).
+	  heightVariance = rotationJacobian * rotationVariance * rotationJacobian.transpose();
+	  heightVariance += sensorJacobian * sensorVariance * sensorJacobian.transpose();
 
-	    // Copy to list.
-	    variances(i*j) = heightVariance;
-	  }
+	  // Copy to list.
+	  variances(i) = heightVariance;
 	}
 
 	return true;
+}
+
+int AslamSensorProcessor::getI(int index)
+{
+  return indices_[index]/originalWidth_;
+}
+
+int AslamSensorProcessor::getJ(int index)
+{
+  return indices_[index]%originalWidth_;
 }
 
 } /* namespace elevation_mapping */
