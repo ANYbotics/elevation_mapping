@@ -26,7 +26,7 @@ int main(int argc, char** argv)
 
   std::string sensorTypeName;
   elevation_mapping::SensorType sensorType;
-  nodeHandle.param("sensor_type", sensorTypeName, "KINECT");
+  nodeHandle.param("sensor_type", sensorTypeName, std::string("KINECT"));
   if (sensorTypeName == "ASLAM")
     sensorType = elevation_mapping::ASLAM;
   else
