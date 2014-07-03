@@ -42,6 +42,8 @@
 
 namespace elevation_mapping {
 
+enum SensorType{KINECT, ASLAM};
+
 /*!
  * The elevation mapping main class. Coordinates the ROS interfaces, the timing,
  * and the data handling between the other classes.
@@ -50,7 +52,7 @@ namespace elevation_mapping {
 class ElevationMapping
 {
  public:
-  enum SensorType{KINECT, ASLAM};
+
 
   /*!
    * Constructor.
@@ -210,6 +212,7 @@ class ElevationMapping
   ElevationMap map_;
 
   //! Sensor processors.
+  SensorType sensorType_;
   SensorProcessorBase::Ptr sensorProcessor_;
 
   //! Robot motion elevation map updater.

@@ -1,5 +1,6 @@
 <launch>
  	<node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
+ 	     <param name="sensor_type" value="KINECT" />
     	 <rosparam command="load" file="$(find elevation_mapping)/parameters/robots/starleth.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/default.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/primesense_carmine_109_short_range_uncalibrated.yaml" />

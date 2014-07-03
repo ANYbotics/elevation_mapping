@@ -48,7 +48,7 @@ using namespace kindr::rotations::eigen_impl;
 namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType)
-    : nodeHandle_(nodeHandle)
+    : nodeHandle_(nodeHandle), sensorType_(sensorType)
 {
   ROS_INFO("Elevation mapping node started.");
 
@@ -146,8 +146,12 @@ bool ElevationMapping::readParameters()
 
   nodeHandle_.param("base_frame_id", sensorProcessor_->baseFrameId_, string("/robot"));
 
-  ROS_ASSERT(sensorProcessor_->sensorParameters_[0] >= 0.0);
-  ROS_ASSERT(sensorProcessor_->sensorParameters_[1] > sensorProcessor_->sensorParameters_[0]);
+  if(sensorType_ == KINECT)
+  {
+    ROS_ASSERT(sensorProcessor_->sensorParameters_[0] >= 0.0);
+    ROS_ASSERT(sensorProcessor_->sensorParameters_[1] > sensorProcessor_->sensorParameters_[0]);
+  }
+
 
   sensorProcessor_->mapFrameId_ = map_.frameId_;
   sensorProcessor_->transformListenerTimeout_ = maxNoUpdateDuration_;
