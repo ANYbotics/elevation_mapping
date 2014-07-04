@@ -16,6 +16,7 @@
   <build_depend>geometric_shapes</build_depend>
   <build_depend>eigen_stl_containers</build_depend>
   <build_depend>shape_tools</build_depend>
+  <build_depend>shape_msgs</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>elevation_map_msg</run_depend>
   <run_depend>tf</run_depend>
@@ -23,4 +24,5 @@
   <run_depend>geometric_shapes</run_depend>
   <run_depend>eigen_stl_containers</run_depend>
   <run_depend>shape_tools</run_depend>
+  <run_depend>shape_msgs</run_depend>
 </package>

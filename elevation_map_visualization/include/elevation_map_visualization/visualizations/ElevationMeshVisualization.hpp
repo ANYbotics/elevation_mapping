@@ -66,54 +66,8 @@ class ElevationMeshVisualization : public VisualizationBase
    */
   void setColor(std_msgs::ColorRGBA& color, const double elevation, const double variance, const unsigned long colorValue, bool isEmtpyCell);
 
-  //! Height of the cube markers [m].
-  double markerHeight_;
-
-  //! Showing empty cell in visualization.
-  bool showEmptyCells_;
-
   //! Base color for the map visualization.
   std_msgs::ColorRGBA baseColor_;
-
-  //! Color for the empty cells of the map.
-  std_msgs::ColorRGBA emptyCellColor_;
-
-  //! Set colors from map color data.
-  bool isSetColorFromMap_;
-
-  //! Set colors from map variance data.
-  bool isSetColorFromVariance_;
-
-  //! Set colors from map elevation data.
-  bool isSetColorFromHeight_;
-
-  //! Set color saturation from map variance data.
-  bool isSetSaturationFromVariance_;
-
-  //! Set color alpha from map variance data.
-  bool isSetAlphaFromVariance_;
-
-  //! Colors for the lower and upper variance values.
-  std_msgs::ColorRGBA lowerVarianceColor_;
-  std_msgs::ColorRGBA upperVarianceColor_;
-
-  //! Lower and upper value of the variance for mapping from
-  //! the variance data to color properties.
-  double varianceLowerValue_;
-  double varianceUpperValue_;
-
-  //! Lower and upper value of the elevation for mapping from
-  //! the elevation data to color properties.
-  double elevationLowerValue_;
-  double elevationUpperValue_;
-
-  //! Minimum and maximum saturation of the colors.
-  double minMarkerSaturation_;
-  double maxMarkerSaturation_;
-
-  //! Minimum and maximum color alpha values.
-  double minMarkerAlpha_;
-  double maxMarkerAlpha_;
 };
 
 } /* namespace elevation_map_visualization */

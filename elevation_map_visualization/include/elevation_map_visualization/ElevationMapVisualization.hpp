@@ -73,9 +73,6 @@ class ElevationMapVisualization
   //! ROS publisher of the marker array.
   ros::Publisher mapMarkerArrayPublisher_;
 
-  //! Nnumber of visualization layers/modules.
-  const unsigned int nVisualizations_;
-
   //! List of visualization modules, can be separately activated in rviz.
   std::vector<std::unique_ptr<VisualizationBase>> visualizations_;
 

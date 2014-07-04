@@ -30,8 +30,7 @@ using namespace Eigen;
 namespace elevation_map_visualization {
 
 ElevationMapVisualization::ElevationMapVisualization(ros::NodeHandle& nodeHandle)
-    : nodeHandle_(nodeHandle),
-      nVisualizations_(3)
+    : nodeHandle_(nodeHandle)
 {
   ROS_INFO("Elevation map visualization node started.");
 
@@ -39,7 +38,7 @@ ElevationMapVisualization::ElevationMapVisualization(ros::NodeHandle& nodeHandle
   visualizations_.push_back(unique_ptr<VisualizationBase>(new ElevationMeshVisualization(nodeHandle_)));
   visualizations_.push_back(unique_ptr<VisualizationBase>(new MapRegionVisualization(nodeHandle_)));
   visualizations_.push_back(unique_ptr<VisualizationBase>(new VarianceVisualization(nodeHandle_)));
-  mapMarkerArrayMessage_.markers.resize(nVisualizations_);
+  mapMarkerArrayMessage_.markers.resize(visualizations_.size());
 
   readParameters();
 
@@ -68,7 +67,7 @@ bool ElevationMapVisualization::readParameters()
 
 bool ElevationMapVisualization::initialize()
 {
-  for (unsigned int i = 0; i < nVisualizations_; i++)
+  for (unsigned int i = 0; i < visualizations_.size(); i++)
   {
     visualization_msgs::Marker& marker = mapMarkerArrayMessage_.markers.at(i);
     visualizations_.at(i)->initialize(&marker);

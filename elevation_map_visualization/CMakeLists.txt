@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
   geometric_shapes
   shape_tools
   eigen_stl_containers
+  shape_msgs
 )
 
 ## System dependencies are found with CMake's conventions
