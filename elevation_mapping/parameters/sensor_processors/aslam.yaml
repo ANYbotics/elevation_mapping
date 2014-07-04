@@ -1,7 +1,8 @@
 sensor_model_m_2:   0.4850
-sensor_model_m_3:   0.000001936
-sensor_model_q_1:   0.03777
+sensor_model_m_3:   0.000006735
+sensor_model_q_1:   0.03287
 sensor_model_q_2: 399.1046
-sensor_model_q_3:   0.00004329
+sensor_model_q_3:   -0.0001276
 sensor_model_lateral_factor: 0.001376915
 sensor_model_depth_to_disparity_factor: 47.3
+
