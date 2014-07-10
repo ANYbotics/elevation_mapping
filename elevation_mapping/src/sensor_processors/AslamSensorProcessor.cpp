@@ -19,11 +19,11 @@ AslamSensorProcessor::AslamSensorProcessor(tf::TransformListener& transformListe
 	sensorParameterNames_.resize(7);
 	sensorParameters_.resize(7);
 
-	sensorParameterNames_[0] = "sensor_model_m_2";
-	sensorParameterNames_[1] = "sensor_model_m_3";
-	sensorParameterNames_[2] = "sensor_model_q_1";
-	sensorParameterNames_[3] = "sensor_model_q_2";
-	sensorParameterNames_[4] = "sensor_model_q_3";
+	sensorParameterNames_[0] = "sensor_model_p_1";
+	sensorParameterNames_[1] = "sensor_model_p_2";
+	sensorParameterNames_[2] = "sensor_model_p_3";
+	sensorParameterNames_[3] = "sensor_model_p_4";
+	sensorParameterNames_[4] = "sensor_model_p_5";
 	sensorParameterNames_[5] = "sensor_model_lateral_factor";
 	sensorParameterNames_[6] = "sensor_model_depth_to_disparity_factor";
 }
@@ -81,7 +81,7 @@ bool AslamSensorProcessor::computeVariances(
 	  float measurementDistance = pointVector.norm();
 
 	  // Compute sensor covariance matrix (Sigma_S) with sensor model.
-	  float varianceNormal = pow(sensorParameters_[6]/pow(disparity, 2), 2)*((sensorParameters_[1]*disparity + sensorParameters_[4])*sqrt(pow(sensorParameters_[0]*disparity + sensorParameters_[3]-getJ(i), 2) + pow(240 - getI(i), 2)) + sensorParameters_[2]);
+	  float varianceNormal = pow(sensorParameters_[6]/pow(disparity, 2), 2)*((sensorParameters_[4]*disparity + sensorParameters_[1])*sqrt(pow(sensorParameters_[2]*disparity + sensorParameters_[3]-getJ(i), 2) + pow(240 - getI(i), 2)) + sensorParameters_[0]);
 	  float varianceLateral = pow(sensorParameters_[5] * measurementDistance, 2);
 	  Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
 	  sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
