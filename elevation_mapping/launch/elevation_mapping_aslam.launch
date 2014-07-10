@@ -1,0 +1,8 @@
+<launch>
+ 	<node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
+ 	     <param name="sensor_type" value="ASLAM" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/robots/aslam.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/aslam.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/aslam.yaml" />
+    </node>
+</launch>

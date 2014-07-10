@@ -1,0 +1,9 @@
+point_cloud_topic: "/points2"
+robot_pose_topic: "/robot_pose"
+parent_frame_id: "/world"
+base_frame_id: "/cam0"
+robot_pose_cache_size: 200
+track_point_frame_id: "/cam0"
+track_point_x: 0.0
+track_point_y: 0.0
+track_point_z: 0.0

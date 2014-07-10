@@ -24,7 +24,14 @@ int main(int argc, char** argv)
 
   ros::NodeHandle nodeHandle("~");
 
-  elevation_mapping::ElevationMapping elevationMap(nodeHandle);
+  std::string sensorTypeName;
+  elevation_mapping::SensorType sensorType;
+  nodeHandle.param("sensor_type", sensorTypeName, std::string("KINECT"));
+  if (sensorTypeName == "ASLAM")
+    sensorType = elevation_mapping::ASLAM;
+  else
+    sensorType = elevation_mapping::KINECT;
+  elevation_mapping::ElevationMapping elevationMap(nodeHandle, sensorType);
 
   // Spin
   ros::AsyncSpinner spinner(1); // Use n threads

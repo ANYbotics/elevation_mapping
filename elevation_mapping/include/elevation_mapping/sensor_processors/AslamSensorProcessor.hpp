@@ -33,6 +33,14 @@ private:
 			const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
 			const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
 			Eigen::VectorXf& variances);
+
+	//! Helper functions to get i-j indices out of a single index.
+	int getI(int index);
+	int getJ(int index);
+
+	//! Stores 'original' point cloud indices of the cleaned point cloud.
+	std::vector<int> indices_;
+	int originalWidth_;
 };
 
 
