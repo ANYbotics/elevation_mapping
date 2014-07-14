@@ -1,28 +1,16 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(elevation_mapping)
+project(elevation_map_commons)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  elevation_map_commons
-  elevation_map_msg
-  pcl_ros
   roscpp
-  message_filters
-  sensor_msgs
-  std_msgs
-  tf
-  tf_conversions
-  eigen_conversions
-  sm_common
-  sm_timing
 )
 
 ## System dependencies are found with CMake's conventions
-find_package(Boost REQUIRED COMPONENTS system)
-find_package(Kindr REQUIRED)
 find_package(Eigen REQUIRED)
+find_package(Kindr REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -35,9 +23,9 @@ find_package(Eigen REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
     INCLUDE_DIRS include
-#  LIBRARIES elevation_mapping
-    CATKIN_DEPENDS std_msgs sensor_msgs elevation_map_msg
-#  DEPENDS system_lib
+    LIBRARIES ${PROJECT_NAME}
+#   CATKIN_DEPENDS
+    DEPENDS Eigen
 )
 
 ###########
@@ -45,34 +33,30 @@ catkin_package(
 ###########
 
 ## Specify additional locations of header files
-## Your package locations should be listed before other locations
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
-  ${Boost_INCLUDE_DIRS}
+  ${EIGEN_INCLUDE_DIRS}
   ${Kindr_INCLUDE_DIRS}
-  ${Eigen_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
-# add_library(elevation_mapping
-#   src/${PROJECT_NAME}/elevation_mapping.cpp
-# )
-
-## Declare a cpp executable
-add_executable(
-  ${PROJECT_NAME}
-  src/elevation_mapping_node.cpp
-  src/ElevationMapping.cpp
-  src/ElevationMap.cpp
-  src/RobotMotionMapUpdater.cpp
-  src/sensor_processors/SensorProcessorBase.cpp
-  src/sensor_processors/KinectSensorProcessor.cpp
-  src/sensor_processors/AslamSensorProcessor.cpp
+add_library(${PROJECT_NAME}
+   src/ElevationMapBase.cpp
+   src/TransformationMath.cpp
 )
 
-## Specify libraries to link a library or executable target against
-target_link_libraries(
-  ${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
+
+#############
+## Testing ##
+#############
+
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+### Add gtest based cpp test target and link libraries
+#catkin_add_gtest(${PROJECT_NAME}-test test/test_elevation_map_msg.cpp test/TransformationMathTest.cpp)
+#if(TARGET ${PROJECT_NAME}-test)
+#  target_link_libraries(${PROJECT_NAME}-test transformation_math)
+#endif()

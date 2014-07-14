@@ -8,6 +8,9 @@
 
 #pragma once
 
+// Elevation Mapping
+#include <elevation_map_commons/ElevationMapBase.hpp>
+
 // Eigen
 #include <Eigen/Core>
 #include <Eigen/Geometry>
@@ -29,12 +32,14 @@
 // ROS (time)
 #include <ros/ros.h>
 
+using namespace elevation_map_commons;
+
 namespace elevation_mapping {
 
 /*!
  * Elevation map stored as planar grid holding elevation height and variance.
  */
-class ElevationMap
+class ElevationMap : public ElevationMapBase
 {
  public:
 
@@ -49,13 +54,14 @@ class ElevationMap
   virtual ~ElevationMap();
 
   /*!
-   * Set the geometry of the elevation map. Resets the data.
+   * Set the geometry of the elevation map. Resets all the data.
    * @param length the side lengths in x, and y-direction of the elevation map [m].
-   * @param position the position of the elevation map in the map frame [m].
+   * @param position the position of the elevation map in the elevation map frame [m].
    * @param resolution the cell size in [m/cell].
    * @return true if successful.
    */
-  bool setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position, const double& resolution);
+  bool setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position,
+                   const double& resolution);
 
   /*!
    * Add new measurements to the elevation map.
@@ -91,63 +97,10 @@ class ElevationMap
   bool fuseArea(const Eigen::Vector2d& position, const Eigen::Array2d& length);
 
   /*!
-   * Gets a submap from the map. The requested submap is specified with the requested location (usually the center)
-   * and length. The returned position of the submap might be different as the submap might not have the same
-   * length as the requested length due to the borders of the map.
-   * @param[out] submap the data of the submap.
-   * @param[out] submapPosition the position of the submap in the map frame.
-   * @param[out] submapLength the length of the submap.
-   * @param[out] submapBufferSize the buffer size of the submap.
-   * @param[out] requestedIndexInSubmap the index of the requested position in the submap.
-   * @param[in] map the map to take the submap from.
-   * @param[in] requestedSubmapPosition the requested position of the submap.
-   * @param[in] requestedSubmapLength the requested length of the submap.
-   * @return true if successful.
-   */
-  bool getSubmap(Eigen::MatrixXf& submap, Eigen::Vector2d& submapPosition, Eigen::Array2d& submapLength, Eigen::Array2i& submapBufferSize,
-                 Eigen::Array2i& requestedIndexInSubmap, const Eigen::MatrixXf& map,
-                 const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapLength);
-
-  /*!
-   * Relocate the elevation map frame w.r.t. the parent frame. Use this to move
-   * the elevation map boundaries without moving the elevation map data. Takes care
-   * of all the data handling, such that the elevation map is stationary in the parent frame.
-   * @param mapFramePosition the new location of the elevation map frame in the parent frame.
-   * @return true if successful.
-   */
-  bool relocate(const kindr::phys_quant::eigen_impl::Position3D& mapFramePosition);
-
-  /*!
    * Reset all data of the elevation map (data, lengths, resolution etc.)
    * @return true if successful.
    */
   bool reset();
-
-  /*!
-   * Get the side length of the map.
-   * @return side length of the map.
-   */
-  const Eigen::Array2d& getLength();
-
-  /*!
-   * Get the position of the map in the elevation map frame.
-   * @return position of the map in the elevation map frame.
-   */
-  const kindr::phys_quant::eigen_impl::Position3D& getPosition();
-
-  /*!
-   * Get the resolution of the elevation map.
-   * @return resolution of the elevation map in the xy plane [m/cell].
-   */
-  double getResolution();
-
-  /*!
-   * Get the pose of the elevation map frame w.r.t. the parent frame.
-   * @return pose of the elevation map frame w.r.t. the parent frame.
-   */
-  const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& getPose();
-
-  const Eigen::Array2i& getBufferStartIndex();
 
   const Eigen::MatrixXf& getElevationData();
 
@@ -160,8 +113,6 @@ class ElevationMap
   const Eigen::MatrixXf& getRawVarianceData();
 
   const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& getRawColorData();
-
-  Eigen::Array2i getBufferSize();
 
   /*!
    * Gets the time of last map update.
@@ -221,20 +172,6 @@ class ElevationMap
   void resetFusedData();
 
   /*!
-   * Resets a number of columns in the raw elevation map.
-   * @param index the left index for the columns to be reset.
-   * @param nCols the number of columns to reset.
-   */
-  void resetCols(unsigned int index, unsigned int nCols);
-
-  /*!
-   * Resets a number of rows in the raw elevation map.
-   * @param index the upper index for the rows to be reset.
-   * @param nRows the number of rows to reset.
-   */
-  void resetRows(unsigned int index, unsigned int nRows);
-
-  /*!
    * Cumulative distribution function.
    * @param x the argument value.
    * @param mean the mean of the distribution.
@@ -242,21 +179,6 @@ class ElevationMap
    * @return the function value.
    */
   float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
-
-  //! Frame id of the elevation map.
-  std::string frameId_;
-
-  //! Pose of the elevation map frame w.r.t. the parent frame.
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
-
-  //! Map size in x, and y-direction [m].
-  Eigen::Array2d length_;
-
-  //! Map position in the elevation map frame [m].
-  kindr::phys_quant::eigen_impl::Position3D position_;
-
-  //! Map resolution in xy plane [m/cell].
-  double resolution_;
 
   //! Elevation height raw data.
   Eigen::MatrixXf elevationRawData_;
@@ -280,17 +202,11 @@ class ElevationMap
   //! The fused map color data.
   Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorData_;
 
-  //! Circular buffer start indeces.
-  Eigen::Array2i bufferStartIndex_;
-
   //! Time of last map update.
   ros::Time timeOfLastUpdate_;
 
   //! Time of last map fusion.
   ros::Time timeOfLastFusion_;
-
-  //! Mutex lock for structure of the map.
-  boost::recursive_mutex structureMutex_;
 
   //! Mutex lock for map fusion process.
   boost::recursive_mutex fusedDataMutex_;

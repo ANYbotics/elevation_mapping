@@ -410,9 +410,9 @@ bool ElevationMapping::getSubmap(elevation_map_msg::GetSubmap::Request& request,
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
 
   map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
-  map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
-  map_.getSubmap(submapVariance, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getVarianceData(), requestedSubmapPosition, requestedSubmapLength);
-  // TODO Add color for submaps.
+//  map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
+//  map_.getSubmap(submapVariance, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getVarianceData(), requestedSubmapPosition, requestedSubmapLength);
+//  // TODO Add color for submaps.
 //  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength);
 
   response.elevation_map.header.stamp = map_.getTimeOfLastFusion();
