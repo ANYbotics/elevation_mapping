@@ -9,6 +9,7 @@
   <url type="bugtracker">http://github.com/ethz-asl/elevation_mapping/issues</url>
   <author email="pfankhauser@ethz.ch">Peter Fankhauser</author>
   <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>cmake_modules</build_depend>
   <build_depend>roscpp</build_depend>
   <build_depend>message_filters</build_depend>
   <build_depend>pcl_ros</build_depend>

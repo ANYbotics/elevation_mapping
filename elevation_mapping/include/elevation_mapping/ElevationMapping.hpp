@@ -13,7 +13,6 @@
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 #include "elevation_map_msg/ElevationMap.h"
-#include "elevation_map_msg/EigenConversions.hpp"
 #include "elevation_map_msg/GetSubmap.h"
 
 // Eigen

@@ -10,7 +10,7 @@
 // Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
-#include "elevation_map_msg/EigenConversions.hpp"
+#include "elevation_map_msg/MultiArrayToEigenConversions.hpp"
 #include "elevation_map_msg/TransformationMath.hpp"
 #include "elevation_mapping/sensor_processors/KinectSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/AslamSensorProcessor.hpp"

@@ -9,7 +9,7 @@
 #include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
 
 // Elevation Map
-#include "elevation_map_msg/TransformationMath.hpp""
+#include "elevation_map_msg/TransformationMath.hpp"
 
 // ROS
 #include <ros/ros.h>

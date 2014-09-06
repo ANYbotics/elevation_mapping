@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
+  cmake_modules
   roscpp
   std_msgs
   geometry_msgs
@@ -74,15 +75,15 @@ add_library(transformation_math
 )
 
 # Eigen conversions
-add_library(eigen_conversions
-   src/EigenConversions.cpp
+add_library(multi_array_to_eigen_conversions
+   src/MultiArrayToEigenConversions.cpp
 )
 
-target_link_libraries(eigen_conversions
+target_link_libraries(multi_array_to_eigen_conversions
   ${catkin_LIBRARIES}
 )
 
-add_dependencies(eigen_conversions
+add_dependencies(multi_array_to_eigen_conversions
     elevation_map_msg_helpers
 )
 

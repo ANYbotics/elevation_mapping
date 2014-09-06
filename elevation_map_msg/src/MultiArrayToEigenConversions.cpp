@@ -6,7 +6,7 @@
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include "elevation_map_msg/EigenConversions.hpp"
+#include "elevation_map_msg/MultiArrayToEigenConversions.hpp"
 
 // ROS
 #include <ros/ros.h>

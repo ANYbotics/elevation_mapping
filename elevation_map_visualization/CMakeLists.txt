@@ -5,6 +5,7 @@ set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
+  cmake_modules
   roscpp
   tf
   elevation_map_msg
