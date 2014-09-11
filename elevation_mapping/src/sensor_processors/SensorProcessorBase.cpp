@@ -20,7 +20,7 @@ namespace elevation_mapping {
 SensorProcessorBase::SensorProcessorBase(tf::TransformListener& transformListener)
     : transformListener_(transformListener),
       mapFrameId_(""),
-      baseFrameId_("")
+      robotBaseFrameId_("")
 {
 	transformationSensorToMap_.setIdentity();
 	transformListenerTimeout_.fromSec(1.0);
@@ -39,11 +39,7 @@ bool SensorProcessorBase::process(
 	cleanPointCloud(pointCloudClean);
 
 	ros::Time timeStamp;
-#if ROS_VERSION_MINIMUM(1, 10, 0) // Hydro and newer
-	timeStamp.fromNSec(1000.0 * pointCloudClean->header.stamp); // TODO Double check.
-#else
-	timeStamp = pointCloudClean->header.stamp;
-#endif
+	timeStamp.fromNSec(1000 * pointCloudClean->header.stamp);
 
 	if (!updateTransformations(pointCloudClean->header.frame_id, timeStamp)) return false;
 
@@ -64,13 +60,13 @@ bool SensorProcessorBase::updateTransformations(const std::string& sensorFrameId
 		transformListener_.lookupTransform(mapFrameId_, sensorFrameId, timeStamp, transformTf);
 		poseTFToEigen(transformTf, transformationSensorToMap_);
 
-		transformListener_.lookupTransform(baseFrameId_, sensorFrameId, timeStamp, transformTf); // TODO Why wrong direction?
+		transformListener_.lookupTransform(robotBaseFrameId_, sensorFrameId, timeStamp, transformTf); // TODO Why wrong direction?
 		Eigen::Affine3d transform;
 		poseTFToEigen(transformTf, transform);
 		rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
 		translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
 
-		transformListener_.lookupTransform(mapFrameId_, baseFrameId_, timeStamp, transformTf); // TODO Why wrong direction?
+		transformListener_.lookupTransform(mapFrameId_, robotBaseFrameId_, timeStamp, transformTf); // TODO Why wrong direction?
 		poseTFToEigen(transformTf, transform);
 		rotationMapToBase_.setMatrix(transform.rotation().matrix());
 		translationMapToBaseInMapFrame_.toImplementation() = transform.translation();

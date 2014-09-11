@@ -3,11 +3,20 @@ project(elevation_mapping)
 
 set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
 
+# Set the build type.  Options are:
+#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
+#  Debug          : w/ debug symbols, w/o optimization
+#  Release        : w/o debug symbols, w/ optimization
+#  RelWithDebInfo : w/ debug symbols, w/ optimization
+#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
+set(CMAKE_BUILD_TYPE RelWithDebInfo)
+
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  elevation_map_commons
   cmake_modules
-  elevation_map_msg
+  grid_map
+  grid_map_lib
+  grid_map_msg
   pcl_ros
   roscpp
   message_filters
@@ -37,7 +46,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_mapping
-    CATKIN_DEPENDS std_msgs sensor_msgs elevation_map_msg
+    CATKIN_DEPENDS std_msgs sensor_msgs grid_map_msg
 #  DEPENDS system_lib
 )
 

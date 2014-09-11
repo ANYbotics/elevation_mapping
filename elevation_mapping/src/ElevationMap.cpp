@@ -5,12 +5,15 @@
  *      Author: Péter Fankhauser
  *	 Institute: ETH Zurich, Autonomous Systems Lab
  */
+
 #include "elevation_mapping/ElevationMap.hpp"
 
 // Elevation Mapping
 #include "elevation_mapping/ElevationMapFunctors.hpp"
-#include "elevation_map_msg/TransformationMath.hpp"
-#include "elevation_map_msg/ElevationMapMsgHelpers.hpp"
+
+// Grid Map
+#include <grid_map_lib/GridMapMath.hpp>
+#include <grid_map/GridMapMsgHelpers.hpp>
 
 // Math
 #include <math.h>
@@ -25,7 +28,10 @@ using namespace sm::timing;
 
 namespace elevation_mapping {
 
-ElevationMap::ElevationMap()
+ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
+    : nodeHandle_(nodeHandle),
+      rawMap_(vector<string>( { "elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color" })),
+      fusedMap_(vector<string>( { "elevation", "variance", "color" }))
 {
   minVariance_ = 0.0;
   maxVariance_ = 0.0;
@@ -33,7 +39,11 @@ ElevationMap::ElevationMap()
   multiHeightNoise_ = 0.0;
   minHorizontalVariance_ = 0.0;
   maxHorizontalVariance_ = 0.0;
+  // TODO set clear types?
   reset();
+
+  elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMapCircularBuffer>("elevation_map_raw", 1);
+  elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMapCircularBuffer>("elevation_map", 1);
 }
 
 ElevationMap::~ElevationMap()
@@ -41,45 +51,39 @@ ElevationMap::~ElevationMap()
 
 }
 
-bool ElevationMap::setGeometry(const Eigen::Array2d& length, const kindr::phys_quant::eigen_impl::Position3D& position, const double& resolution)
+void ElevationMap::setGeometry(const Eigen::Array2d& length, const double& resolution, const Eigen::Vector2d& position)
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
-  return ElevationMapBase::setGeometry(length, position, resolution);
+  rawMap_.setGeometry(length, resolution, position);
+  fusedMap_.setGeometry(length, resolution, position);
 }
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  #if ROS_VERSION_MINIMUM(1, 10, 0) // Hydro and newer
-    timeOfLastUpdate_.fromNSec(1000.0 * pointCloud->header.stamp); // Double check.
-  #else
-    timeOfLastUpdate_ = pointCloud->header.stamp;
-  #endif
-
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
     auto& point = pointCloud->points[i];
 
     Array2i index;
-    if (!elevation_map_msg::getIndexFromPosition(
-        index, Vector2d(point.x, point.y), length_, position_.vector().head(2), resolution_, getBufferSize(), bufferStartIndex_))
-      continue; // Skip this point if it does not lie within the elevation map
+    Vector2d position(point.x, point.y);
+    if (!rawMap_.getIndex(position, index)) continue; // Skip this point if it does not lie within the elevation map
 
-    auto& elevation = elevationRawData_(index(0), index(1));
-    auto& variance = varianceRawData_(index(0), index(1));
-    auto& horizontalVarianceX = horizontalVarianceRawDataX_(index(0), index(1));
-    auto& horizontalVarianceY = horizontalVarianceRawDataY_(index(0), index(1));
-    auto& color = colorRawData_(index(0), index(1));
+    auto& elevation = rawMap_.at("elevation", index);
+    auto& variance = rawMap_.at("variance", index);
+    auto& horizontalVarianceX = rawMap_.at("horizontal_variance_x", index);
+    auto& horizontalVarianceY = rawMap_.at("horizontal_variance_y", index);
+    auto& color = rawMap_.at("color", index);
     float pointVariance = pointCloudVariances(i);
 
-    if (!elevation_map_msg::isValidCell(elevation, variance))
+    if (!rawMap_.isValid(index))
     {
       // No prior information in elevation map, use measurement.
-      elevation = position_.z() + point.z;
+      elevation = point.z;
       variance = pointVariance;
       horizontalVarianceX = minHorizontalVariance_;
       horizontalVarianceY = minHorizontalVariance_;
-      elevation_map_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      grid_map::transformColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
 
@@ -88,10 +92,10 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     if (mahalanobisDistance < mahalanobisDistanceThreshold_)
     {
       // Fuse measurement with elevation map data.
-      elevation = (variance * (position_.z() + point.z) + pointVariance * elevation) / (variance + pointVariance);
+      elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
       variance =  (pointVariance * variance) / (pointVariance + variance);
       // TODO Add color fusion.
-      elevation_map_msg::copyColorVectorToValue(point.getRGBVector3i(), color);
+      grid_map::transformColorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
 
@@ -105,7 +109,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   }
 
   clean();
-
+  rawMap_.setTimestamp(1000 * pointCloud->header.stamp); // Point cloud stores time in microseconds.
   return true;
 }
 
@@ -114,7 +118,7 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
 {
   boost::recursive_mutex::scoped_lock scopedLock(rawDataMutex_);
 
-  Array2i bufferSize = getBufferSize();
+  const auto& bufferSize = rawMap_.getBufferSize();
 
   if (!(
       (Array2i(varianceUpdate.rows(), varianceUpdate.cols()) == bufferSize).all() &&
@@ -126,11 +130,11 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
     return false;
   }
 
-  varianceRawData_ += varianceUpdate;
-  horizontalVarianceRawDataX_ += horizontalVarianceUpdateX;
-  horizontalVarianceRawDataY_ += horizontalVarianceUpdateY;
+  rawMap_.get("variance") += varianceUpdate;
+  rawMap_.get("horizontal_variance_x") += horizontalVarianceUpdateX;
+  rawMap_.get("horizontal_variance_y") += horizontalVarianceUpdateY;
   clean();
-  timeOfLastUpdate_ = time;
+  rawMap_.setTimestamp(time.toNSec());
 
   return true;
 }
@@ -139,7 +143,7 @@ bool ElevationMap::fuseAll()
 {
   ROS_DEBUG("Requested to fuse entire elevation map.");
   boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-  return fuse(Array2i(0, 0), getBufferSize());
+  return fuse(Array2i(0, 0), fusedMap_.getBufferSize());
 }
 
 bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2d& length)
@@ -157,13 +161,12 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
 
   boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
 
-  elevation_map_msg::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength,
-                                          requestedIndexInSubmap, position, length, length_, position_.vector().head(2),
-                                          resolution_, getBufferSize(), bufferStartIndex_);
+  grid_map_lib::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, position, length,
+                                     fusedMap_.getLength(), fusedMap_.getPosition(), fusedMap_.getResolution(), fusedMap_.getBufferSize(),
+                                     fusedMap_.getBufferStartIndex()); // TODO ok as fused map?
 
   return fuse(topLeftIndex, submapBufferSize);
 }
-
 
 bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size)
 {
@@ -338,35 +341,81 @@ bool ElevationMap::reset()
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
-  ElevationMapBase::resetAll();
+  rawMap_.clearAll();
+  fusedMap_.clearAll();
   return true;
 }
 
-const ros::Time& ElevationMap::getTimeOfLastUpdate()
+void ElevationMap::move(const Eigen::Vector2d& position)
 {
-  return timeOfLastUpdate_;
+  rawMap_.move(position);
+  fusedMap_.move(position);
 }
 
-const ros::Time& ElevationMap::getTimeOfLastFusion()
+bool ElevationMap::publishRawElevationMap()
+{
+  if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
+
+  grid_map_msg::GridMapCircularBuffer message;
+  rawMap_.toMessage(message);
+  elevationMapRawPublisher_.publish(message);
+
+  ROS_DEBUG("Elevation map raw has been published.");
+  return true;
+}
+
+bool ElevationMap::publishElevationMap()
+{
+  if (elevationMapFusedPublisher_.getNumSubscribers() < 1) return false;
+
+  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
+
+//  elevation_map_msg::ElevationMap elevationMapMessage;
+//  elevationMapMessage.header.stamp = map_.getTimeOfLastFusion();
+//  addHeaderDataToElevationMessage(elevationMapMessage);
+
+//  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
+//  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getVarianceData(), elevationMapMessage.variance);
+//  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getColorData(), elevationMapMessage.color);
+
+//  elevationMapPublisher_.publish(elevationMapMessage);
+
+  ROS_DEBUG("Elevation map (fused) has been published.");
+
+  return true;
+}
+
+grid_map::GridMap& ElevationMap::getRawGridMap()
+{
+  return rawMap_;
+}
+
+grid_map::GridMap& ElevationMap::getFusedGridMap()
+{
+  return fusedMap_;
+}
+
+ros::Time ElevationMap::getTimeOfLastUpdate()
+{
+  return ros::Time().fromNSec(rawMap_.getTimestamp());
+}
+
+ros::Time ElevationMap::getTimeOfLastFusion()
 {
   boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-  return timeOfLastFusion_;
+  return ros::Time().fromNSec(fusedMap_.getTimestamp());
 }
 
-bool ElevationMap::getDataPointPositionInParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& positionInParentFrame)
+const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& ElevationMap::getPose()
 {
-  double height = elevationRawData_(index(0), index(1));
-  if(std::isnan(height)) return false;
+  return pose_;
+}
 
-  Vector2d positionInGrid;
-  elevation_map_msg::getPositionFromIndex(positionInGrid, index, length_, position_.vector().head(2), resolution_, getBufferSize(), bufferStartIndex_);
-
-  positionInParentFrame << positionInGrid.x(),
-                           positionInGrid.y(),
-                           height;
-
-  positionInParentFrame = pose_.transform(positionInParentFrame);
-
+bool ElevationMap::getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& position)
+{
+  kindr::phys_quant::eigen_impl::Position3D positionInGridFrame;
+  if (!rawMap_.getPosition3d("elevation", index, positionInGridFrame.vector())) return false;
+  position = pose_.transform(positionInGridFrame);
   return true;
 }
 
@@ -383,52 +432,28 @@ boost::recursive_mutex& ElevationMap::getRawDataMutex()
 bool ElevationMap::clean()
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
-  varianceRawData_ = varianceRawData_.unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
-  horizontalVarianceRawDataX_ = horizontalVarianceRawDataX_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
-  horizontalVarianceRawDataY_ = horizontalVarianceRawDataY_.unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
+  rawMap_.get("variance") = rawMap_.get("variance").unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
+  rawMap_.get("horizontal_variance_x") = rawMap_.get("horizontal_variance_x").unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
+  rawMap_.get("horizontal_variance_y") = rawMap_.get("horizontal_variance_y").unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
   return true;
 }
 
 void ElevationMap::resetFusedData()
 {
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
-  elevationData_.setConstant(NAN);
-  varianceData_.setConstant(numeric_limits<float>::infinity());
-  colorData_.setConstant(0);
-  timeOfLastFusion_.fromSec(0.0);
+  fusedMap_.clearAll();
+  fusedMap_.setTimestamp(0);
 }
 
-const Eigen::MatrixXf& ElevationMap::getElevationData()
+void ElevationMap::setFrameId(const std::string& frameId)
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-  return elevationData_;
+  rawMap_.setFrameId(frameId);
+  fusedMap_.setFrameId(frameId);
 }
 
-const Eigen::MatrixXf& ElevationMap::getVarianceData()
+const std::string& ElevationMap::getFrameId()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-  return varianceData_;
-}
-
-const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getColorData()
-{
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-  return colorData_;
-}
-
-const Eigen::MatrixXf& ElevationMap::getRawElevationData()
-{
-  return elevationRawData_;
-}
-
-const Eigen::MatrixXf& ElevationMap::getRawVarianceData()
-{
-  return varianceRawData_;
-}
-
-const Eigen::Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic>& ElevationMap::getRawColorData()
-{
-  return colorRawData_;
+  return rawMap_.getFrameId();
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)

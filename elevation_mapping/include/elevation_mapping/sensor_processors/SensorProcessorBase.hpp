@@ -135,8 +135,8 @@ public:
   //! TF frame id of the map.
   std::string mapFrameId_;
 
-  //! TF frame id of the base.
-  std::string baseFrameId_;
+  //! TF frame id of the robot base.
+  std::string robotBaseFrameId_;
 
   // TODO This could be stored as std::map.
   //! Sensor parameters. Initialized by ElevationMapping friend class.

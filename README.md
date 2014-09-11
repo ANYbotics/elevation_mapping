@@ -8,7 +8,7 @@ This is a collection of [ROS] packages developed for local elevation mapping wit
 
 The Robot-Centric Elevation Mapping packages have been tested under ROS Groovy and Ubuntu 13.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
-**Author: Peter Fankhauser, pfankhauser@ethz.ch<br />
+**Author: Péter Fankhauser, pfankhauser@ethz.ch<br />
 Affiliation: Autonomous Systems Lab, ETH Zurich**
 
 
