@@ -8,7 +8,7 @@
 
 #pragma once
 
-// Grid Map
+// Grid Mapo
 #include <grid_map/GridMap.hpp>
 
 // Eigen
@@ -230,11 +230,11 @@ class ElevationMap
   ros::Publisher elevationMapRawPublisher_;
   ros::Publisher elevationMapFusedPublisher_;
 
-  //! Mutex lock for map fusion process.
-  boost::recursive_mutex fusedDataMutex_;
+  //! Mutex lock for fused map.
+  boost::recursive_mutex fusedMapMutex_;
 
-  //! Mutex lock for raw data handling.
-  boost::recursive_mutex rawDataMutex_;
+  //! Mutex lock for raw map.
+  boost::recursive_mutex rawMapMutex_;
 
   //! Parameters. Are set through the ElevationMapping class.
   double minVariance_;

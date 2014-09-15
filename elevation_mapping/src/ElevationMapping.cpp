@@ -13,8 +13,7 @@
 #include "elevation_mapping/sensor_processors/AslamSensorProcessor.hpp"
 
 // Grid Map
-#include "grid_map_msg/GridMap.h"
-#include "grid_map_msg/GridMapCircularBuffer.h"
+#include <grid_map_msg/GridMap.h>
 
 //PCL
 #include <pcl/conversions.h>
@@ -248,7 +247,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
   resetMapUpdateTimer();
 }
 
-bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response&)
+bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
@@ -313,43 +312,22 @@ bool ElevationMapping::updateMapLocation()
 
 bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, grid_map_msg::GetGridMap::Response& response)
 {
-  // Request
-//  Vector2d requestedSubmapPosition(request.positionX, request.positionY);
-//  Array2d requestedSubmapLength(request.lengthInX, request.lengthInY);
-//
-//  ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
-//
-//  // Response
-//  MatrixXf submapElevation, submapVariance, submapColor;
-//  Vector2d submapPosition;
-//  Array2d submapLength;
-//  Array2i submapBufferSize;
-//  Array2i requestedIndexInSubmap;
-//
-//  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-//
-//  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
-//  map_.getSubmap(submapElevation, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getElevationData(), requestedSubmapPosition, requestedSubmapLength);
-//  map_.getSubmap(submapVariance, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getVarianceData(), requestedSubmapPosition, requestedSubmapLength);
-//  // TODO Add color for submaps.
-//  map_.getSubmap(submapColor, submapPosition, submapLength, submapBufferSize, requestedIndexInSubmap, map_.getColorData(), requestedSubmapPosition, requestedSubmapLength);
+  Vector2d requestedSubmapPosition(request.positionX, request.positionY);
+  Array2d requestedSubmapLength(request.lengthX, request.lengthY);
+  ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
 
-//  response.elevation_map.header.stamp = map_.getTimeOfLastFusion();
-//  response.elevation_map.header.frame_id = map_.frameId_;
-//  response.elevation_map.lengthInX = submapLength(0);
-//  response.elevation_map.lengthInY = submapLength(1);
-//  response.elevation_map.position.x = submapPosition.x();
-//  response.elevation_map.position.y = submapPosition.y();
-//  response.elevation_map.resolution = map_.getResolution();
-//  response.elevation_map.outerStartIndex = 0;
-//  response.elevation_map.innerStartIndex = 0;
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
 
-//  elevation_map_msg::matrixEigenToMultiArrayMessage(submapElevation, response.elevation_map.elevation);
-//  elevation_map_msg::matrixEigenToMultiArrayMessage(submapVariance, response.elevation_map.variance);
+  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
 
+  bool isSuccess;
+  Array2i index;
+  grid_map::GridMap subMap = map_.getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
+  scopedLock.unlock();
+
+  subMap.toMessage(response.gridMap);
   ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
-
-  return true;
+  return isSuccess;
 }
 
 void ElevationMapping::resetMapUpdateTimer()

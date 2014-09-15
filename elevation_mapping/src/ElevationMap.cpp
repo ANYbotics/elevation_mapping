@@ -14,6 +14,7 @@
 // Grid Map
 #include <grid_map_lib/GridMapMath.hpp>
 #include <grid_map/GridMapMsgHelpers.hpp>
+#include <grid_map_lib/SubmapIterator.hpp>
 
 // Math
 #include <math.h>
@@ -30,8 +31,8 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_(vector<string>( { "elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color" })),
-      fusedMap_(vector<string>( { "elevation", "variance", "color" }))
+      rawMap_(vector<string>({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color"})),
+      fusedMap_(vector<string>({"elevation", "variance", "color"}))
 {
   minVariance_ = 0.0;
   maxVariance_ = 0.0;
@@ -39,11 +40,12 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   multiHeightNoise_ = 0.0;
   minHorizontalVariance_ = 0.0;
   maxHorizontalVariance_ = 0.0;
-  // TODO set clear types?
+  rawMap_.setClearTypes(vector<string>({"elevation", "variance"}));
+  fusedMap_.setClearTypes(vector<string>({"elevation", "variance"}));
   reset();
 
-  elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMapCircularBuffer>("elevation_map_raw", 1);
-  elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMapCircularBuffer>("elevation_map", 1);
+  elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_map_raw", 1);
+  elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_map", 1);
 }
 
 ElevationMap::~ElevationMap()
@@ -53,10 +55,11 @@ ElevationMap::~ElevationMap()
 
 void ElevationMap::setGeometry(const Eigen::Array2d& length, const double& resolution, const Eigen::Vector2d& position)
 {
-  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
-  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   rawMap_.setGeometry(length, resolution, position);
   fusedMap_.setGeometry(length, resolution, position);
+  ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getBufferSize()(0) << " rows and "  << rawMap_.getBufferSize()(1) << " columns.");
 }
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
@@ -67,7 +70,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
     Array2i index;
     Vector2d position(point.x, point.y);
-    if (!rawMap_.getIndex(position, index)) continue; // Skip this point if it does not lie within the elevation map
+    if (!rawMap_.getIndex(position, index)) continue; // Skip this point if it does not lie within the elevation map.
 
     auto& elevation = rawMap_.at("elevation", index);
     auto& variance = rawMap_.at("variance", index);
@@ -83,7 +86,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       variance = pointVariance;
       horizontalVarianceX = minHorizontalVariance_;
       horizontalVarianceY = minHorizontalVariance_;
-      grid_map::transformColorVectorToValue(point.getRGBVector3i(), color);
+      grid_map::colorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
 
@@ -95,12 +98,12 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
       variance =  (pointVariance * variance) / (pointVariance + variance);
       // TODO Add color fusion.
-      grid_map::transformColorVectorToValue(point.getRGBVector3i(), color);
+      grid_map::colorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
 
     // Add noise to cells which have ignored lower values,
-    // such that outliers and moving objects are removed
+    // such that outliers and moving objects are removed.
     variance += multiHeightNoise_;
 
     // Horizontal variances are reset.
@@ -116,7 +119,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX,
                           Eigen::MatrixXf horizontalVarianceUpdateY, const ros::Time& time)
 {
-  boost::recursive_mutex::scoped_lock scopedLock(rawDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
 
   const auto& bufferSize = rawMap_.getBufferSize();
 
@@ -142,7 +145,7 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
 bool ElevationMap::fuseAll()
 {
   ROS_DEBUG("Requested to fuse entire elevation map.");
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
   return fuse(Array2i(0, 0), fusedMap_.getBufferSize());
 }
 
@@ -159,11 +162,11 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
   Array2d submapLength;
   Array2i requestedIndexInSubmap;
 
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   grid_map_lib::getSubmapInformation(topLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, position, length,
-                                     fusedMap_.getLength(), fusedMap_.getPosition(), fusedMap_.getResolution(), fusedMap_.getBufferSize(),
-                                     fusedMap_.getBufferStartIndex()); // TODO ok as fused map?
+                                     rawMap_.getLength(), rawMap_.getPosition(), rawMap_.getResolution(), rawMap_.getBufferSize(),
+                                     rawMap_.getBufferStartIndex());
 
   return fuse(topLeftIndex, submapBufferSize);
 }
@@ -171,176 +174,129 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
 bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size)
 {
   ROS_DEBUG("Fusing elevation map...");
-//
-//  // Nothing to do.
-//  if (size.any() == 0) return false;
-//
-//  // Initializations.
-//  string timerId = "map_fusion_timer";
-//  Timer timer(timerId, true);
-//
-//  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-//
-//  // Copy raw elevation map data for safe multi-threading.
-//  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
-//  MatrixXf elevationRawDataCopy(elevationRawData_);
-//  MatrixXf varianceRawDataCopy(varianceRawData_);
-//  MatrixXf horizontalVarianceRawDataXCopy(horizontalVarianceRawDataX_);
-//  MatrixXf horizontalVarianceRawDataYCopy(horizontalVarianceRawDataY_);
-//  Matrix<unsigned long, Eigen::Dynamic, Eigen::Dynamic> colorRawDataCopy(colorRawData_);
-//  ros::Time timeOfLastUpdateCopy(timeOfLastUpdate_);
-//  scopedLockForRawData.unlock();
-//
-//  // Check if there is the need to reset out-dated data.
-//  if (timeOfLastFusion_ != timeOfLastUpdateCopy)
-//  {
-//    resetFusedData();
-//  }
-//
-//  Array2i index;
-//
-//  // For each cell in requested area.
-//  for (Array2i areaIndex = Array2i::Zero();
-//      elevation_map_msg::incrementIndexForSubmap(areaIndex, index, topLeftIndex, size, getBufferSize(),
-//                                                 bufferStartIndex_);)
-//  {
-//    if (timer.isTiming()) timer.stop();
-//    timer.start();
-//
-//    // Iteration parameters.
-//    unsigned int i = index[0];
-//    unsigned int j = index[1];
-//
-//    // Check if fusion for this cell has already been done earlier.
-//    if (!std::isnan(elevationData_(i, j))) continue;
-//
-//    if (std::isnan(elevationRawDataCopy(i, j)) ||
-//        std::isinf(varianceRawDataCopy(i, j)) ||
-//        std::isinf(horizontalVarianceRawDataXCopy(i, j)) ||
-//        std::isinf(horizontalVarianceRawDataYCopy(i, j)))
-//    {
-//      // This is an empty cell (hole in the map).
-//      continue;
-//    }
-//
-//    // Size of submap (2 sigma bound). TODO Add minimum submap size?
-//    Array2d requestedSubmapLength = 4.0 * Array2d(horizontalVarianceRawDataXCopy(i, j), horizontalVarianceRawDataYCopy(i, j)).sqrt();
-//
-//    // Requested position (center) of submap in map.
-//    Vector2d requestedSubmapPosition;
-//    elevation_map_msg::getPositionFromIndex(requestedSubmapPosition, Array2i(i, j), length_, position_.vector().head(2),
-//                                            resolution_, getBufferSize(), bufferStartIndex_);
-//
-//    // Get submap data.
-//    MatrixXf elevationSubmap, variancesSubmap, horizontalVariancesXSubmap, horizontalVariancesYSubmap;
-//    Vector2d submapPosition;
-//    Array2d submapLength;
-//    Array2i submapBufferSize;
-//    Array2i requestedIndex;
-//
-//    getSubmap(elevationSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, elevationRawDataCopy, requestedSubmapPosition, requestedSubmapLength);
-//    getSubmap(variancesSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, varianceRawDataCopy, requestedSubmapPosition, requestedSubmapLength);
-//    getSubmap(horizontalVariancesXSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, horizontalVarianceRawDataXCopy, requestedSubmapPosition, requestedSubmapLength);
-//    getSubmap(horizontalVariancesYSubmap, submapPosition, submapLength, submapBufferSize, requestedIndex, horizontalVarianceRawDataYCopy, requestedSubmapPosition, requestedSubmapLength);
-//
-//    // Prepare data fusion.
-//    ArrayXf means, variances, weights;
-//    int maxNumberOfCellsToFuse = submapBufferSize.prod();
-//    means.resize(maxNumberOfCellsToFuse);
-//    variances.resize(maxNumberOfCellsToFuse);
-//    weights.resize(maxNumberOfCellsToFuse);
-//
-//    // Position of center index in submap.
-//    Vector2d centerInSubmap;
-//    elevation_map_msg::getPositionFromIndex(centerInSubmap, requestedIndex, submapLength, Vector2d::Zero(), resolution_, submapBufferSize,
-//                                                 Array2i(0, 0));
-//
-//    unsigned int n = 0;
-//
-//    // For each cell in submap.
-//    for (unsigned int p = 0; p < elevationSubmap.rows(); ++p)
-//    {
-//      for (unsigned int q = 0; q < elevationSubmap.cols(); ++q)
-//      {
-//        if (std::isnan(elevationSubmap(p, q)) ||
-//            std::isinf(variancesSubmap(p, q)) ||
-//            std::isinf(horizontalVariancesXSubmap(p, q)) ||
-//            std::isinf(horizontalVariancesYSubmap(p, q)))
-//        {
-//          // Empty cell in submap (cannot be center cell because we checked above).
-//          continue;
-//        }
-//
-//        means[n] = elevationSubmap(p, q);
-//        variances[n] = variancesSubmap(p, q);
-//
-//        // Compute weight from probability.
-//        Vector2d positionInSubmap;
-//        elevation_map_msg::getPositionFromIndex(positionInSubmap, Array2i(p, q),
-//                                                     submapLength, Vector2d::Zero(), resolution_,
-//                                                     submapBufferSize, Array2i(0, 0));
-//
-//        Vector2d distanceToCenter = (positionInSubmap - centerInSubmap).cwiseAbs();
-//
-//        float probabilityX =
-//              cumulativeDistributionFunction(distanceToCenter.x() + resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q)))
-//            - cumulativeDistributionFunction(distanceToCenter.x() - resolution_ / 2.0, 0.0, sqrt(horizontalVariancesXSubmap(p, q)));
-//        float probabilityY =
-//              cumulativeDistributionFunction(distanceToCenter.y() + resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q)))
-//            - cumulativeDistributionFunction(distanceToCenter.y() - resolution_ / 2.0, 0.0, sqrt(horizontalVariancesYSubmap(p, q)));
-//
-//        weights[n] = probabilityX * probabilityY;
-//
-//        n++;
-//      }
-//    }
-//
-//    if (n == 0)
-//    {
-//      // Nothing to fuse.
-//      elevationData_(i, j) = elevationRawDataCopy(i, j);
-//      varianceData_(i, j) = varianceRawDataCopy(i, j);
-//      colorData_(i, j) = colorRawDataCopy(i, j);
-//      continue;
-//    }
-//
-//    // Fuse.
-//    means.conservativeResize(n);
-//    variances.conservativeResize(n);
-//    weights.conservativeResize(n);
-//
-//    float mean = (weights * means).sum() / weights.sum();
-//    float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
-//
-//    if (!(std::isfinite(variance) && std::isfinite(mean)))
-//    {
-//      ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
-//      continue;
-//    }
-//
-//    // Add to fused map.
-//    elevationData_(i, j) = mean;
-//    varianceData_(i, j) = variance;
-//
-//    // TODO Add fusion of colors.
-//    colorData_(i, j) = colorRawDataCopy(i, j);
-//
-//    timer.stop();
-//  }
-//
-//  timeOfLastFusion_ = timeOfLastUpdateCopy;
-//
-//  ROS_INFO("Elevation map has been fused in %f s.", Timing::getTotalSeconds(timerId));
-//  ROS_DEBUG("Mean: %f s, Min: %f s, Max: %f s.", Timing::getMeanSeconds(timerId), Timing::getMinSeconds(timerId), Timing::getMaxSeconds(timerId));
-//  Timing::reset(timerId);
+
+  // Nothing to do.
+  if (size.any() == 0) return false;
+
+  // Initializations.
+  string timerId = "map_fusion_timer";
+  Timer timer(timerId, true);
+
+  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
+
+  // Copy raw elevation map data for safe multi-threading.
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+  auto rawMapCopy = rawMap_;
+  scopedLockForRawData.unlock();
+
+  // Check if there is the need to reset out-dated data.
+  if (fusedMap_.getTimestamp() != rawMapCopy.getTimestamp()) resetFusedData();
+
+  // For each cell in requested area.
+  for (grid_map_lib::SubmapIterator areaIterator(rawMapCopy, topLeftIndex, size); !areaIterator.isPassedEnd(); ++areaIterator) {
+    if (timer.isTiming()) timer.stop();
+    timer.start();
+
+    // Check if fusion for this cell has already been done earlier.
+    if (fusedMap_.isValid(*areaIterator)) continue;
+
+    if (!rawMapCopy.isValid(*areaIterator)) {
+      // This is an empty cell (hole in the map).
+      continue;
+    }
+
+    // Size of submap (2 sigma bound). TODO Add minimum/maximum submap size?
+    Array2d submapLength = 4.0 * Array2d(rawMapCopy.at("horizontal_variance_x", *areaIterator), rawMapCopy.at("horizontal_variance_y", *areaIterator)).sqrt();
+
+    // Requested position (center) of submap in map.
+    Vector2d submapPosition;
+    rawMapCopy.getPosition(*areaIterator, submapPosition);
+
+    Array2i submapTopLeftIndex, submapBufferSize, requestedIndexInSubmap;
+
+    grid_map_lib::getSubmapInformation(submapTopLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, submapPosition, submapLength,
+                         rawMapCopy.getLength(), rawMapCopy.getPosition(), rawMapCopy.getResolution(), rawMapCopy.getBufferSize(), rawMapCopy.getBufferStartIndex());
+
+    // Prepare data fusion.
+    ArrayXf means, variances, weights;
+    int maxNumberOfCellsToFuse = submapBufferSize.prod();
+    means.resize(maxNumberOfCellsToFuse);
+    variances.resize(maxNumberOfCellsToFuse);
+    weights.resize(maxNumberOfCellsToFuse);
+
+    // For each cell in submap.
+    size_t i = 0;
+    for (grid_map_lib::SubmapIterator submapIterator(rawMapCopy, submapTopLeftIndex, submapBufferSize); !submapIterator.isPassedEnd(); ++submapIterator) {
+      if (!rawMapCopy.isValid(*submapIterator)) {
+        // Empty cell in submap (cannot be center cell because we checked above).
+        continue;
+      }
+
+      means[i] = rawMapCopy.at("elevation", *submapIterator);
+      variances[i] = rawMapCopy.at("variance", *submapIterator);
+
+      // Compute weight from probability.
+      Vector2d position;
+      rawMapCopy.getPosition(*submapIterator, position);
+
+      Vector2d distanceToCenter = (position - submapPosition).cwiseAbs();
+
+      float probabilityX =
+            cumulativeDistributionFunction(distanceToCenter.x() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *submapIterator)))
+          - cumulativeDistributionFunction(distanceToCenter.x() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *submapIterator)));
+      float probabilityY =
+            cumulativeDistributionFunction(distanceToCenter.y() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *submapIterator)))
+          - cumulativeDistributionFunction(distanceToCenter.y() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *submapIterator)));
+
+      weights[i] = probabilityX * probabilityY;
+      i++;
+    }
+
+    if (i == 0) {
+      // Nothing to fuse.
+      fusedMap_.at("elevation", *areaIterator) = rawMapCopy.at("elevation", *areaIterator);
+      fusedMap_.at("variance", *areaIterator) = rawMapCopy.at("variance", *areaIterator);
+      fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
+      continue;
+    }
+
+    // Fuse.
+    means.conservativeResize(i);
+    variances.conservativeResize(i);
+    weights.conservativeResize(i);
+
+    float mean = (weights * means).sum() / weights.sum();
+    float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
+
+    if (!(std::isfinite(variance) && std::isfinite(mean)))
+    {
+      ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
+      continue;
+    }
+
+    // Add to fused map.
+    fusedMap_.at("elevation", *areaIterator) = mean;
+    fusedMap_.at("variance", *areaIterator) = variance;
+
+    // TODO Add fusion of colors.
+    fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
+
+    timer.stop();
+  }
+
+  fusedMap_.setTimestamp(rawMapCopy.getTimestamp());
+
+  ROS_INFO("Elevation map has been fused in %f s.", Timing::getTotalSeconds(timerId));
+  ROS_DEBUG("Mean: %f s, Min: %f s, Max: %f s.", Timing::getMeanSeconds(timerId), Timing::getMinSeconds(timerId), Timing::getMaxSeconds(timerId));
+  Timing::reset(timerId);
 
   return true;
 }
 
 bool ElevationMap::reset()
 {
-  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
-  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   rawMap_.clearAll();
   fusedMap_.clearAll();
   return true;
@@ -348,18 +304,21 @@ bool ElevationMap::reset()
 
 void ElevationMap::move(const Eigen::Vector2d& position)
 {
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   rawMap_.move(position);
-  fusedMap_.move(position);
+  scopedLockForRawData.unlock();
+
+  // Do not move fused map if fusion is in process.
+  boost::recursive_mutex::scoped_try_lock scopedLockForFusedData(fusedMapMutex_);
+  if (scopedLockForFusedData.owns_lock()) fusedMap_.move(position);
 }
 
 bool ElevationMap::publishRawElevationMap()
 {
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
-
-  grid_map_msg::GridMapCircularBuffer message;
+  grid_map_msg::GridMap message;
   rawMap_.toMessage(message);
   elevationMapRawPublisher_.publish(message);
-
   ROS_DEBUG("Elevation map raw has been published.");
   return true;
 }
@@ -367,21 +326,11 @@ bool ElevationMap::publishRawElevationMap()
 bool ElevationMap::publishElevationMap()
 {
   if (elevationMapFusedPublisher_.getNumSubscribers() < 1) return false;
-
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
-
-//  elevation_map_msg::ElevationMap elevationMapMessage;
-//  elevationMapMessage.header.stamp = map_.getTimeOfLastFusion();
-//  addHeaderDataToElevationMessage(elevationMapMessage);
-
-//  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getElevationData(), elevationMapMessage.elevation);
-//  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getVarianceData(), elevationMapMessage.variance);
-//  elevation_map_msg::matrixEigenToMultiArrayMessage(map_.getColorData(), elevationMapMessage.color);
-
-//  elevationMapPublisher_.publish(elevationMapMessage);
-
+  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
+  grid_map_msg::GridMap message;
+  fusedMap_.toMessage(message);
+  elevationMapFusedPublisher_.publish(message);
   ROS_DEBUG("Elevation map (fused) has been published.");
-
   return true;
 }
 
@@ -402,7 +351,7 @@ ros::Time ElevationMap::getTimeOfLastUpdate()
 
 ros::Time ElevationMap::getTimeOfLastFusion()
 {
-  boost::recursive_mutex::scoped_lock scopedLock(fusedDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
   return ros::Time().fromNSec(fusedMap_.getTimestamp());
 }
 
@@ -421,17 +370,17 @@ bool ElevationMap::getPosition3dInRobotParentFrame(const Eigen::Array2i& index, 
 
 boost::recursive_mutex& ElevationMap::getFusedDataMutex()
 {
-  return fusedDataMutex_;
+  return fusedMapMutex_;
 }
 
 boost::recursive_mutex& ElevationMap::getRawDataMutex()
 {
-  return rawDataMutex_;
+  return rawMapMutex_;
 }
 
 bool ElevationMap::clean()
 {
-  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   rawMap_.get("variance") = rawMap_.get("variance").unaryExpr(VarianceClampOperator<double>(minVariance_, maxVariance_));
   rawMap_.get("horizontal_variance_x") = rawMap_.get("horizontal_variance_x").unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
   rawMap_.get("horizontal_variance_y") = rawMap_.get("horizontal_variance_y").unaryExpr(VarianceClampOperator<double>(minHorizontalVariance_, maxHorizontalVariance_));
@@ -440,7 +389,7 @@ bool ElevationMap::clean()
 
 void ElevationMap::resetFusedData()
 {
-  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedDataMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   fusedMap_.clearAll();
   fusedMap_.setTimestamp(0);
 }
