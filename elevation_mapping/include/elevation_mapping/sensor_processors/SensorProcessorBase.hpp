@@ -24,7 +24,7 @@
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 
 // STL
-#include <vector>
+#include <unordered_map>
 #include <string>
 #include <memory>
 
@@ -44,9 +44,10 @@ public:
 
   /*!
    * Constructor.
+   * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-	SensorProcessorBase(tf::TransformListener& transformListener);
+	SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
 
 	/*!
 	 * Destructor.
@@ -72,6 +73,12 @@ public:
 	friend class ElevationMapping;
 
  protected:
+
+  /*!
+   * Reads and verifies the parameters.
+   * @return true if successful.
+   */
+  virtual bool readParameters() = 0;
 
   /*!
    * Cleans the point cloud.
@@ -111,6 +118,9 @@ public:
                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
                            const std::string& targetFrame);
 
+  //! ROS nodehandle.
+  ros::NodeHandle& nodeHandle_;
+
   //! TF transform listener.
   tf::TransformListener& transformListener_;
 
@@ -138,13 +148,8 @@ public:
   //! TF frame id of the robot base.
   std::string robotBaseFrameId_;
 
-  // TODO This could be stored as std::map.
-  //! Sensor parameters. Initialized by ElevationMapping friend class.
-  std::vector<double> sensorParameters_;
-
-  //! Sensor parameter names. Must be initialized by derived sensor processor class.
-  std::vector<std::string> sensorParameterNames_;
-
+  //! Sensor parameters.
+  std::unordered_map<std::string, double> sensorParameters_;
 };
 
 } /* namespace elevation_mapping */

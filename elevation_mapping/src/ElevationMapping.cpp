@@ -10,7 +10,7 @@
 // Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/sensor_processors/KinectSensorProcessor.hpp"
-#include "elevation_mapping/sensor_processors/AslamSensorProcessor.hpp"
+#include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 
 // Grid Map
 #include <grid_map_msg/GridMap.h>
@@ -43,26 +43,17 @@ using namespace kindr::rotations::eigen_impl;
 
 namespace elevation_mapping {
 
-ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType)
+ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       map_(nodeHandle)
 {
   ROS_INFO("Elevation mapping node started.");
 
-  //Initialize sensor processor
-  switch(sensorType)
-  {
-  case KINECT: sensorProcessor_.reset(new KinectSensorProcessor(transformListener_));
-    break;
-  case ASLAM: sensorProcessor_.reset(new AslamSensorProcessor(transformListener_));
-    break;
-  }
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
   robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
   robotPoseCache_.connectInput(robotPoseSubscriber_);
   robotPoseCache_.setCacheSize(robotPoseCacheSize_);
-
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
   // Multi-threading for fusion.
@@ -105,7 +96,7 @@ bool ElevationMapping::readParameters()
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
-  // ElevationMap parameters.
+  // ElevationMap parameters. TODO Move this to the class.
   string frameId;
   nodeHandle_.param("map_frame_id", frameId, string("/map"));
   map_.setFrameId(frameId);
@@ -128,17 +119,18 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
 
   // SensorProcessor parameters.
-  std::size_t nParameters = sensorProcessor_->sensorParameters_.size();
-  for(std::size_t i = 0; i < nParameters; i++)
-	  nodeHandle_.param(sensorProcessor_->sensorParameterNames_[i].c_str(), sensorProcessor_->sensorParameters_[i], 0.0);
-
-  nodeHandle_.param("robot_base_frame_id", sensorProcessor_->robotBaseFrameId_, string("/robot"));
-
-  ROS_ASSERT(sensorProcessor_->sensorParameters_[0] >= 0.0);
-  ROS_ASSERT(sensorProcessor_->sensorParameters_[1] > sensorProcessor_->sensorParameters_[0]);
-
-  sensorProcessor_->mapFrameId_ = map_.getFrameId();
-  sensorProcessor_->transformListenerTimeout_ = maxNoUpdateDuration_;
+  string sensorType;
+  nodeHandle_.param("sensor_type", sensorType, string("Kinect"));
+  if (sensorType == "Kinect") {
+    sensorProcessor_.reset(new KinectSensorProcessor(nodeHandle_, transformListener_));
+  } else if (sensorType == "Stereo") {
+    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
+  } else if (sensorType == "Laser") {
+//    sensorProcessor_.reset(new LaserSensorProcessor(transformListener_));
+  } else {
+    ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
+  }
+  if (!sensorProcessor_->readParameters()) return false;
 
   return true;
 }
@@ -317,7 +309,6 @@ bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, gri
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-
   map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
 
   bool isSuccess;
@@ -325,7 +316,16 @@ bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, gri
   grid_map::GridMap subMap = map_.getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
   scopedLock.unlock();
 
-  subMap.toMessage(response.gridMap);
+  if (request.dataDefinition.empty()) {
+    subMap.toMessage(response.gridMap);
+  } else {
+    vector<string> types;
+    for (const auto& type : request.dataDefinition) {
+      types.push_back(type.data);
+    }
+    subMap.toMessage(types, response.gridMap);
+  }
+
   ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
   return isSuccess;
 }

@@ -17,8 +17,9 @@
 
 namespace elevation_mapping {
 
-SensorProcessorBase::SensorProcessorBase(tf::TransformListener& transformListener)
-    : transformListener_(transformListener),
+SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
+    : nodeHandle_(nodeHandle),
+      transformListener_(transformListener),
       mapFrameId_(""),
       robotBaseFrameId_("")
 {
@@ -94,3 +95,4 @@ bool SensorProcessorBase::transformPointCloud(
 }
 
 } /* namespace elevation_mapping */
+

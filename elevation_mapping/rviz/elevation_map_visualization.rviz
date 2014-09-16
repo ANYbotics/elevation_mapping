@@ -154,7 +154,7 @@ Visualization Manager:
           Style: Boxes
           Topic: /elevation_map_visualization/point_cloud
           Use Fixed Frame: true
-          Use rainbow: true
+          Use rainbow: false
           Value: true
         - Class: rviz/Marker
           Enabled: true
@@ -176,11 +176,11 @@ Visualization Manager:
           Color: 255; 255; 255
           Color Transformer: Intensity
           Decay Time: 0
-          Enabled: true
+          Enabled: false
           Invert Rainbow: true
           Max Color: 255; 0; 0
           Max Intensity: 0.0002
-          Min Color: 85; 85; 255
+          Min Color: 0; 0; 255
           Min Intensity: 0
           Name: Elevation Map Raw
           Position Transformer: XYZ
@@ -191,8 +191,8 @@ Visualization Manager:
           Style: Boxes
           Topic: /elevation_map_raw_visualization/point_cloud
           Use Fixed Frame: true
-          Use rainbow: true
-          Value: true
+          Use rainbow: false
+          Value: false
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /elevation_map_visualization/region
@@ -227,22 +227,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 4.41142
+      Distance: 3.68653
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.535354
-        Y: 1.67421
-        Z: -1.25904
+        X: 0.780164
+        Y: -0.081319
+        Z: -0.0263333
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.595739
+      Pitch: 0.623588
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.2219
+      Yaw: 5.43727
     Saved: ~
 Window Geometry:
   Displays:
@@ -260,5 +260,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1203
-  X: 1552
-  Y: 591
+  X: 1503
+  Y: 584

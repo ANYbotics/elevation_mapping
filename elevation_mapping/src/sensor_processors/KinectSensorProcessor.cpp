@@ -10,31 +10,45 @@
 
 #include <pcl/filters/passthrough.h>
 #include <vector>
+#include <limits>
+#include <string>
 
 namespace elevation_mapping {
 
-KinectSensorProcessor::KinectSensorProcessor(tf::TransformListener& transformListener):
-				SensorProcessorBase(transformListener)
-{
-	sensorParameterNames_.resize(6);
-	sensorParameters_.resize(6);
+/*! Kinect-type (structured light) sensor model:
+ * standardDeviationInNormalDirection = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * (measurementDistance - sensorModelNormalFactorC_)^2;
+ * standardDeviationInLateralDirection = sensorModelLateralFactor_ * measurementDistance
+ * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
+ */
 
-  /*! Kinect sensor model:
-   * standardDeviationInNormalDirection = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * (measurementDistance - sensorModelNormalFactorC_)^2;
-   * standardDeviationInLateralDirection = sensorModelLateralFactor_ * measurementDistance
-   * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
-   */
-	sensorParameterNames_[0] = "sensor_cutoff_min_depth";
-	sensorParameterNames_[1] = "sensor_cutoff_max_depth";
-	sensorParameterNames_[2] = "sensor_model_normal_factor_a";
-	sensorParameterNames_[3] = "sensor_model_normal_factor_b";
-	sensorParameterNames_[4] = "sensor_model_normal_factor_c";
-	sensorParameterNames_[5] = "sensor_model_lateral_factor";
+KinectSensorProcessor::KinectSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
+    : SensorProcessorBase(nodeHandle, transformListener)
+{
+
 }
 
 KinectSensorProcessor::~KinectSensorProcessor()
 {
 
+}
+
+bool KinectSensorProcessor::readParameters()
+{
+  nodeHandle_.param("sensor_cutoff_min_depth", sensorParameters_["sensor_cutoff_min_depth"], std::numeric_limits<double>::min());
+  nodeHandle_.param("sensor_cutoff_max_depth", sensorParameters_["sensor_cutoff_max_depth"], std::numeric_limits<double>::max());
+  nodeHandle_.param("sensor_model_normal_factor_a", sensorParameters_["sensor_model_normal_factor_a"], 0.0);
+  nodeHandle_.param("sensor_model_normal_factor_b", sensorParameters_["sensor_model_normal_factor_b"], 0.0);
+  nodeHandle_.param("sensor_model_normal_factor_c", sensorParameters_["sensor_model_normal_factor_c"], 0.0);
+  nodeHandle_.param("sensor_model_lateral_factor", sensorParameters_["sensor_model_lateral_factor"], 0.0);
+  nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
+  nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
+
+  double minUpdateRate;
+  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
+  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
+  ROS_ASSERT(!transformListenerTimeout_.isZero());
+
+  return true;
 }
 
 bool KinectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
@@ -44,7 +58,7 @@ bool KinectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZR
 
 	passThroughFilter.setInputCloud(pointCloud);
 	passThroughFilter.setFilterFieldName("z");
-	passThroughFilter.setFilterLimits(sensorParameters_[0], sensorParameters_[1]);
+	passThroughFilter.setFilterLimits(sensorParameters_.at("sensor_cutoff_min_depth"), sensorParameters_.at("sensor_cutoff_max_depth"));
 	// This makes the point cloud also dense (no NaN points).
 	passThroughFilter.filter(tempPointCloud);
 	tempPointCloud.is_dense = true;
@@ -90,9 +104,9 @@ bool KinectSensorProcessor::computeVariances(
 
 		// Compute sensor covariance matrix (Sigma_S) with sensor model.
 		float varianceNormal =
-				pow(sensorParameters_[2] + sensorParameters_[3] *
-						pow(measurementDistance - sensorParameters_[4], 2), 2);
-		float varianceLateral = pow(sensorParameters_[5] * measurementDistance, 2);
+				pow(sensorParameters_.at("sensor_model_normal_factor_a") + sensorParameters_.at("sensor_model_normal_factor_b") *
+						pow(measurementDistance - sensorParameters_.at("sensor_model_normal_factor_c"), 2), 2);
+		float varianceLateral = pow(sensorParameters_.at("sensor_model_lateral_factor") * measurementDistance, 2);
 		Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
 		sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 

@@ -48,14 +48,12 @@ namespace elevation_mapping {
 class ElevationMapping
 {
  public:
-  enum SensorType{KINECT, ASLAM};
 
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
    */
-  // TODO This could be done more nicely, by allowing to switch sensor from a ROS parameter.
-  ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType = KINECT);
+  ElevationMapping(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.

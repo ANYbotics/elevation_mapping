@@ -22,9 +22,10 @@ public:
 
   /*!
    * Constructor.
+   * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-  KinectSensorProcessor(tf::TransformListener& transformListener);
+  KinectSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
 
   /*!
    * Destructor.
@@ -32,6 +33,12 @@ public:
 	virtual ~KinectSensorProcessor();
 
 private:
+
+  /*!
+   * Reads and verifies the parameters.
+   * @return true if successful.
+   */
+	bool readParameters();
 
 	/*!
 	 * Clean the point cloud. Points below the minimal and above the maximal sensor

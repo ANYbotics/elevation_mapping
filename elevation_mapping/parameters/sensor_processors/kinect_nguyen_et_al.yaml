@@ -1,6 +1,7 @@
-# Kinect (short-range mode) taken from:
+# Kinect (short-range mode) model taken from:
 # Nguyen, C. V., Izadi, S., & Lovell, D. (2012).
 # Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking.
+sensor_type: Kinect
 sensor_cutoff_min_depth: 0.35
 sensor_cutoff_max_depth: 3.0
 sensor_model_normal_factor_a: 0.0012

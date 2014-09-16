@@ -78,7 +78,7 @@ add_executable(
   src/RobotMotionMapUpdater.cpp
   src/sensor_processors/SensorProcessorBase.cpp
   src/sensor_processors/KinectSensorProcessor.cpp
-  src/sensor_processors/AslamSensorProcessor.cpp
+  src/sensor_processors/StereoSensorProcessor.cpp
 )
 
 ## Specify libraries to link a library or executable target against
