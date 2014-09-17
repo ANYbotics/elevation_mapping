@@ -284,7 +284,8 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 
   kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose;
   kindr::poses::eigen_impl::convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
-  Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
+  // Covariance is stored in row-major in ROS: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovariance.html
+  Matrix<double, 6, 6> robotPoseCovariance = Map<const Matrix<double, 6, 6, RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Compute map variance update from motion prediction.
   robotMotionMapUpdater_.update(map_, robotPose, robotPoseCovariance, time);

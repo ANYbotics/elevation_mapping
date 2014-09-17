@@ -33,7 +33,7 @@ bool RobotMotionMapUpdater::update(
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, const ros::Time& time)
 {
   // Check if update necessary.
-  if ((robotPoseCovariance - previousRobotPoseCovariance_).all() == 0) return false;
+  if (((robotPoseCovariance - previousRobotPoseCovariance_).array() == 0.0).all()) return false;
 
   // Initialize update data.
   Array2i size = map.getRawGridMap().getBufferSize();

@@ -2,7 +2,7 @@ length_in_x: 5.0
 length_in_y: 5.0
 position_x: 0.0
 position_y: 0.0
-resolution: 0.02
+resolution: 0.025
 min_variance: 0.000009
 max_variance: 0.01
 mahalanobis_distance_threshold: 2.5

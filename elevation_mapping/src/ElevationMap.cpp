@@ -407,14 +407,18 @@ void ElevationMap::move(const Eigen::Vector2d& position)
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   rawMap_.move(position);
-  scopedLockForRawData.unlock();
 }
 
 bool ElevationMap::publishRawElevationMap()
 {
   if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
+  boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
+  grid_map::GridMap rawMapCopy = rawMap_;
+  scopedLock.unlock();
+  rawMapCopy.add("standard_deviation", rawMapCopy.get("variance").array().sqrt().matrix());
+  rawMapCopy.add("horizontal_standard_deviation", (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
   grid_map_msg::GridMap message;
-  rawMap_.toMessage(message);
+  rawMapCopy.toMessage(message);
   elevationMapRawPublisher_.publish(message);
   ROS_DEBUG("Elevation map raw has been published.");
   return true;
@@ -424,8 +428,11 @@ bool ElevationMap::publishElevationMap()
 {
   if (elevationMapFusedPublisher_.getNumSubscribers() < 1) return false;
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
+  grid_map::GridMap fusedMapCopy = fusedMap_;
+  scopedLock.unlock();
+  fusedMapCopy.add("standard_deviation", fusedMapCopy.get("variance").array().sqrt().matrix());
   grid_map_msg::GridMap message;
-  fusedMap_.toMessage(message);
+  fusedMapCopy.toMessage(message);
   elevationMapFusedPublisher_.publish(message);
   ROS_DEBUG("Elevation map (fused) has been published.");
   return true;

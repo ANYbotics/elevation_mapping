@@ -98,8 +98,8 @@ bool LaserSensorProcessor::computeVariances(
 		float measurementDistance = pointVector.norm();
 
 		// Compute sensor covariance matrix (Sigma_S) with sensor model.
-		float varianceNormal = sensorParameters_.at("min_radius");
-		float varianceLateral = sensorParameters_.at("beam_constant") + sensorParameters_.at("beam_angle") * measurementDistance;
+		float varianceNormal = pow(sensorParameters_.at("min_radius"), 2);
+		float varianceLateral = pow(sensorParameters_.at("beam_constant") + sensorParameters_.at("beam_angle") * measurementDistance, 2);
 		Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
 		sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
