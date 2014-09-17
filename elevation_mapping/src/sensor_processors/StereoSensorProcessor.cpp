@@ -22,13 +22,13 @@ StereoSensorProcessor::~StereoSensorProcessor() {}
 
 bool StereoSensorProcessor::readParameters()
 {
-  nodeHandle_.param("sensor_model_p_1", sensorParameters_["sensor_model_p_1"], 0.0);
-  nodeHandle_.param("sensor_model_p_2", sensorParameters_["sensor_model_p_2"], 0.0);
-  nodeHandle_.param("sensor_model_p_3", sensorParameters_["sensor_model_p_3"], 0.0);
-  nodeHandle_.param("sensor_model_p_4", sensorParameters_["sensor_model_p_4"], 0.0);
-  nodeHandle_.param("sensor_model_p_5", sensorParameters_["sensor_model_p_5"], 0.0);
-  nodeHandle_.param("sensor_model_lateral_factor", sensorParameters_["sensor_model_lateral_factor"], 0.0);
-  nodeHandle_.param("sensor_model_depth_to_disparity_factor", sensorParameters_["sensor_model_depth_to_disparity_factor"], 0.0);
+  nodeHandle_.param("sensor_processor/p_1", sensorParameters_["p_1"], 0.0);
+  nodeHandle_.param("sensor_processor/p_2", sensorParameters_["p_2"], 0.0);
+  nodeHandle_.param("sensor_processor/p_3", sensorParameters_["p_3"], 0.0);
+  nodeHandle_.param("sensor_processor/p_4", sensorParameters_["p_4"], 0.0);
+  nodeHandle_.param("sensor_processor/p_5", sensorParameters_["p_5"], 0.0);
+  nodeHandle_.param("sensor_processor/lateral_factor", sensorParameters_["lateral_factor"], 0.0);
+  nodeHandle_.param("sensor_processor/depth_to_disparity_factor", sensorParameters_["depth_to_disparity_factor"], 0.0);
   nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
 
@@ -80,17 +80,9 @@ bool StereoSensorProcessor::computeVariances(
   {
     // For every point in point cloud.
 
-//    sensorParameterNames_[0] = "sensor_model_p_1";
-//    sensorParameterNames_[1] = "sensor_model_p_2";
-//    sensorParameterNames_[2] = "sensor_model_p_3";
-//    sensorParameterNames_[3] = "sensor_model_p_4";
-//    sensorParameterNames_[4] = "sensor_model_p_5";
-//    sensorParameterNames_[5] = "sensor_model_lateral_factor";
-//    sensorParameterNames_[6] = "sensor_model_depth_to_disparity_factor";
-
     // Preparation.
     pcl::PointXYZRGB point = pointCloud->points[i];
-    double disparity = sensorParameters_.at("sensor_model_depth_to_disparity_factor")/point.z;
+    double disparity = sensorParameters_.at("depth_to_disparity_factor")/point.z;
     Eigen::Vector3f pointVector(point.x, point.y, point.z); // S_r_SP
     float heightVariance = 0.0; // sigma_p
 
@@ -98,11 +90,11 @@ bool StereoSensorProcessor::computeVariances(
     float measurementDistance = pointVector.norm();
 
     // Compute sensor covariance matrix (Sigma_S) with sensor model.
-    float varianceNormal = pow(sensorParameters_.at("sensor_model_depth_to_disparity_factor") / pow(disparity, 2), 2)
-        * ((sensorParameters_.at("sensor_model_p_5") * disparity + sensorParameters_.at("sensor_model_p_2"))
-            * sqrt(pow(sensorParameters_.at("sensor_model_p_3") * disparity + sensorParameters_.at("sensor_model_p_4") - getJ(i), 2)
-                    + pow(240 - getI(i), 2)) + sensorParameters_.at("sensor_model_p_1"));
-    float varianceLateral = pow(sensorParameters_.at("sensor_model_lateral_factor") * measurementDistance, 2);
+    float varianceNormal = pow(sensorParameters_.at("depth_to_disparity_factor") / pow(disparity, 2), 2)
+        * ((sensorParameters_.at("p_5") * disparity + sensorParameters_.at("p_2"))
+            * sqrt(pow(sensorParameters_.at("p_3") * disparity + sensorParameters_.at("p_4") - getJ(i), 2)
+                    + pow(240 - getI(i), 2)) + sensorParameters_.at("p_1"));
+    float varianceLateral = pow(sensorParameters_.at("lateral_factor") * measurementDistance, 2);
     Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
     sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 

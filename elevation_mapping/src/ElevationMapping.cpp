@@ -11,6 +11,7 @@
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/sensor_processors/KinectSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
+#include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
 
 // Grid Map
 #include <grid_map_msg/GridMap.h>
@@ -31,6 +32,9 @@
 // Boost
 #include <boost/bind.hpp>
 #include <boost/thread/recursive_mutex.hpp>
+
+// STL
+#include <string>
 
 using namespace std;
 using namespace Eigen;
@@ -96,7 +100,7 @@ bool ElevationMapping::readParameters()
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
-  // ElevationMap parameters. TODO Move this to the class.
+  // ElevationMap parameters. TODO Move this to the elevation map class.
   string frameId;
   nodeHandle_.param("map_frame_id", frameId, string("/map"));
   map_.setFrameId(frameId);
@@ -117,6 +121,19 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
   nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
+  nodeHandle_.param("surface_normal_estimation_radius", map_.surfaceNormalEstimationRadius_, 0.05);
+
+  string surfaceNormalPositiveAxis;
+  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
+  if (surfaceNormalPositiveAxis == "z") {
+    map_.surfaceNormalPositiveAxis_ = Vector3d::UnitZ();
+  } else if (surfaceNormalPositiveAxis == "y") {
+    map_.surfaceNormalPositiveAxis_ = Vector3d::UnitY();
+  } else if (surfaceNormalPositiveAxis == "x") {
+    map_.surfaceNormalPositiveAxis_ = Vector3d::UnitX();
+  } else {
+    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
+  }
 
   // SensorProcessor parameters.
   string sensorType;
@@ -126,7 +143,7 @@ bool ElevationMapping::readParameters()
   } else if (sensorType == "Stereo") {
     sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
   } else if (sensorType == "Laser") {
-//    sensorProcessor_.reset(new LaserSensorProcessor(transformListener_));
+    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, transformListener_));
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
   }
@@ -242,7 +259,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll();
+  map_.fuseAll(true);
   map_.publishElevationMap();
   return true;
 }
@@ -308,8 +325,17 @@ bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, gri
   Array2d requestedSubmapLength(request.lengthX, request.lengthY);
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
 
+  bool computeSurfaceNormals = false;
+  if (request.dataDefinition.empty()) {
+    computeSurfaceNormals = true;
+  } else {
+    for (const auto& type : request.dataDefinition) {
+      if (type.data.find("surface_normal") != std::string::npos) computeSurfaceNormals = true;
+    }
+  }
+
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
+  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength, computeSurfaceNormals);
 
   bool isSuccess;
   Array2i index;

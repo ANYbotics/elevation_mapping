@@ -78,7 +78,7 @@ public:
    * Reads and verifies the parameters.
    * @return true if successful.
    */
-  virtual bool readParameters() = 0;
+  virtual bool readParameters();
 
   /*!
    * Cleans the point cloud.
@@ -118,6 +118,12 @@ public:
                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
                            const std::string& targetFrame);
 
+  /*!
+   * Removes points with z-coordinate above a limit in map frame.
+   * @param[in/out] pointCloud the point cloud to be cropped.
+   */
+  void removePointsOutsideLimits(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
 
@@ -147,6 +153,12 @@ public:
 
   //! TF frame id of the robot base.
   std::string robotBaseFrameId_;
+
+  //! Ignore points above this height in map frame.
+  double ignorePointsAbove_;
+
+  //! Ignore points below this height in map frame.
+  double ignorePointsBelow_;
 
   //! Sensor parameters.
   std::unordered_map<std::string, double> sensorParameters_;

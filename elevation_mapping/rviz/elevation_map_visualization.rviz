@@ -142,9 +142,9 @@ Visualization Manager:
           Enabled: true
           Invert Rainbow: true
           Max Color: 255; 0; 0
-          Max Intensity: 0.0002
+          Max Intensity: 0.0001
           Min Color: 0; 0; 255
-          Min Intensity: 0
+          Min Intensity: -2e-05
           Name: Elevation Map
           Position Transformer: XYZ
           Queue Size: 10
@@ -154,7 +154,7 @@ Visualization Manager:
           Style: Boxes
           Topic: /elevation_map_visualization/point_cloud
           Use Fixed Frame: true
-          Use rainbow: false
+          Use rainbow: true
           Value: true
         - Class: rviz/Marker
           Enabled: true
@@ -176,12 +176,12 @@ Visualization Manager:
           Color: 255; 255; 255
           Color Transformer: Intensity
           Decay Time: 0
-          Enabled: false
+          Enabled: true
           Invert Rainbow: true
           Max Color: 255; 0; 0
-          Max Intensity: 0.0002
+          Max Intensity: 0.0001
           Min Color: 0; 0; 255
-          Min Intensity: 0
+          Min Intensity: -2e-05
           Name: Elevation Map Raw
           Position Transformer: XYZ
           Queue Size: 0
@@ -191,14 +191,14 @@ Visualization Manager:
           Style: Boxes
           Topic: /elevation_map_raw_visualization/point_cloud
           Use Fixed Frame: true
-          Use rainbow: false
-          Value: false
+          Use rainbow: true
+          Value: true
         - Class: rviz/Marker
           Enabled: true
           Marker Topic: /elevation_map_visualization/region
           Name: Elevation Map Region
           Namespaces:
-            map_region: true
+            {}
           Queue Size: 100
           Value: true
       Enabled: true
@@ -227,22 +227,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 3.68653
+      Distance: 2.13987
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.780164
-        Y: -0.081319
-        Z: -0.0263333
+        X: 0.715941
+        Y: -0.621799
+        Z: 0.402022
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.623588
+      Pitch: 0.81733
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.43727
+      Yaw: 5.23741
     Saved: ~
 Window Geometry:
   Displays:
@@ -260,5 +260,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1203
-  X: 1503
-  Y: 584
+  X: 1540
+  Y: 485

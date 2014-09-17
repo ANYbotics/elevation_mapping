@@ -6,7 +6,7 @@
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include <elevation_mapping/sensor_processors/KinectSensorProcessor.hpp>
+#include <elevation_mapping/sensor_processors/LaserSensorProcessor.hpp>
 
 #include <pcl/filters/passthrough.h>
 #include <vector>
@@ -15,31 +15,32 @@
 
 namespace elevation_mapping {
 
-/*! Kinect-type (structured light) sensor model:
- * standardDeviationInNormalDirection = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * (measurementDistance - sensorModelNormalFactorC_)^2;
- * standardDeviationInLateralDirection = sensorModelLateralFactor_ * measurementDistance
- * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
+/*!
+ * Anisotropic laser range sensor model:
+ * standardDeviationInBeamDirection = minRadius
+ * standardDeviationOfBeamRadius = beamConstant + beamAngle * measurementDistance
+ *
+ * Taken from: Pomerleau, F.; Breitenmoser, A; Ming Liu; Colas, F.; Siegwart, R.,
+ * "Noise characterization of depth sensors for surface inspections,"
+ * International Conference on Applied Robotics for the Power Industry (CARPI), 2012.
  */
 
-KinectSensorProcessor::KinectSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
+LaserSensorProcessor::LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
     : SensorProcessorBase(nodeHandle, transformListener)
 {
 
 }
 
-KinectSensorProcessor::~KinectSensorProcessor()
+LaserSensorProcessor::~LaserSensorProcessor()
 {
 
 }
 
-bool KinectSensorProcessor::readParameters()
+bool LaserSensorProcessor::readParameters()
 {
-  nodeHandle_.param("sensor_processor/cutoff_min_depth", sensorParameters_["cutoff_min_depth"], std::numeric_limits<double>::min());
-  nodeHandle_.param("sensor_processor/cutoff_max_depth", sensorParameters_["max_depth"], std::numeric_limits<double>::max());
-  nodeHandle_.param("sensor_processor/normal_factor_a", sensorParameters_["normal_factor_a"], 0.0);
-  nodeHandle_.param("sensor_processor/normal_factor_b", sensorParameters_["normal_factor_b"], 0.0);
-  nodeHandle_.param("sensor_processor/normal_factor_c", sensorParameters_["normal_factor_c"], 0.0);
-  nodeHandle_.param("sensor_processor/lateral_factor", sensorParameters_["lateral_factor"], 0.0);
+  nodeHandle_.param("sensor_processor/min_radius", sensorParameters_["min_radius"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_angle", sensorParameters_["beam_constant"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_constant", sensorParameters_["beam_constant"], 0.0);
   nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
 
@@ -51,24 +52,18 @@ bool KinectSensorProcessor::readParameters()
   return true;
 }
 
-bool KinectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+bool LaserSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
-	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
-
-	passThroughFilter.setInputCloud(pointCloud);
-	passThroughFilter.setFilterFieldName("z");
-	passThroughFilter.setFilterLimits(sensorParameters_.at("cutoff_min_depth"), sensorParameters_.at("cutoff_max_depth"));
-	// This makes the point cloud also dense (no NaN points).
-	passThroughFilter.filter(tempPointCloud);
-	tempPointCloud.is_dense = true;
-	pointCloud->swap(tempPointCloud);
-
-	ROS_DEBUG("cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
-	return true;
+  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
+  tempPointCloud.is_dense = true;
+  pointCloud->swap(tempPointCloud);
+  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  return true;
 }
 
-bool KinectSensorProcessor::computeVariances(
+bool LaserSensorProcessor::computeVariances(
 		const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
 		const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
 		Eigen::VectorXf& variances)
@@ -103,10 +98,8 @@ bool KinectSensorProcessor::computeVariances(
 		float measurementDistance = pointVector.norm();
 
 		// Compute sensor covariance matrix (Sigma_S) with sensor model.
-		float varianceNormal =
-				pow(sensorParameters_.at("normal_factor_a") + sensorParameters_.at("normal_factor_b") *
-						pow(measurementDistance - sensorParameters_.at("normal_factor_c"), 2), 2);
-		float varianceLateral = pow(sensorParameters_.at("lateral_factor") * measurementDistance, 2);
+		float varianceNormal = sensorParameters_.at("min_radius");
+		float varianceLateral = sensorParameters_.at("beam_constant") + sensorParameters_.at("beam_angle") * measurementDistance;
 		Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
 		sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
