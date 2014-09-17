@@ -61,7 +61,7 @@ bool RobotMotionMapUpdater::update(
   // Robot/sensor position (I_r_IS, for all points the same).
   kindr::phys_quant::eigen_impl::Position3D robotPosition = robotPose.getPosition();
 
-  // For each cell in map.
+  // For each cell in map. // TODO Change to new iterator.
   for (unsigned int i = 0; i < size(0); ++i)
   {
     for (unsigned int j = 0; j < size(1); ++j)
@@ -86,7 +86,7 @@ bool RobotMotionMapUpdater::update(
       }
       else
       {
-        // Cell invalid.
+        // Cell invalid. // TODO Change to new functions
         varianceUpdate(i, j) = numeric_limits<float>::infinity();
         horizontalVarianceUpdateX(i, j) = numeric_limits<float>::infinity();
         horizontalVarianceUpdateY(i, j) = numeric_limits<float>::infinity();

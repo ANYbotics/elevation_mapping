@@ -61,7 +61,6 @@ bool SensorProcessorBase::process(
 
 	if (!computeVariances(pointCloudClean, robotPoseCovariance, variances)) return false;
 
-
 	return true;
 }
 
@@ -115,7 +114,7 @@ void SensorProcessorBase::removePointsOutsideLimits(pcl::PointCloud<pcl::PointXY
   pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
   passThroughFilter.setInputCloud(pointCloud);
   passThroughFilter.setFilterFieldName("z");
-  passThroughFilter.setFilterLimits(-1000.0, 1.0);
+  passThroughFilter.setFilterLimits(-1000.0, 1.0); // TODO !!!
   passThroughFilter.filter(tempPointCloud);
   pointCloud->swap(tempPointCloud);
   ROS_DEBUG("removePointsOutsideLimits() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));

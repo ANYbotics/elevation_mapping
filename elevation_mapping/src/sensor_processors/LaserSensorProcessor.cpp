@@ -39,7 +39,7 @@ LaserSensorProcessor::~LaserSensorProcessor()
 bool LaserSensorProcessor::readParameters()
 {
   nodeHandle_.param("sensor_processor/min_radius", sensorParameters_["min_radius"], 0.0);
-  nodeHandle_.param("sensor_processor/beam_angle", sensorParameters_["beam_constant"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_angle", sensorParameters_["beam_angle"], 0.0);
   nodeHandle_.param("sensor_processor/beam_constant", sensorParameters_["beam_constant"], 0.0);
   nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));

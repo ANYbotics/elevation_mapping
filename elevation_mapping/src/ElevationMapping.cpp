@@ -137,7 +137,7 @@ bool ElevationMapping::readParameters()
 
   // SensorProcessor parameters.
   string sensorType;
-  nodeHandle_.param("sensor_type", sensorType, string("Kinect"));
+  nodeHandle_.param("sensor_processor/type", sensorType, string("Kinect"));
   if (sensorType == "Kinect") {
     sensorProcessor_.reset(new KinectSensorProcessor(nodeHandle_, transformListener_));
   } else if (sensorType == "Stereo") {
