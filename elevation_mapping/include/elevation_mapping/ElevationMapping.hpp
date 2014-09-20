@@ -12,9 +12,9 @@
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
-#include "elevation_map_msg/ElevationMap.h"
-#include "elevation_map_msg/EigenConversions.hpp"
-#include "elevation_map_msg/GetSubmap.h"
+
+// Grid Map
+#include "grid_map_msg/GetGridMap.h"
 
 // Eigen
 #include <Eigen/Core>
@@ -30,7 +30,6 @@
 #include <message_filters/cache.h>
 #include <message_filters/subscriber.h>
 #include <tf/transform_listener.h>
-#include <tf/transform_broadcaster.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <std_srvs/Empty.h>
 
@@ -46,18 +45,15 @@ namespace elevation_mapping {
  * The elevation mapping main class. Coordinates the ROS interfaces, the timing,
  * and the data handling between the other classes.
  */
-
 class ElevationMapping
 {
  public:
-  enum SensorType{KINECT, ASLAM};
 
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
    */
-  // TODO This could be done more nicely, by allowing to switch sensor from a ROS parameter.
-  ElevationMapping(ros::NodeHandle& nodeHandle, SensorType sensorType = KINECT);
+  ElevationMapping(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.
@@ -93,7 +89,7 @@ class ElevationMapping
    * @param response the ROS service response containing the requested submap.
    * @return true if successful.
    */
-  bool getSubmap(elevation_map_msg::GetSubmap::Request& request, elevation_map_msg::GetSubmap::Response& response);
+  bool getSubmap(grid_map_msg::GetGridMap::Request& request, grid_map_msg::GetGridMap::Response& response);
 
  private:
 
@@ -115,13 +111,6 @@ class ElevationMapping
   void runFusionServiceThread();
 
   /*!
-   * Broadcasts the elevation map to parent transformation.
-   * @param time the time of the transformation.
-   * @return true if successful.
-   */
-  bool broadcastElevationMapTransform(const ros::Time& time);
-
-  /*!
    * Update the elevation map from the robot motion up to a certain time.
    * @param time to which the map is updated to.
    * @return true if successful.
@@ -129,23 +118,10 @@ class ElevationMapping
   bool updatePrediction(const ros::Time& time);
 
   /*!
-   * Publishes the (latest) raw elevation map.
-   * @return true if successful.
-   */
-  bool publishRawElevationMap();
-
-  /*!
-   * Publishes the (fused) elevation map. Takes the latest available (fused) elevation
-   * map, does not trigger the fusion process.
-   * @return true if successful.
-   */
-  bool publishElevationMap();
-
-  /*!
    * Fills a elevation map message with the appropriate header information.
-   * @param elevationMapMessage the elevation massage to be filled with header information.
+   * @param gridMapMessage the elevation massage to be filled with header information.
    */
-  void addHeaderDataToElevationMessage(elevation_map_msg::ElevationMap& elevationMapMessage);
+  void addHeaderDataToElevationMessage(grid_map_msg::GridMap& gridMapMessage);
 
   /*!
    * Updates the location of the map to follow the tracking point. Takes care
@@ -171,10 +147,6 @@ class ElevationMapping
   ros::Subscriber pointCloudSubscriber_;
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
 
-  //! ROS publishers.
-  ros::Publisher elevationMapRawPublisher_;
-  ros::Publisher elevationMapPublisher_;
-
   //! ROS service servers.
   ros::ServiceServer fusionTriggerService_;
   ros::ServiceServer submapService_;
@@ -192,11 +164,7 @@ class ElevationMapping
   int robotPoseCacheSize_;
 
   //! TF listener and broadcaster.
-  tf::TransformBroadcaster transformBroadcaster_;
   tf::TransformListener transformListener_;
-
-  //! Frame id of the parent of the elevation map.
-  std::string parentFrameId_;
 
   //! Point which the elevation map follows.
   kindr::phys_quant::eigen_impl::Position3D trackPoint_;
@@ -220,11 +188,6 @@ class ElevationMapping
 
   //! Maximum time that the map will not be updated.
   ros::Duration maxNoUpdateDuration_;
-
-  //! Duration in which interval the map is checked for relocation.
-  //! Currently not used, as the map is not relocalized if no new data
-  //! is added to the map.
-  ros::Duration mapRelocateTimerDuration_;
 };
 
 } /* namespace */

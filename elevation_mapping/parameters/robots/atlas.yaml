@@ -1,0 +1,10 @@
+point_cloud_topic: "/lidar_to_point_cloud_transformer/lidar_point_cloud"
+map_frame_id: "world"
+robot_base_frame_id: "pelvis"
+robot_pose_with_covariance_topic: "/atlas/rootPoseWithCovariance"
+robot_pose_cache_size: 200
+track_point_frame_id: "pelvis"
+track_point_x: 0.5
+track_point_y: 0.0
+track_point_z: 0.0
+sensor_processor/ignore_points_above: 1.0

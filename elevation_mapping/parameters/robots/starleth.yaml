@@ -1,7 +1,7 @@
 point_cloud_topic: "/depth_registered/points"
-robot_pose_topic: "/starleth/robot_state/pose"
-parent_frame_id: "starleth/odometry"
-base_frame_id: "starleth/BASE"
+map_frame_id: "starleth/odometry"
+robot_base_frame_id: "starleth/BASE"
+robot_pose_with_covariance_topic: "/starleth/robot_state/pose"
 robot_pose_cache_size: 200
 track_point_frame_id: "starleth/BASE"
 track_point_x: 0.25

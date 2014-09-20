@@ -1,0 +1,9 @@
+point_cloud_topic: "/points2"
+map_frame_id: "/world"
+robot_base_frame_id: "/cam0"
+robot_pose_with_covariance_topic: "/robot_pose"
+robot_pose_cache_size: 200
+track_point_frame_id: "/cam0"
+track_point_x: 0.0
+track_point_y: 0.0
+track_point_z: 0.0

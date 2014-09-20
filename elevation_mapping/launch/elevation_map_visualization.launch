@@ -1,0 +1,14 @@
+<launch>
+	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find grid_map_visualization)/launch/custom_rosconsole.conf"/>
+ 	<node pkg="grid_map_visualization" type="grid_map_visualization" name="elevation_map_visualization" output="screen">
+ 		 <param name="grid_map_topic" value="/elevation_mapping/elevation_map" />
+ 		 <param name="point_cloud/point_type" value="elevation" />
+ 		 <param name="map_region/line_width" value="0.003" />
+ 		 <param name="map_region/color" value="16777215" />
+ 		 <param name="vector/type_prefix" value="surface_normal" />
+ 		 <param name="vector/position_type" value="elevation" />
+ 		 <param name="vector/scale" value="0.03" />
+ 		 <param name="vector/line_width" value="0.001" />
+ 		 <param name="vector/color" value="16777215" />
+    </node>
+</launch>

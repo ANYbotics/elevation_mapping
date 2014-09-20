@@ -1,54 +1,69 @@
 /*
- * AslamSensorProcessor.cpp
+ * KinectSensorProcessor.cpp
  *
- *  Created on: Jun 6, 2014
- *      Author: Hannes Keller
+ *  Created on: Feb 5, 2014
+ *      Author: Péter Fankhauser
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
-#include <elevation_mapping/sensor_processors/AslamSensorProcessor.hpp>
+#include <elevation_mapping/sensor_processors/LaserSensorProcessor.hpp>
 
 #include <pcl/filters/passthrough.h>
 #include <vector>
+#include <limits>
+#include <string>
 
 namespace elevation_mapping {
 
-AslamSensorProcessor::AslamSensorProcessor(tf::TransformListener& transformListener):
-				SensorProcessorBase(transformListener)
-{
-	sensorParameterNames_.resize(6);
-	sensorParameters_.resize(6);
+/*!
+ * Anisotropic laser range sensor model:
+ * standardDeviationInBeamDirection = minRadius
+ * standardDeviationOfBeamRadius = beamConstant + beamAngle * measurementDistance
+ *
+ * Taken from: Pomerleau, F.; Breitenmoser, A; Ming Liu; Colas, F.; Siegwart, R.,
+ * "Noise characterization of depth sensors for surface inspections,"
+ * International Conference on Applied Robotics for the Power Industry (CARPI), 2012.
+ */
 
-	sensorParameterNames_[0] = "sensor_cutoff_min_depth";
-	sensorParameterNames_[1] = "sensor_cutoff_max_depth";
-	sensorParameterNames_[2] = "sensor_model_normal_factor_a";
-	sensorParameterNames_[3] = "sensor_model_normal_factor_b";
-	sensorParameterNames_[4] = "sensor_model_normal_factor_c";
-	sensorParameterNames_[5] = "sensor_model_lateral_factor";
+LaserSensorProcessor::LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
+    : SensorProcessorBase(nodeHandle, transformListener)
+{
+
 }
 
-AslamSensorProcessor::~AslamSensorProcessor() {}
-
-/* Private */
-
-bool AslamSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+LaserSensorProcessor::~LaserSensorProcessor()
 {
-	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
-	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
 
-	passThroughFilter.setInputCloud(pointCloud);
-	passThroughFilter.setFilterFieldName("z");
-	passThroughFilter.setFilterLimits(sensorParameters_[0], sensorParameters_[1]);
-	// This makes the point cloud also dense (no NaN points).
-	passThroughFilter.filter(tempPointCloud);
-	tempPointCloud.is_dense = true;
-	pointCloud->swap(tempPointCloud);
-
-	ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
-	return true;
 }
 
-bool AslamSensorProcessor::computeVariances(
+bool LaserSensorProcessor::readParameters()
+{
+  nodeHandle_.param("sensor_processor/min_radius", sensorParameters_["min_radius"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_angle", sensorParameters_["beam_angle"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_constant", sensorParameters_["beam_constant"], 0.0);
+  nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
+  nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
+
+  double minUpdateRate;
+  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
+  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
+  ROS_ASSERT(!transformListenerTimeout_.isZero());
+
+  return true;
+}
+
+bool LaserSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+{
+  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
+  tempPointCloud.is_dense = true;
+  pointCloud->swap(tempPointCloud);
+  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  return true;
+}
+
+bool LaserSensorProcessor::computeVariances(
 		const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
 		const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
 		Eigen::VectorXf& variances)
@@ -64,7 +79,7 @@ bool AslamSensorProcessor::computeVariances(
 	// Robot rotation covariance matrix (Sigma_q).
 	Eigen::Matrix3f rotationVariance = robotPoseCovariance.bottomRightCorner(3, 3).cast<float>();
 
-	// Preparations for#include <pcl/common/transforms.h> robot rotation Jacobian (J_q) to minimize computation for every point in point cloud.
+	// Preparations for robot rotation Jacobian (J_q) to minimize computation for every point in point cloud.
 	const Eigen::Matrix3f C_BM_transpose = rotationMapToBase_.transposed().toImplementation().cast<float>();
 	const Eigen::RowVector3f P_mul_C_BM_transpose = projectionVector * C_BM_transpose;
 	const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
@@ -83,10 +98,8 @@ bool AslamSensorProcessor::computeVariances(
 		float measurementDistance = pointVector.norm();
 
 		// Compute sensor covariance matrix (Sigma_S) with sensor model.
-		float varianceNormal =
-				pow(sensorParameters_[2] + sensorParameters_[3] *
-						pow(measurementDistance - sensorParameters_[4], 2), 2);
-		float varianceLateral = pow(sensorParameters_[5] * measurementDistance, 2);
+		float varianceNormal = pow(sensorParameters_.at("min_radius"), 2);
+		float varianceLateral = pow(sensorParameters_.at("beam_constant") + sensorParameters_.at("beam_angle") * measurementDistance, 2);
 		Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
 		sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
@@ -105,8 +118,4 @@ bool AslamSensorProcessor::computeVariances(
 	return true;
 }
 
-} /* namespace elevation_mapping */
-
-
-
-
+} /* namespace */

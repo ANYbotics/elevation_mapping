@@ -1,7 +1,7 @@
 /*
- * KinectSensorProcessor.hpp
+ * LaserSensorProcessor.hpp
  *
- *  Created on: Feb 5, 2014
+ *  Created on: Sep 15, 2014
  *      Author: Péter Fankhauser
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
@@ -13,9 +13,9 @@
 namespace elevation_mapping {
 
 /*!
- * Sensor processor for Kinect-type (PrimeSense) structured light sensors.
+ * Sensor processor for laser range sensors.
  */
-class KinectSensorProcessor : public SensorProcessorBase
+class LaserSensorProcessor : public SensorProcessorBase
 {
 
 public:
@@ -25,12 +25,12 @@ public:
    * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-  KinectSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
 
   /*!
    * Destructor.
    */
-	virtual ~KinectSensorProcessor();
+	virtual ~LaserSensorProcessor();
 
 private:
 

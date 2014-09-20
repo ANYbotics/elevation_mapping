@@ -1,8 +1,0 @@
-variance/sigma_bound: 1.0
-variance/marker_size: 0.003
-variance/base_color: 16711680
-variance/set_color_from_variance: true
-variance/lower_variance_color: 255
-variance/upper_variance_color: 16711680
-variance/variance_lower_value: 0.0
-variance/variance_upper_value: 0.0001

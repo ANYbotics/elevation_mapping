@@ -33,10 +33,10 @@ bool RobotMotionMapUpdater::update(
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, const ros::Time& time)
 {
   // Check if update necessary.
-  if ((robotPoseCovariance - previousRobotPoseCovariance_).all() == 0) return false;
+  if (((robotPoseCovariance - previousRobotPoseCovariance_).array() == 0.0).all()) return false;
 
   // Initialize update data.
-  Array2i size = map.getBufferSize();
+  Array2i size = map.getRawGridMap().getBufferSize();
   MatrixXf varianceUpdate(size(0), size(1));
   MatrixXf horizontalVarianceUpdateX(size(0), size(1));
   MatrixXf horizontalVarianceUpdateY(size(0), size(1));
@@ -61,14 +61,14 @@ bool RobotMotionMapUpdater::update(
   // Robot/sensor position (I_r_IS, for all points the same).
   kindr::phys_quant::eigen_impl::Position3D robotPosition = robotPose.getPosition();
 
-  // For each cell in map.
+  // For each cell in map. // TODO Change to new iterator.
   for (unsigned int i = 0; i < size(0); ++i)
   {
     for (unsigned int j = 0; j < size(1); ++j)
     {
       kindr::phys_quant::eigen_impl::Position3D cellPosition; // I_r_IP
 
-      if (map.getDataPointPositionInParentFrame(Array2i(i, j), cellPosition))
+      if (map.getPosition3dInRobotParentFrame(Array2i(i, j), cellPosition))
       {
         // Rotation Jacobian (J_q)
         Matrix3d rotationJacobian = parentToMapRotation
@@ -86,7 +86,7 @@ bool RobotMotionMapUpdater::update(
       }
       else
       {
-        // Cell invalid.
+        // Cell invalid. // TODO Change to new functions
         varianceUpdate(i, j) = numeric_limits<float>::infinity();
         horizontalVarianceUpdateX(i, j) = numeric_limits<float>::infinity();
         horizontalVarianceUpdateY(i, j) = numeric_limits<float>::infinity();

@@ -1,8 +1,0 @@
-<launch>
- 	<node pkg="elevation_map_visualization" type="elevation_map_visualization" name="elevation_map_visualization" output="screen">
- 		 <param name="elevation_map_topic" value="/elevation_mapping/elevation_map" />
-		 <rosparam command="load" file="$(find elevation_map_visualization)/parameters/elevation/default.yaml" />
-		 <rosparam command="load" file="$(find elevation_map_visualization)/parameters/map_region/default.yaml" />
-		 <rosparam command="load" file="$(find elevation_map_visualization)/parameters/variance/default.yaml" />
-    </node>
-</launch>

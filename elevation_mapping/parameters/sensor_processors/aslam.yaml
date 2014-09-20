@@ -1,0 +1,12 @@
+# ASLAM Stereo camera:
+# "Localization and Path Planning of a Climbing Robot for Corrosion Monitoring",
+# Hannes Keller, Semester Project, ETH Zurich, 2014.
+
+sensor_processor/type: Stereo
+sensor_processor/p_1:   0.03287
+sensor_processor/p_2:  -0.0001276
+sensor_processor/p_3:   0.4850
+sensor_processor/p_4: 399.1046
+sensor_processor/p_5:   0.000006735
+sensor_processor/lateral_factor: 0.001376915
+sensor_processor/depth_to_disparity_factor: 47.3

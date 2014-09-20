@@ -24,7 +24,7 @@
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 
 // STL
-#include <vector>
+#include <unordered_map>
 #include <string>
 #include <memory>
 
@@ -44,9 +44,10 @@ public:
 
   /*!
    * Constructor.
+   * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-	SensorProcessorBase(tf::TransformListener& transformListener);
+	SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
 
 	/*!
 	 * Destructor.
@@ -72,6 +73,12 @@ public:
 	friend class ElevationMapping;
 
  protected:
+
+  /*!
+   * Reads and verifies the parameters.
+   * @return true if successful.
+   */
+  virtual bool readParameters();
 
   /*!
    * Cleans the point cloud.
@@ -111,6 +118,15 @@ public:
                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
                            const std::string& targetFrame);
 
+  /*!
+   * Removes points with z-coordinate above a limit in map frame.
+   * @param[in/out] pointCloud the point cloud to be cropped.
+   */
+  void removePointsOutsideLimits(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+
+  //! ROS nodehandle.
+  ros::NodeHandle& nodeHandle_;
+
   //! TF transform listener.
   tf::TransformListener& transformListener_;
 
@@ -135,16 +151,17 @@ public:
   //! TF frame id of the map.
   std::string mapFrameId_;
 
-  //! TF frame id of the base.
-  std::string baseFrameId_;
+  //! TF frame id of the robot base.
+  std::string robotBaseFrameId_;
 
-  // TODO This could be stored as std::map.
-  //! Sensor parameters. Initialized by ElevationMapping friend class.
-  std::vector<double> sensorParameters_;
+  //! Ignore points above this height in map frame.
+  double ignorePointsAbove_;
 
-  //! Sensor parameter names. Must be initialized by derived sensor processor class.
-  std::vector<std::string> sensorParameterNames_;
+  //! Ignore points below this height in map frame.
+  double ignorePointsBelow_;
 
+  //! Sensor parameters.
+  std::unordered_map<std::string, double> sensorParameters_;
 };
 
 } /* namespace elevation_mapping */
