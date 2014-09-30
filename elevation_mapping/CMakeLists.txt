@@ -80,6 +80,7 @@ add_executable(
   src/sensor_processors/KinectSensorProcessor.cpp
   src/sensor_processors/StereoSensorProcessor.cpp
   src/sensor_processors/LaserSensorProcessor.cpp
+  src/sensor_processors/PerfectSensorProcessor.cpp
 )
 
 ## Specify libraries to link a library or executable target against

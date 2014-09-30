@@ -12,6 +12,7 @@
 #include "elevation_mapping/sensor_processors/KinectSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
+#include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
 
 // Grid Map
 #include <grid_map_msg/GridMap.h>
@@ -49,7 +50,8 @@ namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-      map_(nodeHandle)
+      map_(nodeHandle),
+      robotMotionMapUpdater_(nodeHandle)
 {
   ROS_INFO("Elevation mapping node started.");
 
@@ -144,10 +146,14 @@ bool ElevationMapping::readParameters()
     sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
   } else if (sensorType == "Laser") {
     sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, transformListener_));
+  } else if (sensorType == "Perfect") {
+    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, transformListener_));
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
   }
   if (!sensorProcessor_->readParameters()) return false;
+
+  if (!robotMotionMapUpdater_.readParameters()) return false;
 
   return true;
 }

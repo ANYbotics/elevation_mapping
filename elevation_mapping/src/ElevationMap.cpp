@@ -272,10 +272,9 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
     weights.conservativeResize(i);
 
     float mean = (weights * means).sum() / weights.sum();
-    float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
+    float variance = (weights * (variances + means.square())).sum() / weights.sum() - pow(mean, 2);
 
-    if (!(std::isfinite(variance) && std::isfinite(mean)))
-    {
+    if (!(std::isfinite(variance) && std::isfinite(mean))) {
       ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
       continue;
     }
@@ -307,6 +306,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
 bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size)
 {
+  // TODO Change this to raw map!
   ROS_DEBUG("Computing surface normals...");
 
   // Initializations.
@@ -417,6 +417,7 @@ bool ElevationMap::publishRawElevationMap()
   scopedLock.unlock();
   rawMapCopy.add("standard_deviation", rawMapCopy.get("variance").array().sqrt().matrix());
   rawMapCopy.add("horizontal_standard_deviation", (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
+  rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
   grid_map_msg::GridMap message;
   rawMapCopy.toMessage(message);
   elevationMapRawPublisher_.publish(message);
@@ -431,6 +432,7 @@ bool ElevationMap::publishElevationMap()
   grid_map::GridMap fusedMapCopy = fusedMap_;
   scopedLock.unlock();
   fusedMapCopy.add("standard_deviation", fusedMapCopy.get("variance").array().sqrt().matrix());
+  fusedMapCopy.add("two_sigma_bound", fusedMapCopy.get("elevation") + 2.0 * fusedMapCopy.get("variance").array().sqrt().matrix());
   grid_map_msg::GridMap message;
   fusedMapCopy.toMessage(message);
   elevationMapFusedPublisher_.publish(message);

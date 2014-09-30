@@ -18,9 +18,11 @@ using namespace kindr::rotations::eigen_impl;
 
 namespace elevation_mapping {
 
-RobotMotionMapUpdater::RobotMotionMapUpdater()
+RobotMotionMapUpdater::RobotMotionMapUpdater(ros::NodeHandle& nodeHandle)
+    : nodeHandle_(nodeHandle)
 {
   previousRobotPoseCovariance_.setZero();
+  covarianceScale_.setOnes();
 }
 
 RobotMotionMapUpdater::~RobotMotionMapUpdater()
@@ -28,12 +30,25 @@ RobotMotionMapUpdater::~RobotMotionMapUpdater()
 
 }
 
+bool RobotMotionMapUpdater::readParameters()
+{
+  nodeHandle_.param("robot_motion_map_update/covariance_scale_translation_x", covarianceScale_(0, 0), 1.0);
+  nodeHandle_.param("robot_motion_map_update/covariance_scale_translation_y", covarianceScale_(1, 1), 1.0);
+  nodeHandle_.param("robot_motion_map_update/covariance_scale_translation_z", covarianceScale_(2, 2), 1.0);
+  nodeHandle_.param("robot_motion_map_update/covariance_scale_rotation_x", covarianceScale_(3, 3), 1.0);
+  nodeHandle_.param("robot_motion_map_update/covariance_scale_rotation_y", covarianceScale_(4, 4), 1.0);
+  nodeHandle_.param("robot_motion_map_update/covariance_scale_rotation_z", covarianceScale_(5, 5), 1.0);
+  return true;
+}
+
 bool RobotMotionMapUpdater::update(
     ElevationMap& map, const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, const ros::Time& time)
 {
+  Matrix<double, 6, 6> robotPoseCovarianceScaled = (covarianceScale_ * robotPoseCovariance.array()).matrix();
+
   // Check if update necessary.
-  if (((robotPoseCovariance - previousRobotPoseCovariance_).array() == 0.0).all()) return false;
+  if (((robotPoseCovarianceScaled - previousRobotPoseCovariance_).array() == 0.0).all()) return false;
 
   // Initialize update data.
   Array2i size = map.getRawGridMap().getBufferSize();
@@ -43,9 +58,9 @@ bool RobotMotionMapUpdater::update(
 
   // Covariance matrices.
   Matrix3d previousPositionCovariance = previousRobotPoseCovariance_.topLeftCorner<3, 3>();
-  Matrix3d positionCovariance = robotPoseCovariance.topLeftCorner<3, 3>();
+  Matrix3d positionCovariance = robotPoseCovarianceScaled.topLeftCorner<3, 3>();
   Matrix3d previousRotationCovariance = previousRobotPoseCovariance_.bottomRightCorner<3, 3>();
-  Matrix3d rotationCovariance = robotPoseCovariance.bottomRightCorner<3, 3>();
+  Matrix3d rotationCovariance = robotPoseCovarianceScaled.bottomRightCorner<3, 3>();
 
   // Parent to elevation map frame rotation (C_IM^T = C_SM^T * C_IS^T)
   Matrix3d parentToMapRotation = RotationMatrixPD(map.getPose().getRotation()).matrix().transpose();
@@ -97,7 +112,7 @@ bool RobotMotionMapUpdater::update(
 
   map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, time);
 
-  previousRobotPoseCovariance_ = robotPoseCovariance;
+  previousRobotPoseCovariance_ = robotPoseCovarianceScaled;
 
   return true;
 }

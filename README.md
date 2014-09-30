@@ -123,7 +123,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) and safe it to a text file form the console with
 
-        rosservice call -- /elevation_mapping/get_submap -0.5 0.0 0.5 1.2
+        rosservice call -- /elevation_mapping/get_grid_map -0.5 0.0 0.5 1.2 []
 
 
 #### Parameters
