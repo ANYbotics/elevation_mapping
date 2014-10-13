@@ -1,4 +1,4 @@
-point_cloud_topic: "/camera/depth/points"
+point_cloud_topic: "/camera/depth_registered/points"
 map_frame_id: "starleth/odometry"
 robot_base_frame_id: "base"
 robot_pose_with_covariance_topic: "/starleth/robot_state/pose"
