@@ -96,10 +96,10 @@ class ElevationMap
   bool fuseArea(const Eigen::Vector2d& position, const Eigen::Array2d& length, const bool computeSurfaceNormals);
 
   /*!
-   * Resets all data of the elevation map (data, lengths, resolution etc.)
+   * Clears all data of the elevation map (data and time).
    * @return true if successful.
    */
-  bool reset();
+  bool clear();
 
   /*!
    * Move the grid map w.r.t. to the grid map frame.

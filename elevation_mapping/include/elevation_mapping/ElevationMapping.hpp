@@ -91,6 +91,14 @@ class ElevationMapping
    */
   bool getSubmap(grid_map_msg::GetGridMap::Request& request, grid_map_msg::GetGridMap::Response& response);
 
+  /*!
+   * Clears all data of the elevation map.
+   * @param request the ROS service request.
+   * @param response the ROS service response.
+   * @return true if successful.
+   */
+  bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+
  private:
 
   /*!
@@ -150,6 +158,7 @@ class ElevationMapping
   //! ROS service servers.
   ros::ServiceServer fusionTriggerService_;
   ros::ServiceServer submapService_;
+  ros::ServiceServer clearMapService_;
 
   //! Callback thread for the fusion services.
   boost::thread fusionServiceThread_;

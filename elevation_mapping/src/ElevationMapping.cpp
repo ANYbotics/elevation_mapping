@@ -73,6 +73,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       &fusionServiceQueue_);
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
 
+  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
+
   initialize();
 }
 
@@ -172,8 +174,7 @@ void ElevationMapping::runFusionServiceThread()
 {
   static const double timeout = 0.01;
 
-  while(nodeHandle_.ok())
-  {
+  while (nodeHandle_.ok()) {
     fusionServiceQueue_.callAvailable(ros::WallDuration(timeout));
   }
 }
@@ -366,6 +367,12 @@ bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, gri
 
   ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
   return isSuccess;
+}
+
+bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+  ROS_INFO("Clearing map.");
+  return map_.clear();
 }
 
 void ElevationMapping::resetMapUpdateTimer()

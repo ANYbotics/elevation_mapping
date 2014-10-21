@@ -45,7 +45,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   maxHorizontalVariance_ = 0.0;
   rawMap_.setClearTypes(vector<string>({"elevation", "variance"}));
   fusedMap_.setClearTypes(vector<string>({"elevation", "variance"}));
-  reset();
+  clear();
 
   elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_map_raw", 1);
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_map", 1);
@@ -413,12 +413,14 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
 }
 
 
-bool ElevationMap::reset()
+bool ElevationMap::clear()
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   rawMap_.clearAll();
+  rawMap_.resetTimestamp();
   fusedMap_.clearAll();
+  fusedMap_.resetTimestamp();
   return true;
 }
 
@@ -516,7 +518,7 @@ void ElevationMap::resetFusedData()
 {
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   fusedMap_.clearAll();
-  fusedMap_.setTimestamp(0);
+  fusedMap_.resetTimestamp();
 }
 
 void ElevationMap::setFrameId(const std::string& frameId)

@@ -125,6 +125,12 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
         rosservice call -- /elevation_mapping/get_grid_map -0.5 0.0 0.5 1.2 []
 
+* **`clear_map`** ([std_srvs/Empty])
+
+    Initiates clearing of the entire map for resetting purposes. Trigger the map clearing with
+
+        rosservice call /elevation_mapping/clear_map
+
 
 #### Parameters
 
