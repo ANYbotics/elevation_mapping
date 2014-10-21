@@ -1,0 +1,7 @@
+# Velodyne_HDL-32E
+# TODO
+
+sensor_processor/type: Laser
+sensor_processor/min_radius: 0.018
+sensor_processor/beam_angle: 0.0006
+sensor_processor/beam_constant: 0.0015

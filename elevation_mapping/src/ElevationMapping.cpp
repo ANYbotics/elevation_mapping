@@ -237,6 +237,11 @@ void ElevationMapping::pointCloudCallback(
   // Publish raw elevation map.
   if (!map_.publishRawElevationMap()) ROS_DEBUG("Elevation map has not been broadcasted.");
 
+  // TODO Add option for continous fusion.
+//  boost::recursive_mutex::scoped_lock scopedLock2(map_.getFusedDataMutex());
+//  map_.fuseAll(true);
+//  map_.publishElevationMap();
+
   resetMapUpdateTimer();
 }
 

@@ -1,0 +1,15 @@
+point_cloud_topic: "/velodyne_post/point_cloud"
+map_frame_id: "topocentric"
+robot_base_frame_id: "base"
+robot_pose_with_covariance_topic: "/starleth/robot_state/pose"
+robot_pose_cache_size: 200
+track_point_frame_id: "base"
+track_point_x: 1.0
+track_point_y: 0.0
+track_point_z: 0.0          
+robot_motion_map_update/covariance_scale_translation_x: 1.0
+robot_motion_map_update/covariance_scale_translation_y: 1.0
+robot_motion_map_update/covariance_scale_translation_z: 1.0
+robot_motion_map_update/covariance_scale_rotation_x: 1.0
+robot_motion_map_update/covariance_scale_rotation_y: 1.0
+robot_motion_map_update/covariance_scale_rotation_z: 1.0

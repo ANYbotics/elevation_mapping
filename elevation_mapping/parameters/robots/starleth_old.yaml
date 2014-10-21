@@ -1,0 +1,23 @@
+point_cloud_topic: "/depth_registered/points"
+map_frame_id: "starleth/odometry"
+robot_base_frame_id: "starleth/BASE"
+robot_pose_with_covariance_topic: "/starleth/robot_state/pose"
+robot_pose_cache_size: 200
+track_point_frame_id: "starleth/BASE"
+track_point_x: 0.25
+track_point_y: 0.0
+track_point_z: 0.0          
+robot_motion_map_update/covariance_scale_translation_x: 64.0
+robot_motion_map_update/covariance_scale_translation_y: 64.0
+robot_motion_map_update/covariance_scale_translation_z: 9.0
+robot_motion_map_update/covariance_scale_rotation_x: 1.0
+robot_motion_map_update/covariance_scale_rotation_y: 1.0
+robot_motion_map_update/covariance_scale_rotation_z: 144.0
+
+# After walking test covariance observation
+#robot_motion_map_update/covariance_scale_translation_x: 36.0
+#robot_motion_map_update/covariance_scale_translation_y: 36.0
+#robot_motion_map_update/covariance_scale_translation_z: 4.0
+#robot_motion_map_update/covariance_scale_rotation_x: 1.0
+#robot_motion_map_update/covariance_scale_rotation_y: 1.0
+#robot_motion_map_update/covariance_scale_rotation_z: 100.0
