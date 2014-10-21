@@ -32,12 +32,18 @@ class RobotMotionMapUpdater
   /*!
    * Constructor.
    */
-  RobotMotionMapUpdater();
+  RobotMotionMapUpdater(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.
    */
   virtual ~RobotMotionMapUpdater();
+
+  /*!
+   * Reads and verifies the ROS parameters.
+   * @return true if successful.
+   */
+  bool readParameters();
 
   /*!
    * Computes the model update for the elevation map based on the pose covariance and
@@ -55,10 +61,14 @@ class RobotMotionMapUpdater
 
  private:
 
-  /*!
-   * Robot pose covariance from the previous update.
-   */
+  //! ROS nodehandle.
+  ros::NodeHandle& nodeHandle_;
+
+  //! Robot pose covariance from the previous update.
   Eigen::Matrix<double, 6, 6> previousRobotPoseCovariance_;
+
+  //! Scaling factor for the covariance matrix (default all ones).
+  Eigen::Array<double, 6, 6> covarianceScale_;
 };
 
 } /* namespace */

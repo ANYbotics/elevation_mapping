@@ -6,5 +6,5 @@
     	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/drc.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/hokuyo_utm-30lx.yaml" />
     </node>
-    <include file="$(find elevation_mapping)/launch/elevation_map_raw_visualization.launch" />
+    <include file="$(find elevation_mapping)/launch/raw_visualization.launch" />
 </launch>

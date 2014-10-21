@@ -179,7 +179,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
   ROS_DEBUG("Fusing elevation map...");
 
   // Nothing to do.
-  if (size.any() == 0) return false;
+  if ((size == 0).any()) return false;
 
   // Initializations.
   string timerId = "map_fusion_timer";
@@ -191,6 +191,8 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   auto rawMapCopy = rawMap_;
   scopedLockForRawData.unlock();
+
+  ROS_DEBUG("Fusing elevation map2...");
 
   // Check if there is the need to reset out-dated data.
   if (fusedMap_.getTimestamp() != rawMapCopy.getTimestamp()) resetFusedData();
@@ -212,16 +214,31 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
     }
 
     // Size of submap (2 sigma bound). TODO Add minimum/maximum submap size?
-    Array2d submapLength = 4.0 * Array2d(rawMapCopy.at("horizontal_variance_x", *areaIterator), rawMapCopy.at("horizontal_variance_y", *areaIterator)).sqrt();
+    Array2d requestedSubmapLength = 4.0 * Array2d(rawMapCopy.at("horizontal_variance_x", *areaIterator), rawMapCopy.at("horizontal_variance_y", *areaIterator)).sqrt();
 
     // Requested position (center) of submap in map.
-    Vector2d submapPosition;
-    rawMapCopy.getPosition(*areaIterator, submapPosition);
+    Vector2d requestedSubmapPosition;
+    rawMapCopy.getPosition(*areaIterator, requestedSubmapPosition);
 
+    Array2d submapLength;
+    Vector2d submapPosition;
     Array2i submapTopLeftIndex, submapBufferSize, requestedIndexInSubmap;
 
-    grid_map_lib::getSubmapInformation(submapTopLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, submapPosition, submapLength,
+    grid_map_lib::getSubmapInformation(submapTopLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, requestedSubmapPosition, requestedSubmapLength,
                          rawMapCopy.getLength(), rawMapCopy.getPosition(), rawMapCopy.getResolution(), rawMapCopy.getBufferSize(), rawMapCopy.getBufferStartIndex());
+
+//    cout << "submapTopLeftIndex: " << submapTopLeftIndex << endl;
+//    cout << "submapBufferSize: " << submapBufferSize << endl;
+//    cout << "submapPosition: " << submapPosition << endl;
+//    cout << "submapLength: " << submapLength << endl;
+//    cout << "requestedIndexInSubmap: " << requestedIndexInSubmap << endl;
+//    cout << "requestedSubmapPosition: " << requestedSubmapPosition << endl;
+//    cout << "requestedSubmapLength: " << requestedSubmapLength << endl;
+//    cout << "rawMapCopy.getLength(): " << rawMapCopy.getLength() << endl;
+//    cout << "rawMapCopy.getPosition(): " << rawMapCopy.getPosition() << endl;
+//    cout << "rawMapCopy.getResolution(): " << rawMapCopy.getResolution() << endl;
+//    cout << "rawMapCopy.getBufferSize(): " << rawMapCopy.getBufferSize() << endl;
+//    cout << "rawMapCopy.getBufferStartIndex(): " << rawMapCopy.getBufferStartIndex() << endl;
 
     // Prepare data fusion.
     ArrayXf means, variances, weights;
@@ -272,10 +289,9 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
     weights.conservativeResize(i);
 
     float mean = (weights * means).sum() / weights.sum();
-    float variance = (weights * (variances.square() + means.square())).sum() / weights.sum() - pow(mean, 2);
+    float variance = (weights * (variances + means.square())).sum() / weights.sum() - pow(mean, 2);
 
-    if (!(std::isfinite(variance) && std::isfinite(mean)))
-    {
+    if (!(std::isfinite(variance) && std::isfinite(mean))) {
       ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
       continue;
     }
@@ -295,6 +311,8 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
     timer.stop();
   }
 
+  ROS_DEBUG("Fusing elevation map...");
+
   fusedMap_.setTimestamp(rawMapCopy.getTimestamp());
 
   ROS_INFO("Elevation map has been fused in %f s.", Timing::getTotalSeconds(timerId));
@@ -307,6 +325,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
 bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size)
 {
+  // TODO Change this to raw map!
   ROS_DEBUG("Computing surface normals...");
 
   // Initializations.
@@ -417,6 +436,7 @@ bool ElevationMap::publishRawElevationMap()
   scopedLock.unlock();
   rawMapCopy.add("standard_deviation", rawMapCopy.get("variance").array().sqrt().matrix());
   rawMapCopy.add("horizontal_standard_deviation", (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
+  rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
   grid_map_msg::GridMap message;
   rawMapCopy.toMessage(message);
   elevationMapRawPublisher_.publish(message);
@@ -431,6 +451,7 @@ bool ElevationMap::publishElevationMap()
   grid_map::GridMap fusedMapCopy = fusedMap_;
   scopedLock.unlock();
   fusedMapCopy.add("standard_deviation", fusedMapCopy.get("variance").array().sqrt().matrix());
+  fusedMapCopy.add("two_sigma_bound", fusedMapCopy.get("elevation") + 2.0 * fusedMapCopy.get("variance").array().sqrt().matrix());
   grid_map_msg::GridMap message;
   fusedMapCopy.toMessage(message);
   elevationMapFusedPublisher_.publish(message);

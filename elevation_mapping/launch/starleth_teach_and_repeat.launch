@@ -1,0 +1,8 @@
+<launch>
+	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find elevation_mapping)/launch/custom_rosconsole.conf"/>
+ 	<node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping_starleth_teach_and_repeat" output="screen">
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/robots/starleth_teach_and_repeat.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/teach_and_repeat.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/velodyne_HDL-32E.yaml" />
+    </node>
+</launch>
