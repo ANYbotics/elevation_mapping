@@ -334,10 +334,30 @@ bool ElevationMapping::updateMapLocation()
 
 bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, grid_map_msg::GetGridMap::Response& response)
 {
-  Vector2d requestedSubmapPosition(request.positionX, request.positionY);
+  Vector2d requestedSubmapPosition(request.positionX, request.positionY);  
   Array2d requestedSubmapLength(request.lengthX, request.lengthY);
-  ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
+  ROS_DEBUG("Elevation submap request: Frame \"%s\", Position x=%f, y=%f, Length x=%f, y=%f.", request.frameId.data.c_str(), requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
 
+  geometry_msgs::PointStamped requestedSubmapPoint;
+  requestedSubmapPoint.header.frame_id = request.frameId.data;
+  requestedSubmapPoint.header.stamp = Time(0);
+  requestedSubmapPoint.point.x = request.positionX;
+  requestedSubmapPoint.point.y = request.positionY;
+  requestedSubmapPoint.point.z = 0.0;
+  geometry_msgs::PointStamped requestedSubmapPointTransformed;
+  
+  try
+  {
+    transformListener_.transformPoint(map_.getFrameId(), requestedSubmapPoint, requestedSubmapPointTransformed);
+  }
+  catch (TransformException &ex)
+  {
+    ROS_ERROR("%s", ex.what());
+    return false;
+  }
+  requestedSubmapPosition[0] = requestedSubmapPointTransformed.point.x;
+  requestedSubmapPosition[1] = requestedSubmapPointTransformed.point.y;  
+  
   bool computeSurfaceNormals = false;
   if (request.dataDefinition.empty()) {
     computeSurfaceNormals = true;
