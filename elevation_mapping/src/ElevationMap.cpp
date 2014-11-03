@@ -14,7 +14,7 @@
 // Grid Map
 #include <grid_map_lib/GridMapMath.hpp>
 #include <grid_map/GridMapMsgHelpers.hpp>
-#include <grid_map_lib/SubmapIterator.hpp>
+#include <grid_map_lib/iterators/SubmapIterator.hpp>
 
 // Math
 #include <math.h>
@@ -45,7 +45,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
   maxHorizontalVariance_ = 0.0;
   rawMap_.setClearTypes(vector<string>({"elevation", "variance"}));
   fusedMap_.setClearTypes(vector<string>({"elevation", "variance"}));
-  reset();
+  clear();
 
   elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_map_raw", 1);
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_map", 1);
@@ -192,8 +192,6 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
   auto rawMapCopy = rawMap_;
   scopedLockForRawData.unlock();
 
-  ROS_DEBUG("Fusing elevation map2...");
-
   // Check if there is the need to reset out-dated data.
   if (fusedMap_.getTimestamp() != rawMapCopy.getTimestamp()) resetFusedData();
 
@@ -226,19 +224,6 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     grid_map_lib::getSubmapInformation(submapTopLeftIndex, submapBufferSize, submapPosition, submapLength, requestedIndexInSubmap, requestedSubmapPosition, requestedSubmapLength,
                          rawMapCopy.getLength(), rawMapCopy.getPosition(), rawMapCopy.getResolution(), rawMapCopy.getBufferSize(), rawMapCopy.getBufferStartIndex());
-
-//    cout << "submapTopLeftIndex: " << submapTopLeftIndex << endl;
-//    cout << "submapBufferSize: " << submapBufferSize << endl;
-//    cout << "submapPosition: " << submapPosition << endl;
-//    cout << "submapLength: " << submapLength << endl;
-//    cout << "requestedIndexInSubmap: " << requestedIndexInSubmap << endl;
-//    cout << "requestedSubmapPosition: " << requestedSubmapPosition << endl;
-//    cout << "requestedSubmapLength: " << requestedSubmapLength << endl;
-//    cout << "rawMapCopy.getLength(): " << rawMapCopy.getLength() << endl;
-//    cout << "rawMapCopy.getPosition(): " << rawMapCopy.getPosition() << endl;
-//    cout << "rawMapCopy.getResolution(): " << rawMapCopy.getResolution() << endl;
-//    cout << "rawMapCopy.getBufferSize(): " << rawMapCopy.getBufferSize() << endl;
-//    cout << "rawMapCopy.getBufferStartIndex(): " << rawMapCopy.getBufferStartIndex() << endl;
 
     // Prepare data fusion.
     ArrayXf means, variances, weights;
@@ -310,8 +295,6 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     timer.stop();
   }
-
-  ROS_DEBUG("Fusing elevation map...");
 
   fusedMap_.setTimestamp(rawMapCopy.getTimestamp());
 
@@ -413,12 +396,14 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
 }
 
 
-bool ElevationMap::reset()
+bool ElevationMap::clear()
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   rawMap_.clearAll();
+  rawMap_.resetTimestamp();
   fusedMap_.clearAll();
+  fusedMap_.resetTimestamp();
   return true;
 }
 
@@ -516,7 +501,7 @@ void ElevationMap::resetFusedData()
 {
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   fusedMap_.clearAll();
-  fusedMap_.setTimestamp(0);
+  fusedMap_.resetTimestamp();
 }
 
 void ElevationMap::setFrameId(const std::string& frameId)
