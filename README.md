@@ -43,9 +43,9 @@ This software is built on the Robotic Operating System ([ROS]), which needs to b
 - [kindr](http://github.com/ethz-asl/kindr) (kinematics and dynamics library for robotics),
 - [Schweizer-Messer](http://github.com/ethz-asl/Schweizer-Messer) (programming tools for robotics),
 
-	sudo add-apt-repository ppa:kralf/asl
-	sudo apt-get update
-	sudo apt-get install schweizer-messer-common-dev schweizer-messer-timing-dev
+        sudo add-apt-repository ppa:kralf/asl
+        sudo apt-get update
+        sudo apt-get install schweizer-messer-common-dev schweizer-messer-timing-dev
 
 - [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing),
 - [Eigen](http://eigen.tuxfamily.org) (linear algebra library).
@@ -229,3 +229,4 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
 [grid_map_msg/GetGridMap]: https://github.com/ethz-asl/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
+
