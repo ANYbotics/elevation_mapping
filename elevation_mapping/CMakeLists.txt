@@ -31,6 +31,8 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Kindr REQUIRED)
 find_package(Eigen REQUIRED)
+
+find_package(PkgConfig REQUIRED)
 pkg_check_modules(SM_COMMON schweizer-messer-common REQUIRED)
 pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
 
