@@ -343,7 +343,7 @@ bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, gri
     computeSurfaceNormals = true;
   } else {
     for (const auto& type : request.dataDefinition) {
-      if (type.data.find("surface_normal") != std::string::npos) computeSurfaceNormals = true;
+      if (type.find("surface_normal") != std::string::npos) computeSurfaceNormals = true;
     }
   }
 
@@ -360,7 +360,7 @@ bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, gri
   } else {
     vector<string> types;
     for (const auto& type : request.dataDefinition) {
-      types.push_back(type.data);
+      types.push_back(type);
     }
     subMap.toMessage(types, response.gridMap);
   }
