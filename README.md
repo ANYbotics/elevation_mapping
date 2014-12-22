@@ -43,7 +43,7 @@ This software is built on the Robotic Operating System ([ROS]), which needs to b
 - [kindr](http://github.com/ethz-asl/kindr) (kinematics and dynamics library for robotics),
 - [Schweizer-Messer](http://github.com/ethz-asl/Schweizer-Messer) (programming tools for robotics),
 
-        sudo add-apt-repository ppa:kralf/asl
+        sudo add-apt-repository ppa:ethz-asl/common
         sudo apt-get update
         sudo apt-get install schweizer-messer-common-dev schweizer-messer-timing-dev
 
