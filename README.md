@@ -1,8 +1,6 @@
-Robot-Centric Elevation Mapping
-======================
+# Robot-Centric Elevation Mapping
 
-Overview
----------------
+## Overview
 
 This is a [ROS] package developed for elevation mapping with a mobile robot. The software is designed for (local) navigation tasks with robots which are equipped with a pose estimation (e.g. IMU & odometry) and a distance sensor (e.g. kinect, laser range sensor, stereo camera). The provided elevation map is limited around the robot and reflects the pose uncertainty that is aggregated through the motion of the robot (robot-centric mapping). This method is developed to explicitly handle drift of the robot pose estimation.
 
@@ -12,8 +10,7 @@ The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo a
 Affiliation: Autonomous Systems Lab, ETH Zurich**
 
 
-Citing
----------------
+## Citing
 
 The robot-centric elevation mapping methods used in this software are described in the following paper (available [here](http://dx.doi.org/10.3929/ethz-a-010173654)):
 
@@ -32,8 +29,7 @@ Watch the [video](http://www.youtube.com/watch?v=I9eP8GrMyNQ) demonstrating the 
 [![Robot-Centric Elevation Mapping](example.jpg)](http://www.youtube.com/watch?v=I9eP8GrMyNQ)
 
 
-Installation
-------------
+## Installation
 
 ### Dependencies
 
@@ -68,8 +64,7 @@ Run the unit tests with
     catkin_make run_tests_elevation_map_msg run_tests_elevation_mapping
 
 
-Basic Usage
-------------
+## Basic Usage
 
 In order to get the Robot-Centric Elevation Mapping to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change in `elevation_mapping/parameters/`. Then, change the entries in the launch-file `elevation_mapping/launch/elevation_mapping.launch` to point at your parameter files. You can then launch the elevation mapping node with
 
@@ -86,8 +81,7 @@ or
 Use [rviz] to visualize the elevation map. A sample [rviz] configuration file is provided under `/elevation_map_visualization/rviz/elevation_map_visualization.rviz`.
 
 
-Nodes
-------------
+## Nodes
 
 ### Node: elevation_mapping
 
@@ -216,8 +210,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
     The data for the sensor noise model. 
 
 
-Bugs & Feature Requests
-------------
+## Bugs & Feature Requests
 
 Please report bugs and request features using the [Issue Tracker](https://github.com/ethz-asl/elevation_mapping/issues).
 
@@ -229,4 +222,3 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
 [grid_map_msg/GetGridMap]: https://github.com/ethz-asl/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
-
