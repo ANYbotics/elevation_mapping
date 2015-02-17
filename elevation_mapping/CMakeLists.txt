@@ -29,7 +29,7 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
-find_package(Kindr REQUIRED)
+find_package(kindr REQUIRED)
 find_package(Eigen REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -62,7 +62,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  ${Kindr_INCLUDE_DIRS}
+  ${kindr_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
   ${SM_COMMON_INCLUDE_DIRS}
   ${SM_TIMING_INCLUDE_DIRS}
