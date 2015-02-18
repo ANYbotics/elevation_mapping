@@ -25,11 +25,11 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   eigen_conversions
+  kindr
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
-find_package(Kindr REQUIRED)
 find_package(Eigen REQUIRED)
 
 find_package(PkgConfig REQUIRED)
@@ -48,7 +48,7 @@ pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_mapping
-    CATKIN_DEPENDS std_msgs sensor_msgs grid_map_msg
+    CATKIN_DEPENDS std_msgs sensor_msgs grid_map_msg kindr
 #  DEPENDS system_lib
 )
 
@@ -62,7 +62,6 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  ${Kindr_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
   ${SM_COMMON_INCLUDE_DIRS}
   ${SM_TIMING_INCLUDE_DIRS}
