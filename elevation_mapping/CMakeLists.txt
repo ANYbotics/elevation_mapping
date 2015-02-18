@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(elevation_mapping)
 
-set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
 # Set the build type.  Options are:
 #  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
@@ -29,12 +29,19 @@ find_package(catkin REQUIRED COMPONENTS
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
-find_package(kindr REQUIRED)
 find_package(Eigen REQUIRED)
-
 find_package(PkgConfig REQUIRED)
+
+# Attempt to find catkinized kindr
+find_package(kindr QUIET)
+if(NOT kindr_FOUND)
+  # Attempt to find package-based kindr
+  pkg_check_modules(kindr kindr REQUIRED)
+endif()
+
 pkg_check_modules(SM_COMMON schweizer-messer-common REQUIRED)
 pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
+
 
 ###################################
 ## catkin specific configuration ##
