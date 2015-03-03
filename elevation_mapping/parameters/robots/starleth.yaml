@@ -1,7 +1,7 @@
-point_cloud_topic: "/camera/depth/points"
-map_frame_id: "starleth/odometry"
+point_cloud_topic: "/kinect/depth/points"
+map_frame_id: "map"
 robot_base_frame_id: "base"
-robot_pose_with_covariance_topic: "/starleth/robot_state/pose"
+robot_pose_with_covariance_topic: "/state_estimator/pose"
 robot_pose_cache_size: 200
 track_point_frame_id: "base"
 track_point_x: 0.25
