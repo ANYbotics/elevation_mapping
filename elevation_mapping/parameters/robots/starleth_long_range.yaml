@@ -1,4 +1,4 @@
-point_cloud_topic: "/actuated_lidar/manager/point_cloud"
+point_cloud_topic: "/actuated_lidar/point_cloud"
 map_frame_id: "map"
 robot_base_frame_id: "base"
 robot_pose_with_covariance_topic: "/state_estimator/pose"
