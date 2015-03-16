@@ -346,7 +346,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
     const int maxNumberOfCells = submapBufferSize.prod();
     MatrixXd points(3, maxNumberOfCells);
 
-    // Gather sourounding data.
+    // Gather surrounding data.
     size_t nPoints = 0;
     for (grid_map_lib::SubmapIterator submapIterator(fusedMap_, submapTopLeftIndex, submapBufferSize); !submapIterator.isPassedEnd(); ++submapIterator) {
       if (!fusedMap_.isValid(*submapIterator)) continue;
