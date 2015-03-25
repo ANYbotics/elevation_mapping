@@ -1,0 +1,9 @@
+point_cloud_topic: "/ground_truth"
+map_frame_id: "map"
+robot_base_frame_id: "map"
+robot_pose_with_covariance_topic: "/ground_truth_pose"
+robot_pose_cache_size: 500
+track_point_frame_id: "map"
+track_point_x: 0.0
+track_point_y: 0.0
+track_point_z: 0.0
