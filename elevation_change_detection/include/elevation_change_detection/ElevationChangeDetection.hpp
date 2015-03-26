@@ -38,6 +38,12 @@ namespace elevation_change_detection {
      */
     bool publishElevationChangeMap(const grid_map::GridMap& map);
 
+    /*!
+     * Publishes the ground truth map.
+     * @return true if successful.
+     */
+    bool publishGroundTruthMap(const grid_map::GridMap& map);
+
   private:
 
     /*!
@@ -111,11 +117,14 @@ namespace elevation_change_detection {
     //! Elevation map type
     const std::string type_;
 
-    //! Publisher of the traversability occupancy grid.
+    //! Publisher of elevation change map.
     ros::Publisher elevationChangePublisher_;
 
     //! Ground Truth elevation map
     grid_map::GridMap groundTruthMap_;
+
+    //! Publisher of the ground truth map.
+    ros::Publisher groundTruthPublisher_;
 
   };
 
