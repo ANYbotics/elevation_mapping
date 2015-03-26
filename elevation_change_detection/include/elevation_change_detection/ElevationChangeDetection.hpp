@@ -13,6 +13,7 @@
 
 // ROS
 #include <ros/ros.h>
+#include <tf/transform_listener.h>
 
 #include <string>
 
@@ -72,7 +73,7 @@ namespace elevation_change_detection {
      * @param[in] requestedSubmapPubmapLength the submap of the ground truth map.
      * @param[out] map the submap of the ground truth map.
      */
-    void getGroundTruthSubmap(Eigen::Vector2d& requestedSubmapPosition, Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map);
+    void getGroundTruthSubmap(const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map);
 
     //! ROS node handle.
     ros::NodeHandle& nodeHandle_;

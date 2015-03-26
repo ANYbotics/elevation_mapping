@@ -39,7 +39,7 @@ find_package(Eigen REQUIRED)
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_change_detection
-#    CATKIN_DEPENDS nav_msgs grid_map_msg
+    CATKIN_DEPENDS nav_msgs grid_map_msg
 #  DEPENDS system_lib
 )
 
@@ -51,8 +51,8 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include
-#  ${catkin_INCLUDE_DIRS}
-#  ${Eigen_INCLUDE_DIRS}
+  ${catkin_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library

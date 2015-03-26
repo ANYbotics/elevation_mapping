@@ -10,6 +10,7 @@
 
 #include <grid_map_lib/GridMap.hpp>
 #include <grid_map_lib/GridMapMath.hpp>
+#include <grid_map_msg/GetGridMap.h>
 
 // Eigenvalues
 #include <Eigen/Dense>
@@ -26,7 +27,7 @@ ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
 
   readParameters();
 
-  submapClient_ = nodeHandle_.serviceClient<GetGridMap>(submapServiceName_);
+  submapClient_ = nodeHandle_.serviceClient<grid_map_msg::GetGridMap>(submapServiceName_);
   elevationChangePublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_change_map", 1, true);
 
   updateTimer_ = nodeHandle_.createTimer(updateDuration_,
@@ -122,7 +123,7 @@ bool ElevationChangeDetection::getGridMap(grid_map_msg::GridMap& map)
   return true;
 }
 
-void ElevationChangeDetection::getGroundTruthSubmap(Eigen::Vector2d& requestedSubmapPosition, Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map)
+void ElevationChangeDetection::getGroundTruthSubmap(const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map)
 {
   Vector2d submapPosition;
   Array2d submapLength;
