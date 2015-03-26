@@ -1,0 +1,26 @@
+<?xml version="1.0"?>
+<package>
+  <name>elevation_change_detection</name>
+  <version>0.1.0</version>
+  <description>ROS package for estimating traversability from elevation maps.</description>
+  <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer>
+  <license>MIT</license>
+  <url type="website">https://github.com/ethz-asl/elevation_mapping</url>
+  <url type="bugtracker">https://github.com/ethz-asl/elevation_mapping/issues</url>
+  <author email="martiwer@student.ethz.ch">Martin Wermelinger</author>
+  <author email="pfankhauser@ethz.ch">Peter Fankhauser</author>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>cmake_modules</build_depend>
+  <build_depend>roscpp</build_depend>
+  <build_depend>grid_map</build_depend>
+  <build_depend>grid_map_lib</build_depend>
+  <build_depend>grid_map_msg</build_depend>
+  <build_depend>elevation_mapping</build_depend>
+  <build_depend>traversability_estimation</build_depend>
+  <run_depend>roscpp</run_depend>
+  <run_depend>grid_map</run_depend>
+  <run_depend>grid_map_lib</run_depend>
+  <run_depend>grid_map_msg</run_depend>
+  <run_depend>elevation_mapping</run_depend>
+  <run_depend>traversability_estimation</run_depend>
+</package>

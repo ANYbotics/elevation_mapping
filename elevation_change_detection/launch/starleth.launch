@@ -1,0 +1,6 @@
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find elevation_change_detection)/launch/custom_rosconsole.conf"/>
+  <node pkg="elevation_change_detection" type="elevation_change_detection" name="elevation_change_detection" output="screen">
+    <rosparam command="load" file="$(find elevation_change_detection)/config/starleth.yaml" />
+  </node>
+</launch>
