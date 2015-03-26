@@ -66,13 +66,15 @@ bool ElevationChangeDetection::readParameters()
 
   nodeHandle_.param("path_to_bag", pathToBag_, std::string("lee_ground_truth.bag"));
   loadElevationMap(pathToBag_);
+  if (!groundTruthMap_.exists(type_)) ROS_ERROR("There exists no ground truth map in this bag!");
 
   return true;
 }
 
 bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag)
 {
-  std::string topicName = "elevation_change_map";
+//  std::string topicName = "elevation_change_map";
+  std::string topicName = "grid_map";
   return groundTruthMap_.loadFromBag(pathToBag, topicName);
 }
 
@@ -84,10 +86,10 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
 
     getGroundTruthSubmap(elevationMap.getPosition(), elevationMap.getLength(), groundTruthSubmap);
 
-    Eigen::MatrixXf traversabilityMap, groundTruth;
-    traversabilityMap = elevationMap.get(type_);
+    Eigen::MatrixXf elevation, groundTruth;
+    elevation = elevationMap.get(type_);
     groundTruth = groundTruthSubmap.get(type_);
-    elevationMap.add("elevation_change", (groundTruth - traversabilityMap).cwiseAbs());
+    elevationMap.add("elevation_change", (groundTruth - elevation).cwiseAbs());
 
     // Publish elevation change map.
     if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");

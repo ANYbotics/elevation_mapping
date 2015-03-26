@@ -4,6 +4,6 @@ robot_frame_id: "base"
 map_frame_id: "map"
 map_center_x: 0
 map_center_y: 0
-map_length_x: 5.0
-map_length_y: 5.0
+map_length_x: 4.0
+map_length_y: 4.0
 
