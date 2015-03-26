@@ -7,15 +7,16 @@
  */
 
 #include <ros/ros.h>
-
 #include "elevation_change_detection/ElevationChangeDetection.hpp"
 
 int main(int argc, char** argv) {
   ros::init(argc, argv, "elevation_change_detection");
   ros::NodeHandle nodeHandle("~");
-//  elevation_change_detection::ElevationChangeDetection ElevationChangeDetection(nodeHandle);
+  elevation_change_detection::ElevationChangeDetection ElevationChangeDetection(nodeHandle);
 
   // Spin
-  ros::spin();
+  ros::AsyncSpinner spinner(1); // Use n threads
+  spinner.start();
+  ros::waitForShutdown();
   return 0;
 }

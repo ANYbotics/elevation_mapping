@@ -19,7 +19,9 @@ find_package(catkin REQUIRED COMPONENTS
   grid_map_msg
   roscpp
   elevation_mapping
-  traversability_estimation
+  nav_msgs
+  tf
+  tf_conversions
 )
 
 ## System dependencies are found with CMake's conventions

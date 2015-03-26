@@ -1,58 +1,9 @@
 submap_service: "/elevation_mapping_long_range/get_grid_map"
-# robot_frame_id: "base"
-robot_frame_id: "map"
-map_frame_id: "map"
 update_rate: 2.0
-map_center_x: 2.5
-map_center_y: 5.75
-map_length_x: 6.0
-map_length_y: 10.5
+robot_frame_id: "base"
+map_frame_id: "map"
+map_center_x: 0
+map_center_y: 0
+map_length_x: 5.0
+map_length_y: 5.0
 
-traversability_map_filters:
-  - name: slopeFilter
-    type: traversabilityFilters/SlopeFilter
-    params:
-     map_type: traversability_slope
-     critical_value: 0.5236
-  - name: stepFilter
-    type: traversabilityFilters/StepFilter
-    params:
-     map_type: traversability_step
-     critical_value: 0.20
-     window_radius: 0.24
-  - name: roughnessFilter
-    type: traversabilityFilters/RoughnessFilter
-    params:
-     map_type: traversability_roughness
-     critical_value: 0.04
-     estimation_radius: 0.24
-  - name: weightedSumFilter
-    type: gridMapFilters/WeightedSumFilter
-    params:
-     filter_types: [traversability_slope, traversability_step, traversability_roughness]
-     filter_weights: [1, 1, 1]
-     type_out: traversability
-     normalize: 1
-#  - name: minFilter
-#    type: gridMapFilters/MinFilter
-#    params:
-#     filter_types: [traversability_slope, traversability_step, traversability_roughness]
-#     type_out: traversability
-#  - name: thresholdFilter
-#    type: gridMapFilters/ThresholdFilter
-#    params:
-#     lower_threshold: 0.2
-##     upper_threshold: 0.9
-#     set_to: 0.0
-#     threshold_types: [traversability]
-#  - name: thresholdFilter
-#    type: gridMapFilters/ThresholdFilter
-#    params:
-##     lower_threshold: 0.2
-#     upper_threshold: 0.9
-#     set_to: 1.0
-#     threshold_types: [traversability]
-#  - name: deletionFilter
-#    type: gridMapFilters/DeletionFilter
-#    params:
-#     deletion_types: [traversability_slope, traversability_step, traversability_roughness]
