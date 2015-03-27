@@ -84,55 +84,8 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
 {
   grid_map_msg::GridMap mapMessage;
   if (getGridMap(mapMessage)) {
-    grid_map::GridMap elevationMap(mapMessage), groundTruthSubmap;
-
-
-    // TODO: Move this to a function
-    elevationMap.add("elevation_change", elevationMap.get(type_));
-    std::vector<std::string> validTypes;
-    validTypes.push_back(type_);
-
-    for (grid_map_lib::GridMapIterator iterator(elevationMap);
-        !iterator.isPassedEnd(); ++iterator) {
-      if (!elevationMap.isValid(*iterator, validTypes)) continue;
-      double height = elevationMap.at(type_, *iterator);
-      Vector2d position;
-      elevationMap.getPosition(*iterator, position);
-
-    }
-
-
-//    getGroundTruthSubmap(elevationMap.getPosition(), elevationMap.getLength(), groundTruthSubmap);
-
-//    ROS_INFO("Elevation map position x = %f", elevationMap.getPosition().x());
-//    ROS_INFO("Elevation map position y = %f", elevationMap.getPosition().y());
-//    ROS_INFO("Ground truth map position x = %f", groundTruthSubmap.getPosition().x());
-//    ROS_INFO("Ground truth map position y = %f", groundTruthSubmap.getPosition().y());
-//
-//    ROS_INFO("Elevation map length x = %f", elevationMap.getLength().x());
-//    ROS_INFO("Elevation map length y = %f", elevationMap.getLength().y());
-//    ROS_INFO("Ground truth map length x = %f", groundTruthSubmap.getLength().x());
-//    ROS_INFO("Ground truth map length y = %f", groundTruthSubmap.getLength().y());
-//    ROS_INFO_STREAM("Ground truth map grid resized to " << elevationMap.getBufferSize()(0) << " rows and "  << elevationMap.getBufferSize()(1) << " columns.");
-//    ROS_INFO_STREAM("Ground truth map grid resized to " << groundTruthSubmap.getBufferSize()(0) << " rows and "  << groundTruthSubmap.getBufferSize()(1) << " columns.");
-//    ROS_INFO_STREAM("Resolution of elevation map = " << groundTruthSubmap.getResolution() << " and ground truth map = "  << groundTruthSubmap.getResolution());
-
-
-
-
-//    Eigen::MatrixXf elevation, groundTruth, groundTruthAligned;
-//    elevation = elevationMap.get(type_);
-//    groundTruth = groundTruthSubmap.get(type_);
-////    // Try to align the submaps
-////    int numCols = elevation.cols(), numRows = elevation.rows();
-////    for (int i=0; i<numRows; i++) {
-////      for (int j=0; j<numCols; j++) {
-////
-////      }
-////    }
-////    if (elevation.cols() != groundTruth.cols()) ROS_INFO("Not the same number of cols");
-////    if (elevation.rows() != groundTruth.rows()) ROS_INFO("Not the same number of rows");
-//    elevationMap.add("elevation_change", (groundTruth - elevation).cwiseAbs());
+    grid_map::GridMap elevationMap(mapMessage);
+    computeElevationChange(elevationMap);
 
     // Publish elevation change map.
     if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
@@ -167,6 +120,34 @@ bool ElevationChangeDetection::getGridMap(grid_map_msg::GridMap& map)
   if (!submapClient_.call(submapService)) return false;
   map = submapService.response.gridMap;
   return true;
+}
+
+void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevationMap)
+{
+  elevationMap.add("elevation_change", elevationMap.get(type_));
+  std::vector<std::string> validTypes;
+  validTypes.push_back(type_);
+
+  for (grid_map_lib::GridMapIterator iterator(elevationMap);
+      !iterator.isPassedEnd(); ++iterator) {
+    // Check if elevation map has valid value
+    if (!elevationMap.isValid(*iterator, validTypes)) continue;
+
+    double height = elevationMap.at(type_, *iterator);
+    ROS_INFO("height = %f", height);
+
+    // Get the ground truth height
+    Vector2d position;
+    Array2i groundTruthIndex;
+    elevationMap.getPosition(*iterator, position);
+    groundTruthMap_.getIndex(position, groundTruthIndex);
+    if (!groundTruthMap_.isValid(groundTruthIndex, validTypes)) continue;
+    double groundTruthHeight = groundTruthMap_.at(type_, groundTruthIndex);
+    ROS_INFO("groundTruthHeight = %f", groundTruthHeight);
+
+    // Add to elevation change map
+    elevationMap.at("elevation_change", *iterator) = abs(height - groundTruthHeight);
+  }
 }
 
 void ElevationChangeDetection::getGroundTruthSubmap(const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map)

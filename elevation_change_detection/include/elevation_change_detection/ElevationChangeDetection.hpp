@@ -81,6 +81,12 @@ namespace elevation_change_detection {
      */
     void getGroundTruthSubmap(const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map);
 
+    /*!
+     * Compute the elevation change map and add it to the elevation map.
+     * @param elevationMap map where the elevation change map is added.
+     */
+    void computeElevationChange(grid_map::GridMap& elevationMap);
+
     //! ROS node handle.
     ros::NodeHandle& nodeHandle_;
 
