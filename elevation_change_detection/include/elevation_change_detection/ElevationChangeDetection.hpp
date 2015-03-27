@@ -57,7 +57,7 @@ namespace elevation_change_detection {
     * @param[in] pathToBag string with the path to the Bag file containing the ground truth data
     * @return true if successful.
     */
-    bool loadElevationMap(const std::string& pathToBag);
+    bool loadElevationMap(const std::string& pathToBag, const std::string& topicName);
 
     /*!
     * Callback function for the update timer. Forces an update of the elevation
@@ -72,14 +72,6 @@ namespace elevation_change_detection {
      * @return true if successful, false if ROS service call failed.
      */
     bool getGridMap(grid_map_msg::GridMap& map);
-
-    /*!
-     * Get a submap of the ground truth map corresponding to the elevation map.
-     * @param[in] requestedSubmapPosition the submap of the ground truth map.
-     * @param[in] requestedSubmapPubmapLength the submap of the ground truth map.
-     * @param[out] map the submap of the ground truth map.
-     */
-    void getGroundTruthSubmap(const Eigen::Vector2d& requestedSubmapPosition, const Eigen::Array2d& requestedSubmapPubmapLength, grid_map::GridMap& map);
 
     /*!
      * Compute the elevation change map and add it to the elevation map.
@@ -117,6 +109,9 @@ namespace elevation_change_detection {
     //! Path to the ROS Bag containing the ground truth elevation map.
     std::string pathToBag_;
 
+    //! Name of the topic that should be loaded from the ROS Bag.
+    std::string bagTopicName_;
+
     //! Requested map length in [m].
     Eigen::Array2d mapLength_;
 
@@ -131,6 +126,9 @@ namespace elevation_change_detection {
 
     //! Publisher of the ground truth map.
     ros::Publisher groundTruthPublisher_;
+
+    //! Threshold for minimal elevation difference
+    double threshold_;
 
   };
 

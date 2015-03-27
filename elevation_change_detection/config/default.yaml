@@ -6,4 +6,6 @@ map_center_x: 0
 map_center_y: 0
 map_length_x: 4.0
 map_length_y: 4.0
+threshold: 0.02
+bag_topic_name: "grid_map"
 

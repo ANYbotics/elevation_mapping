@@ -2,7 +2,7 @@
 	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find grid_map_visualization)/launch/custom_rosconsole.conf"/>
  	<node pkg="grid_map_visualization" type="grid_map_visualization" name="elevation_change_map_visualization" output="screen">
  		 <param name="grid_map_topic" value="/elevation_change_detection/elevation_change_map" />
- 		 <param name="point_cloud/point_type" value="elevation" />
+ 		 <param name="point_cloud/point_type" value="elevation_change" />
  		 <param name="map_region/line_width" value="0.003" />
  		 <param name="map_region/color" value="16777215" />
     </node>
