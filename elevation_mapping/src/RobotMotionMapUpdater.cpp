@@ -13,7 +13,7 @@
 #include <kindr/linear_algebra/LinearAlgebra.hpp>
 
 using namespace std;
-using namespace Eigen;
+using namespace grid_map;
 using namespace kindr::rotations::eigen_impl;
 
 namespace elevation_mapping {
@@ -45,31 +45,31 @@ bool RobotMotionMapUpdater::update(
     ElevationMap& map, const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, const ros::Time& time)
 {
-  Matrix<double, 6, 6> robotPoseCovarianceScaled = (covarianceScale_ * robotPoseCovariance.array()).matrix();
+  Eigen::Matrix<double, 6, 6> robotPoseCovarianceScaled = (covarianceScale_ * robotPoseCovariance.array()).matrix();
 
   // Check if update necessary.
   if (((robotPoseCovarianceScaled - previousRobotPoseCovariance_).array() == 0.0).all()) return false;
 
   // Initialize update data.
-  Array2i size = map.getRawGridMap().getBufferSize();
-  MatrixXf varianceUpdate(size(0), size(1));
-  MatrixXf horizontalVarianceUpdateX(size(0), size(1));
-  MatrixXf horizontalVarianceUpdateY(size(0), size(1));
+  Size size = map.getRawGridMap().getSize();
+  Matrix varianceUpdate(size(0), size(1));
+  Matrix horizontalVarianceUpdateX(size(0), size(1));
+  Matrix horizontalVarianceUpdateY(size(0), size(1));
 
   // Covariance matrices.
-  Matrix3d previousPositionCovariance = previousRobotPoseCovariance_.topLeftCorner<3, 3>();
-  Matrix3d positionCovariance = robotPoseCovarianceScaled.topLeftCorner<3, 3>();
-  Matrix3d previousRotationCovariance = previousRobotPoseCovariance_.bottomRightCorner<3, 3>();
-  Matrix3d rotationCovariance = robotPoseCovarianceScaled.bottomRightCorner<3, 3>();
+  Eigen::Matrix3d previousPositionCovariance = previousRobotPoseCovariance_.topLeftCorner<3, 3>();
+  Eigen::Matrix3d positionCovariance = robotPoseCovarianceScaled.topLeftCorner<3, 3>();
+  Eigen::Matrix3d previousRotationCovariance = previousRobotPoseCovariance_.bottomRightCorner<3, 3>();
+  Eigen::Matrix3d rotationCovariance = robotPoseCovarianceScaled.bottomRightCorner<3, 3>();
 
   // Parent to elevation map frame rotation (C_IM^T = C_SM^T * C_IS^T)
-  Matrix3d parentToMapRotation = RotationMatrixPD(map.getPose().getRotation()).matrix().transpose();
+  Eigen::Matrix3d parentToMapRotation = RotationMatrixPD(map.getPose().getRotation()).matrix().transpose();
 
   // Translation Jacobian (J_r)
-  Matrix3d translationJacobian = -parentToMapRotation;
+  Eigen::Matrix3d translationJacobian = -parentToMapRotation;
 
   // Translation variance update (for all points the same).
-  Vector3f translationVarianceUpdate = (translationJacobian *
+  Eigen::Vector3f translationVarianceUpdate = (translationJacobian *
                                         (positionCovariance - previousPositionCovariance) *
                                         translationJacobian.transpose()).diagonal().cast<float>();
 
@@ -83,14 +83,14 @@ bool RobotMotionMapUpdater::update(
     {
       kindr::phys_quant::eigen_impl::Position3D cellPosition; // I_r_IP
 
-      if (map.getPosition3dInRobotParentFrame(Array2i(i, j), cellPosition))
+      if (map.getPosition3dInRobotParentFrame(Index(i, j), cellPosition))
       {
         // Rotation Jacobian (J_q)
-        Matrix3d rotationJacobian = parentToMapRotation
+        Eigen::Matrix3d rotationJacobian = parentToMapRotation
             * kindr::linear_algebra::getSkewMatrixFromVector((cellPosition - robotPosition).vector());
 
         // Rotation variance update.
-        Vector3f rotationVarianceUpdate = (rotationJacobian *
+        Eigen::Vector3f rotationVarianceUpdate = (rotationJacobian *
                                            (rotationCovariance - previousRotationCovariance) *
                                            rotationJacobian.transpose()).diagonal().cast<float>();
 
@@ -111,9 +111,7 @@ bool RobotMotionMapUpdater::update(
   }
 
   map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, time);
-
   previousRobotPoseCovariance_ = robotPoseCovarianceScaled;
-
   return true;
 }
 
