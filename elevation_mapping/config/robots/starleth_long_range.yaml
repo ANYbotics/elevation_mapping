@@ -2,11 +2,12 @@ point_cloud_topic: "/actuated_lidar/point_cloud"
 map_frame_id: "map"
 robot_base_frame_id: "base"
 robot_pose_with_covariance_topic: "/state_estimator/pose"
-robot_pose_cache_size: 200
+robot_pose_cache_size: 500
 track_point_frame_id: "base"
 track_point_x: 0.25
 track_point_y: 0.0
 track_point_z: 0.0
+min_update_rate: 0.5
 robot_motion_map_update/covariance_scale_translation_x: 1.0
 robot_motion_map_update/covariance_scale_translation_y: 1.0
 robot_motion_map_update/covariance_scale_translation_z: 1.0
