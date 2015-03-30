@@ -1,0 +1,17 @@
+grid_map_visualizations:
+
+  - name: elevation_cloud
+    type: point_cloud
+    params:
+     layer: elevation
+
+  - name: sigma_cloud
+    type: point_cloud
+    params:
+     layer: two_sigma_bound
+
+  - name: map_region
+    type: map_region
+    params:
+     color: 16777215
+     line_width: 0.003
