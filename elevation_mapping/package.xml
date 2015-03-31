@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<package>
+<package format="2">
   <name>elevation_mapping</name>
   <version>0.2.0</version>
   <description>Generates an elevation map from distance measurements and robot pose information.</description>
@@ -9,28 +9,18 @@
   <url type="bugtracker">http://github.com/ethz-asl/elevation_mapping/issues</url>
   <author email="pfankhauser@ethz.ch">Peter Fankhauser</author>
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend>cmake_modules</build_depend>
-  <build_depend>roscpp</build_depend>
-  <build_depend>message_filters</build_depend>
-  <build_depend>pcl_ros</build_depend>
-  <build_depend>sensor_msgs</build_depend>
-  <build_depend>std_msgs</build_depend>
-  <build_depend>grid_map</build_depend>
-  <build_depend>grid_map_core</build_depend>
-  <build_depend>grid_map_msgs</build_depend>
-  <build_depend>tf</build_depend>
-  <build_depend>tf_conversions</build_depend>
-  <build_depend>eigen_conversions</build_depend>
-  <build_depend>sm_common</build_depend>
-  <build_depend>sm_timing</build_depend>
-  <run_depend>roscpp</run_depend>
-  <run_depend>message_filters</run_depend>
-  <run_depend>pcl_ros</run_depend>
-  <run_depend>sensor_msgs</run_depend>
-  <run_depend>std_msgs</run_depend>
-  <run_depend>grid_map_core</run_depend>
-  <run_depend>grid_map_msgs</run_depend>
-  <run_depend>grid_map</run_depend>
-  <run_depend>tf</run_depend>
-  <run_depend>tf_conversions</run_depend>
+  <depend>cmake_modules</depend>
+  <depend>roscpp</depend>
+  <depend>message_filters</depend>
+  <depend>pcl_ros</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
+  <depend>grid_map</depend>
+  <depend>grid_map_core</depend>
+  <depend>grid_map_msgs</depend>
+  <depend>tf</depend>
+  <depend>tf_conversions</depend>
+  <depend>eigen_conversions</depend>
+  <depend>sm_common</depend>
+  <depend>sm_timing</depend>
 </package>

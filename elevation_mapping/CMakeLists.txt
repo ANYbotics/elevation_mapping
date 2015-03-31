@@ -55,7 +55,18 @@ pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_mapping
-    CATKIN_DEPENDS std_msgs sensor_msgs grid_map_msgs
+    CATKIN_DEPENDS  
+	  grid_map  
+	  grid_map_core
+	  grid_map_msgs
+	  pcl_ros
+	  roscpp
+	  message_filters
+	  sensor_msgs
+	  std_msgs
+	  tf
+	  tf_conversions
+	  eigen_conversions
 #  DEPENDS system_lib
 )
 
@@ -94,6 +105,7 @@ add_executable(
   src/sensor_processors/LaserSensorProcessor.cpp
   src/sensor_processors/PerfectSensorProcessor.cpp
 )
+
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(
