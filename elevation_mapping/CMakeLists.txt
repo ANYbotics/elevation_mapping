@@ -15,8 +15,8 @@ set(CMAKE_BUILD_TYPE RelWithDebInfo)
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules
   grid_map
-  grid_map_core
-  grid_map_msgs
+  grid_map_lib
+  grid_map_msg
   pcl_ros
   roscpp
   message_filters
@@ -55,7 +55,7 @@ pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
 catkin_package(
     INCLUDE_DIRS include
 #  LIBRARIES elevation_mapping
-    CATKIN_DEPENDS std_msgs sensor_msgs grid_map_msgs
+    CATKIN_DEPENDS std_msgs sensor_msgs grid_map_msg
 #  DEPENDS system_lib
 )
 

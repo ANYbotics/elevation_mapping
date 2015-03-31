@@ -15,7 +15,6 @@
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
 
 // Grid Map
-#include <grid_map/grid_map.hpp>
 #include <grid_map_msg/GridMap.h>
 
 //PCL
@@ -39,7 +38,7 @@
 #include <string>
 
 using namespace std;
-using namespace grid_map;
+using namespace Eigen;
 using namespace ros;
 using namespace tf;
 using namespace pcl;
@@ -69,7 +68,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       &fusionServiceQueue_);
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
-  AdvertiseServiceOptions advertiseServiceOptionsForGetSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
+  AdvertiseServiceOptions advertiseServiceOptionsForGetSubmap = AdvertiseServiceOptions::create<grid_map_msg::GetGridMap>(
       "get_grid_map", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
@@ -131,11 +130,11 @@ bool ElevationMapping::readParameters()
   string surfaceNormalPositiveAxis;
   nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
   if (surfaceNormalPositiveAxis == "z") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
+    map_.surfaceNormalPositiveAxis_ = Vector3d::UnitZ();
   } else if (surfaceNormalPositiveAxis == "y") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
+    map_.surfaceNormalPositiveAxis_ = Vector3d::UnitY();
   } else if (surfaceNormalPositiveAxis == "x") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
+    map_.surfaceNormalPositiveAxis_ = Vector3d::UnitX();
   } else {
     ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
   }
@@ -216,11 +215,11 @@ void ElevationMapping::pointCloudCallback(
     return;
   }
 
-  Eigen::Matrix<double, 6, 6> robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
+  Matrix<double, 6, 6> robotPoseCovariance = Map<const MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
-  Eigen::VectorXf measurementVariances;
+  VectorXf measurementVariances;
   if(!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances))
   {
     ROS_ERROR("Point cloud could not be processed.");
@@ -298,8 +297,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose;
   kindr::poses::eigen_impl::convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
   // Covariance is stored in row-major in ROS: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovariance.html
-  Eigen::Matrix<double, 6, 6> robotPoseCovariance = Eigen::Map<
-      const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
+  Matrix<double, 6, 6> robotPoseCovariance = Map<const Matrix<double, 6, 6, RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Compute map variance update from motion prediction.
   robotMotionMapUpdater_.update(map_, robotPose, robotPoseCovariance, time);
@@ -329,22 +327,22 @@ bool ElevationMapping::updateMapLocation()
 
   Position3D position3d;
   convertFromRosGeometryMsg(trackPointTransformed.point, position3d);
-  grid_map::Position position = position3d.vector().head(2);
+  Vector2d position = position3d.vector().head(2);
   map_.move(position);
   return true;
 }
 
-bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response)
+bool ElevationMapping::getSubmap(grid_map_msg::GetGridMap::Request& request, grid_map_msg::GetGridMap::Response& response)
 {
-  grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
-  Length requestedSubmapLength(request.length_x, request.length_y);
+  Vector2d requestedSubmapPosition(request.positionX, request.positionY);
+  Array2d requestedSubmapLength(request.lengthX, request.lengthY);
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
 
   bool computeSurfaceNormals = false;
-  if (request.layers.empty()) {
+  if (request.dataDefinition.empty()) {
     computeSurfaceNormals = true;
   } else {
-    for (const auto& type : request.layers) {
+    for (const auto& type : request.dataDefinition) {
       if (type.find("surface_normal") != std::string::npos) computeSurfaceNormals = true;
     }
   }
@@ -353,18 +351,18 @@ bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, gr
   map_.fuseArea(requestedSubmapPosition, requestedSubmapLength, computeSurfaceNormals);
 
   bool isSuccess;
-  Index index;
-  GridMap subMap = map_.getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
+  Array2i index;
+  grid_map::GridMap subMap = map_.getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
   scopedLock.unlock();
 
-  if (request.layers.empty()) {
-    GridMapRosConverter::toMessage(subMap, response.map);
+  if (request.dataDefinition.empty()) {
+    subMap.toMessage(response.gridMap);
   } else {
-    vector<string> layers;
-    for (const auto& layer : request.layers) {
-      layers.push_back(layer);
+    vector<string> types;
+    for (const auto& type : request.dataDefinition) {
+      types.push_back(type);
     }
-    GridMapRosConverter::toMessage(subMap, layers, response.map);
+    subMap.toMessage(types, response.gridMap);
   }
 
   ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());

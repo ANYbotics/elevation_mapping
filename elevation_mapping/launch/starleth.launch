@@ -1,8 +1,8 @@
 <launch>
-	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find elevation_mapping)/config/rosconsole.conf"/>
+	<env name="ROSCONSOLE_CONFIG_FILE" value="$(find elevation_mapping)/launch/custom_rosconsole.conf"/>
  	<node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
-    	 <rosparam command="load" file="$(find elevation_mapping)/config/robots/starleth.yaml" />
-    	 <rosparam command="load" file="$(find elevation_mapping)/config/elevation_maps/default.yaml" />
-    	 <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/primesense_carmine_109_short_range_uncalibrated.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/robots/starleth.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/default.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/primesense_carmine_109_short_range_uncalibrated.yaml" />
     </node>
 </launch>

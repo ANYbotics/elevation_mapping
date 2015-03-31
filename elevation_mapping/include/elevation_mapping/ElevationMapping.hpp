@@ -14,7 +14,7 @@
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
 // Grid Map
-#include "grid_map_msgs/GetGridMap.h"
+#include "grid_map_msg/GetGridMap.h"
 
 // Eigen
 #include <Eigen/Core>
@@ -89,7 +89,7 @@ class ElevationMapping
    * @param response the ROS service response containing the requested submap.
    * @return true if successful.
    */
-  bool getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
+  bool getSubmap(grid_map_msg::GetGridMap::Request& request, grid_map_msg::GetGridMap::Response& response);
 
   /*!
    * Clears all data of the elevation map.
@@ -129,7 +129,7 @@ class ElevationMapping
    * Fills a elevation map message with the appropriate header information.
    * @param gridMapMessage the elevation massage to be filled with header information.
    */
-  void addHeaderDataToElevationMessage(grid_map_msgs::GridMap& gridMapMessage);
+  void addHeaderDataToElevationMessage(grid_map_msg::GridMap& gridMapMessage);
 
   /*!
    * Updates the location of the map to follow the tracking point. Takes care

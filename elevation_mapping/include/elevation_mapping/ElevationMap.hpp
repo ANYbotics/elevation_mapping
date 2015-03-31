@@ -8,8 +8,8 @@
 
 #pragma once
 
-// Grid Map
-#include <grid_map/grid_map.hpp>
+// Grid Mapo
+#include <grid_map/GridMap.hpp>
 
 // Eigen
 #include <Eigen/Core>
