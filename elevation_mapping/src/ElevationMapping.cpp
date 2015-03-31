@@ -16,7 +16,7 @@
 
 // Grid Map
 #include <grid_map/grid_map.hpp>
-#include <grid_map_msg/GridMap.h>
+#include <grid_map_msgs/GridMap.h>
 
 //PCL
 #include <pcl/conversions.h>
