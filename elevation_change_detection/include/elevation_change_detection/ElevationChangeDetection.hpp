@@ -9,7 +9,7 @@
 #pragma once
 
 // Grid Map
-#include <grid_map/GridMap.hpp>
+#include <grid_map/grid_map.hpp>
 
 // ROS
 #include <ros/ros.h>
@@ -71,7 +71,7 @@ namespace elevation_change_detection {
      * @param[out] map the map that is received.
      * @return true if successful, false if ROS service call failed.
      */
-    bool getGridMap(grid_map_msg::GridMap& map);
+    bool getGridMap(grid_map_msgs::GridMap& map);
 
     /*!
      * Compute the elevation change map and add it to the elevation map.

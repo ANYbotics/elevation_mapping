@@ -8,15 +8,13 @@
 
 #include "elevation_change_detection/ElevationChangeDetection.hpp"
 
-#include <grid_map_lib/GridMap.hpp>
-#include <grid_map_lib/GridMapMath.hpp>
-#include <grid_map_lib/iterators/GridMapIterator.hpp>
-#include <grid_map_msg/GetGridMap.h>
+#include <grid_map_msgs/GetGridMap.h>
 
 // Eigenvalues
 #include <Eigen/Dense>
 
 using namespace Eigen;
+using namespace grid_map;
 
 namespace elevation_change_detection {
 
@@ -28,9 +26,9 @@ ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
 
   readParameters();
 
-  submapClient_ = nodeHandle_.serviceClient<grid_map_msg::GetGridMap>(submapServiceName_);
-  elevationChangePublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("elevation_change_map", 1, true);
-  groundTruthPublisher_ = nodeHandle_.advertise<grid_map_msg::GridMap>("ground_truth_map", 1, true);
+  submapClient_ = nodeHandle_.serviceClient<grid_map_msgs::GetGridMap>(submapServiceName_);
+  elevationChangePublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_change_map", 1, true);
+  groundTruthPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("ground_truth_map", 1, true);
 
   updateTimer_ = nodeHandle_.createTimer(updateDuration_,
                                          &ElevationChangeDetection::updateTimerCallback, this);
@@ -79,17 +77,18 @@ bool ElevationChangeDetection::readParameters()
 
 bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag, const std::string& topicName)
 {
-  return groundTruthMap_.loadFromBag(pathToBag, topicName);
+  return grid_map::GridMapRosConverter::loadFromBag(pathToBag, topicName, groundTruthMap_);
 }
 
 void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerEvent)
 {
-  grid_map_msg::GridMap mapMessage;
+  grid_map_msgs::GridMap mapMessage;
   ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
   submapClient_.waitForExistence();
   ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
   if (getGridMap(mapMessage)) {
-    grid_map::GridMap elevationMap(mapMessage);
+    grid_map::GridMap elevationMap;
+    grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
     computeElevationChange(elevationMap);
 
     // Publish elevation change map.
@@ -100,7 +99,7 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
   }
 }
 
-bool ElevationChangeDetection::getGridMap(grid_map_msg::GridMap& map)
+bool ElevationChangeDetection::getGridMap(grid_map_msgs::GridMap& map)
 {
   submapPoint_.header.stamp = ros::Time(0);
   geometry_msgs::PointStamped submapPointTransformed;
@@ -111,19 +110,19 @@ bool ElevationChangeDetection::getGridMap(grid_map_msg::GridMap& map)
     ROS_ERROR("%s", ex.what());
   }
 
-  grid_map_msg::GetGridMap submapService;
-  submapService.request.positionX = submapPointTransformed.point.x;
-  submapService.request.positionY = submapPointTransformed.point.y;
-  submapService.request.lengthX = mapLength_.x();
-  submapService.request.lengthY = mapLength_.y();
-  submapService.request.dataDefinition.resize(requestedMapTypes_.size());
+  grid_map_msgs::GetGridMap submapService;
+  submapService.request.position_x = submapPointTransformed.point.x;
+  submapService.request.position_y = submapPointTransformed.point.y;
+  submapService.request.length_x = mapLength_.x();
+  submapService.request.length_y = mapLength_.y();
+  submapService.request.layers.resize(requestedMapTypes_.size());
 
   for (unsigned int i = 0; i < requestedMapTypes_.size(); ++i) {
-    submapService.request.dataDefinition[i] = requestedMapTypes_[i];
+    submapService.request.layers[i] = requestedMapTypes_[i];
   }
 
   if (!submapClient_.call(submapService)) return false;
-  map = submapService.response.gridMap;
+  map = submapService.response.map;
   return true;
 }
 
@@ -131,13 +130,13 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
 {
   elevationMap.add("elevation_change", elevationMap.get(type_));
   std::vector<std::string> validTypes;
-  std::vector<std::string> clearTypes;
+  std::vector<std::string> basicLayers;
   validTypes.push_back(type_);
-  clearTypes.push_back("elevation_change");
-  elevationMap.setClearTypes(clearTypes);
+  basicLayers.push_back("elevation_change");
+  elevationMap.setBasicLayers(basicLayers);
   elevationMap.clear();
 
-  for (grid_map_lib::GridMapIterator iterator(elevationMap);
+  for (GridMapIterator iterator(elevationMap);
       !iterator.isPassedEnd(); ++iterator) {
     // Check if elevation map has valid value
     if (!elevationMap.isValid(*iterator, validTypes)) continue;
@@ -161,8 +160,8 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
 bool ElevationChangeDetection::publishElevationChangeMap(const grid_map::GridMap& map)
 {
   if (elevationChangePublisher_.getNumSubscribers() < 1) return false;
-  grid_map_msg::GridMap message;
-  map.toMessage(message);
+  grid_map_msgs::GridMap message;
+  GridMapRosConverter::toMessage(map, message);
   elevationChangePublisher_.publish(message);
   ROS_DEBUG("Elevation map raw has been published.");
   return true;
@@ -171,8 +170,8 @@ bool ElevationChangeDetection::publishElevationChangeMap(const grid_map::GridMap
 bool ElevationChangeDetection::publishGroundTruthMap(const grid_map::GridMap& map)
 {
   if (groundTruthPublisher_.getNumSubscribers() < 1) return false;
-  grid_map_msg::GridMap message;
-  map.toMessage(message);
+  grid_map_msgs::GridMap message;
+  GridMapRosConverter::toMessage(map, message);
   groundTruthPublisher_.publish(message);
   ROS_DEBUG("Ground truth map raw has been published.");
   return true;
