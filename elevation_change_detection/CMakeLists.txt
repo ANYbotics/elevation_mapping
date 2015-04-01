@@ -9,16 +9,15 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 #  Release        : w/o debug symbols, w/ optimization
 #  RelWithDebInfo : w/ debug symbols, w/ optimization
 #  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-set(CMAKE_BUILD_TYPE RelWithDebInfo)
+#set(CMAKE_BUILD_TYPE RelWithDebInfo)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules
   grid_map
   grid_map_core
-  grid_map_msg
+  grid_map_msgs
   roscpp
-  elevation_mapping
   nav_msgs
   tf
   tf_conversions
@@ -37,10 +36,20 @@ find_package(Eigen REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-    INCLUDE_DIRS include
+  INCLUDE_DIRS
+    include
+    ${Eigen_INCLUDE_DIRS}
 #  LIBRARIES elevation_change_detection
-    CATKIN_DEPENDS nav_msgs grid_map_msg
-#  DEPENDS system_lib
+  CATKIN_DEPENDS
+    grid_map
+    grid_map_core
+    grid_map_msgs
+    roscpp
+    nav_msgs
+    tf
+    tf_conversions
+  DEPENDS
+    Eigen
 )
 
 ###########

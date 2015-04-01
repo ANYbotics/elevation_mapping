@@ -14,11 +14,10 @@
   <build_depend>roscpp</build_depend>
   <build_depend>grid_map</build_depend>
   <build_depend>grid_map_core</build_depend>
-  <build_depend>grid_map_msg</build_depend>
+  <build_depend>grid_map_msgs</build_depend>
   <build_depend>nav_msgs</build_depend>
   <build_depend>tf</build_depend>
   <build_depend>tf_conversions</build_depend>
-  <build_depend>elevation_mapping</build_depend>
   <run_depend>roscpp</run_depend>
   <run_depend>sensor_msgs</run_depend>
   <run_depend>nav_msgs</run_depend>
@@ -26,6 +25,5 @@
   <run_depend>tf_conversions</run_depend>
   <run_depend>grid_map</run_depend>
   <run_depend>grid_map_core</run_depend>
-  <run_depend>grid_map_msg</run_depend>
-  <run_depend>elevation_mapping</run_depend>
+  <run_depend>grid_map_msgs</run_depend>
 </package>
