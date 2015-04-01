@@ -4,8 +4,8 @@ robot_frame_id: "base"
 map_frame_id: "map"
 map_center_x: 0
 map_center_y: 0
-map_length_x: 4.0
-map_length_y: 4.0
-threshold: 0.1
+map_length_x: 6.0
+map_length_y: 6.0
+threshold: 0.0
 bag_topic_name: "grid_map"
 
