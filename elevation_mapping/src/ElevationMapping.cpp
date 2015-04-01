@@ -75,6 +75,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
+  saveToBagService_ = nodeHandle_.advertiseService("save_to_bag", &ElevationMapping::saveToBag, this);
 
   initialize();
 }
@@ -375,6 +376,16 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
 {
   ROS_INFO("Clearing map.");
   return map_.clear();
+}
+
+bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+  ROS_INFO("Save to bag.");
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
+  map_.fuseAll(true);
+  std::string pathToBag = "elevationTestBag.bag"; // TODO: change the path.
+  std::string topic = "grid_map";
+  return GridMapRosConverter::saveToBag(map_, pathToBag, topic);
 }
 
 void ElevationMapping::resetMapUpdateTimer()

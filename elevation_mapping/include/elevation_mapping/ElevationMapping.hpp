@@ -99,6 +99,14 @@ class ElevationMapping
    */
   bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
+  /*!
+   * Saves the grid map with all layer to a ROS bag.
+   * @param request the ROS service request.
+   * @param response the ROS service response.
+   * @return true if successful.
+   */
+  bool saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+
  private:
 
   /*!
@@ -159,6 +167,7 @@ class ElevationMapping
   ros::ServiceServer fusionTriggerService_;
   ros::ServiceServer submapService_;
   ros::ServiceServer clearMapService_;
+  ros::ServiceServer saveToBagService_;
 
   //! Callback thread for the fusion services.
   boost::thread fusionServiceThread_;
