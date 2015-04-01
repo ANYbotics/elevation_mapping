@@ -381,11 +381,12 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
 bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
   ROS_INFO("Save to bag.");
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
-  std::string pathToBag = "elevationTestBag.bag"; // TODO: change the path.
-  std::string topic = "grid_map";
-  return GridMapRosConverter::saveToBag(map_, pathToBag, topic);
+//  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
+//  map_.fuseAll(true);
+//  std::string pathToBag = "elevationTestBag.bag"; // TODO: change the path.
+//  std::string topic = "grid_map";
+//  return GridMapRosConverter::saveToBag(map_, pathToBag, topic);
+  return true;
 }
 
 void ElevationMapping::resetMapUpdateTimer()
