@@ -192,6 +192,9 @@ class ElevationMapping
   std::string pointCloudTopic_;
   std::string robotPoseTopic_;
 
+  //! Path to save the ROS bag
+  std::string pathToBag_;
+
   //! Elevation map.
   ElevationMap map_;
 

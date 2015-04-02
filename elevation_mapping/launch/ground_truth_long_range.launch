@@ -4,5 +4,6 @@
     	 <rosparam command="load" file="$(find elevation_mapping)/config/robots/ground_truth.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping)/config/elevation_maps/ground_truth.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/perfect.yaml" />
+    	 <param name="path_to_bag" value="$(find argos_navigation_data)/data/elevationMap.bag" />
     </node>
 </launch>
