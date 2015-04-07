@@ -21,7 +21,7 @@ def callback(newPose):
     pose.pose.pose.orientation.x = 0
     pose.pose.pose.orientation.y = 0
     pose.pose.pose.orientation.z = 0
-    pose.pose.pose.orientation.w = 0
+    pose.pose.pose.orientation.w = 1
 
     pose.pose.covariance = [0, 0, 0, 0, 0, 0, 
                   0, 0, 0, 0, 0, 0, 
