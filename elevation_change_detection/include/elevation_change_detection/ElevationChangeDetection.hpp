@@ -113,7 +113,7 @@ namespace elevation_change_detection {
     std::string bagTopicName_;
 
     //! Requested map length in [m].
-    Eigen::Array2d mapLength_;
+    grid_map::Length mapLength_;
 
     //! Elevation map type
     const std::string type_;
