@@ -70,7 +70,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
   AdvertiseServiceOptions advertiseServiceOptionsForGetSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_grid_map", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
+      "get_submap", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
 
