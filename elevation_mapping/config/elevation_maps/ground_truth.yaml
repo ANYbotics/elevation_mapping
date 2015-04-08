@@ -1,7 +1,7 @@
-length_in_x: 20
-length_in_y: 20
-position_x: 3.0
-position_y: 5.0
+length_in_x: 10
+length_in_y: 70
+position_x: 2.0
+position_y: -30.0
 resolution: 0.06
 min_variance: 0.000009
 max_variance: 0.01
