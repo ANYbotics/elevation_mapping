@@ -75,6 +75,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
+  saveToBagService_ = nodeHandle_.advertiseService("save_to_bag", &ElevationMapping::saveToBag, this);
 
   initialize();
 }
@@ -104,6 +105,8 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
+
+  nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag"));
 
   // ElevationMap parameters. TODO Move this to the elevation map class.
   string frameId;
@@ -375,6 +378,16 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
 {
   ROS_INFO("Clearing map.");
   return map_.clear();
+}
+
+bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+{
+  ROS_INFO("Save to bag.");
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
+  map_.fuseAll(true);
+  grid_map::GridMap gridMap = map_.getFusedGridMap();
+  std::string topic = "grid_map";
+  return GridMapRosConverter::saveToBag(gridMap, pathToBag_, topic);
 }
 
 void ElevationMapping::resetMapUpdateTimer()
