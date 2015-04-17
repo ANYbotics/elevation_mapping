@@ -22,6 +22,7 @@ StereoSensorProcessor::~StereoSensorProcessor() {}
 
 bool StereoSensorProcessor::readParameters()
 {
+  SensorProcessorBase::readParameters();
   nodeHandle_.param("sensor_processor/p_1", sensorParameters_["p_1"], 0.0);
   nodeHandle_.param("sensor_processor/p_2", sensorParameters_["p_2"], 0.0);
   nodeHandle_.param("sensor_processor/p_3", sensorParameters_["p_3"], 0.0);

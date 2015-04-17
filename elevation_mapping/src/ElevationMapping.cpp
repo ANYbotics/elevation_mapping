@@ -37,6 +37,8 @@
 
 // STL
 #include <string>
+#include <math.h>
+#include <limits>
 
 using namespace std;
 using namespace grid_map;
@@ -52,7 +54,8 @@ namespace elevation_mapping {
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       map_(nodeHandle),
-      robotMotionMapUpdater_(nodeHandle)
+      robotMotionMapUpdater_(nodeHandle),
+      isContinouslyFusing_(false)
 {
   ROS_INFO("Elevation mapping node started.");
 
@@ -73,6 +76,14 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       "get_submap", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
+
+  if (!fusedMapPublishTimerDuration_.isZero()) {
+    TimerOptions timerOptions = TimerOptions(
+        fusedMapPublishTimerDuration_,
+        boost::bind(&ElevationMapping::publishFusedMapCallback, this, _1), &fusionServiceQueue_,
+        false, false);
+    fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
+  }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
   saveToBagService_ = nodeHandle_.advertiseService("save_to_bag", &ElevationMapping::saveToBag, this);
@@ -106,15 +117,27 @@ bool ElevationMapping::readParameters()
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
-  nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag"));
+  double fusedMapPublishingRate;
+  nodeHandle_.param("fused_map_publishing_rate", fusedMapPublishingRate, 1.0);
+  if (fusedMapPublishingRate == 0.0) {
+    fusedMapPublishTimerDuration_.fromSec(0.0);
+    ROS_WARN("Rate for publishing the fused map is zero. The fused elevation map will not be published unless the service `triggerFusion` is called.");
+  } else if (std::isinf(fusedMapPublishingRate)){
+    isContinouslyFusing_ = true;
+    fusedMapPublishTimerDuration_.fromSec(0.0);
+  } else {
+    fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
+  }
+
+  nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag")); // TODO Add this as parameter in the service call.
 
   // ElevationMap parameters. TODO Move this to the elevation map class.
   string frameId;
   nodeHandle_.param("map_frame_id", frameId, string("/map"));
   map_.setFrameId(frameId);
 
-  Eigen::Array2d length;
-  Eigen::Vector2d position;
+  grid_map::Length length;
+  grid_map::Position position;
   double resolution;
   nodeHandle_.param("length_in_x", length(0), 1.5);
   nodeHandle_.param("length_in_y", length(1), 1.5);
@@ -158,9 +181,7 @@ bool ElevationMapping::readParameters()
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
   }
   if (!sensorProcessor_->readParameters()) return false;
-
   if (!robotMotionMapUpdater_.readParameters()) return false;
-
   return true;
 }
 
@@ -170,6 +191,7 @@ bool ElevationMapping::initialize()
   fusionServiceThread_ = boost::thread(boost::bind(&ElevationMapping::runFusionServiceThread, this));
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
+  fusedMapPublishTimer_.start();
   ROS_INFO("Done.");
   return true;
 }
@@ -224,28 +246,26 @@ void ElevationMapping::pointCloudCallback(
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
   Eigen::VectorXf measurementVariances;
-  if(!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances))
-  {
+  if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed,
+                                 measurementVariances)) {
     ROS_ERROR("Point cloud could not be processed.");
     resetMapUpdateTimer();
     return;
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances))
-  {
+  if (!map_.add(pointCloudProcessed, measurementVariances)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;
   }
 
-  // Publish raw elevation map.
-  if (!map_.publishRawElevationMap()) ROS_DEBUG("Elevation map has not been broadcasted.");
-
-  // TODO Add option for continous fusion.
-//  boost::recursive_mutex::scoped_lock scopedLock2(map_.getFusedDataMutex());
-//  map_.fuseAll(true);
-//  map_.publishElevationMap();
+  // Publish elevation map.
+  map_.publishRawElevationMap();
+  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
+    map_.fuseAll(true);
+    map_.publishFusedElevationMap();
+  }
 
   resetMapUpdateTimer();
 }
@@ -266,17 +286,30 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
     return;
   }
 
-  // Publish raw elevation map.
-  if (!map_.publishRawElevationMap()) ROS_DEBUG("Elevation map has not been broadcasted.");
+  // Publish elevation map.
+  map_.publishRawElevationMap();
+  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
+    map_.fuseAll(true);
+    map_.publishFusedElevationMap();
+  }
 
   resetMapUpdateTimer();
+}
+
+void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
+{
+  if (!map_.hasFusedMapSubscribers()) return;
+  ROS_DEBUG("Elevation map is fused and published from timer.");
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
+  map_.fuseAll(false);
+  map_.publishFusedElevationMap();
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll(true);
-  map_.publishElevationMap();
+  map_.publishFusedElevationMap();
   return true;
 }
 
@@ -320,12 +353,9 @@ bool ElevationMapping::updateMapLocation()
   convertToRosGeometryMsg(trackPoint_, trackPoint.point);
   geometry_msgs::PointStamped trackPointTransformed;
 
-  try
-  {
+  try {
     transformListener_.transformPoint(map_.getFrameId(), trackPoint, trackPointTransformed);
-  }
-  catch (TransformException &ex)
-  {
+  } catch (TransformException &ex) {
     ROS_ERROR("%s", ex.what());
     return false;
   }

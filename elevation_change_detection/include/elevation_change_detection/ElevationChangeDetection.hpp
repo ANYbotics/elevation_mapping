@@ -106,12 +106,6 @@ namespace elevation_change_detection {
     //! Requested map cell types.
     std::vector<std::string> requestedMapTypes_;
 
-    //! Path to the ROS Bag containing the ground truth elevation map.
-    std::string pathToBag_;
-
-    //! Name of the topic that should be loaded from the ROS Bag.
-    std::string bagTopicName_;
-
     //! Requested map length in [m].
     grid_map::Length mapLength_;
 

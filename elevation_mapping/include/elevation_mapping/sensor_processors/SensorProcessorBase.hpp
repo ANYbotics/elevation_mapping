@@ -122,7 +122,8 @@ public:
    * Removes points with z-coordinate above a limit in map frame.
    * @param[in/out] pointCloud the point cloud to be cropped.
    */
-  void removePointsOutsideLimits(pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  void removePointsOutsideLimits(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr reference,
+                                 std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr>& pointClouds);
 
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
@@ -155,10 +156,10 @@ public:
   std::string robotBaseFrameId_;
 
   //! Ignore points above this height in map frame.
-  double ignorePointsAbove_;
+  double ignorePointsUpperThreshold_;
 
   //! Ignore points below this height in map frame.
-  double ignorePointsBelow_;
+  double ignorePointsLowerThreshold_;
 
   //! Sensor parameters.
   std::unordered_map<std::string, double> sensorParameters_;

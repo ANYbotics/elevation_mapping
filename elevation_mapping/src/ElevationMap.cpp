@@ -52,7 +52,6 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
 
 ElevationMap::~ElevationMap()
 {
-
 }
 
 void ElevationMap::setGeometry(const Eigen::Array2d& length, const double& resolution, const Eigen::Vector2d& position)
@@ -66,8 +65,13 @@ void ElevationMap::setGeometry(const Eigen::Array2d& length, const double& resol
 
 bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
 {
-  for (unsigned int i = 0; i < pointCloud->size(); ++i)
-  {
+  if (pointCloud->size() != pointCloudVariances.size()) {
+    ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
+              (int) pointCloud->size(), (int) pointCloudVariances.size());
+    return false;
+  }
+
+  for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
 
     Index index;
@@ -79,7 +83,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& horizontalVarianceX = rawMap_.at("horizontal_variance_x", index);
     auto& horizontalVarianceY = rawMap_.at("horizontal_variance_y", index);
     auto& color = rawMap_.at("color", index);
-    float pointVariance = pointCloudVariances(i);
+    const float& pointVariance = pointCloudVariances(i);
 
     if (!rawMap_.isValid(index))
     {
@@ -377,7 +381,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
       eigenvalues = solver.eigenvalues().real();
       eigenvectors = solver.eigenvectors().real();
     } else {
-      ROS_DEBUG("Covariance matrix needed for eigen decomposition is degenerated. Expected cause: no noise in data (nPoints = %i)", nPoints);
+      ROS_DEBUG("Covariance matrix needed for eigen decomposition is degenerated. Expected cause: no noise in data (nPoints = %i)", (int) nPoints);
     }
     // Keep the smallest eigenvector as surface normal
     int smallestId(0);
@@ -422,7 +426,7 @@ void ElevationMap::move(const Eigen::Vector2d& position)
 
 bool ElevationMap::publishRawElevationMap()
 {
-  if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
+  if (hasRawMapSubscribers()) return false;
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
@@ -436,9 +440,9 @@ bool ElevationMap::publishRawElevationMap()
   return true;
 }
 
-bool ElevationMap::publishElevationMap()
+bool ElevationMap::publishFusedElevationMap()
 {
-  if (elevationMapFusedPublisher_.getNumSubscribers() < 1) return false;
+  if (hasFusedMapSubscribers()) return false;
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
   GridMap fusedMapCopy = fusedMap_;
   scopedLock.unlock();
@@ -520,6 +524,18 @@ void ElevationMap::setFrameId(const std::string& frameId)
 const std::string& ElevationMap::getFrameId()
 {
   return rawMap_.getFrameId();
+}
+
+bool ElevationMap::hasRawMapSubscribers() const
+{
+  if (elevationMapRawPublisher_.getNumSubscribers() < 1) return false;
+  return true;
+}
+
+bool ElevationMap::hasFusedMapSubscribers() const
+{
+  if (elevationMapFusedPublisher_.getNumSubscribers() < 1) return false;
+  return true;
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)

@@ -118,7 +118,7 @@ class ElevationMap
    * map, does not trigger the fusion process.
    * @return true if successful.
    */
-  bool publishElevationMap();
+  bool publishFusedElevationMap();
 
   /*!
    * Gets a reference to the raw grid map.
@@ -182,6 +182,18 @@ class ElevationMap
    * @return the frameId.
    */
   const std::string& getFrameId();
+
+  /*!
+   * If the raw elevation map has subscribers.
+   * @return true if number of subscribers bigger then 0.
+   */
+  bool hasRawMapSubscribers() const;
+
+  /*!
+   * If the fused elevation map has subscribers.
+   * @return true if number of subscribers bigger then 0.
+   */
+  bool hasFusedMapSubscribers() const;
 
   friend class ElevationMapping;
 

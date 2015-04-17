@@ -35,6 +35,7 @@ PerfectSensorProcessor::~PerfectSensorProcessor()
 
 bool PerfectSensorProcessor::readParameters()
 {
+  SensorProcessorBase::readParameters();
   nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
 
