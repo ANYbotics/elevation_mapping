@@ -36,8 +36,6 @@
 // Boost
 #include <boost/thread.hpp>
 
-// STD
-#include <limits>
 
 namespace elevation_mapping {
 
@@ -73,6 +71,13 @@ class ElevationMapping
    * @param timerEvent the timer event.
    */
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
+
+  /*!
+   * Callback function for the fused map publish timer. Publishes the fused map
+   * based on configurable duration.
+   * @param timerEvent the timer event.
+   */
+  void publishFusedMapCallback(const ros::TimerEvent& timerEvent);
 
   /*!
    * ROS service callback function to trigger the fusion of the entire
@@ -209,6 +214,15 @@ class ElevationMapping
 
   //! Maximum time that the map will not be updated.
   ros::Duration maxNoUpdateDuration_;
+
+  //! Timer for publishing the fused map.
+  ros::Timer fusedMapPublishTimer_;
+
+  //! Duration for the publishing the fusing map.
+  ros::Duration fusedMapPublishTimerDuration_;
+
+  //! If map is fused after every change for debugging/analysis purposes.
+  bool isContinouslyFusing_;
 };
 
 } /* namespace */

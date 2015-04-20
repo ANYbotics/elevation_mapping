@@ -34,6 +34,7 @@ KinectSensorProcessor::~KinectSensorProcessor()
 
 bool KinectSensorProcessor::readParameters()
 {
+  SensorProcessorBase::readParameters();
   nodeHandle_.param("sensor_processor/cutoff_min_depth", sensorParameters_["cutoff_min_depth"], std::numeric_limits<double>::min());
   nodeHandle_.param("sensor_processor/cutoff_max_depth", sensorParameters_["cutoff_max_depth"], std::numeric_limits<double>::max());
   nodeHandle_.param("sensor_processor/normal_factor_a", sensorParameters_["normal_factor_a"], 0.0);
