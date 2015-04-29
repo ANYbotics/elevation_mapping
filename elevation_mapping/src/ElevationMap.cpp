@@ -426,7 +426,7 @@ void ElevationMap::move(const Eigen::Vector2d& position)
 
 bool ElevationMap::publishRawElevationMap()
 {
-  if (hasRawMapSubscribers()) return false;
+  if (!hasRawMapSubscribers()) return false;
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
@@ -442,7 +442,7 @@ bool ElevationMap::publishRawElevationMap()
 
 bool ElevationMap::publishFusedElevationMap()
 {
-  if (hasFusedMapSubscribers()) return false;
+  if (!hasFusedMapSubscribers()) return false;
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
   GridMap fusedMapCopy = fusedMap_;
   scopedLock.unlock();
