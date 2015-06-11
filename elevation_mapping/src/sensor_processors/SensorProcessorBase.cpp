@@ -31,6 +31,7 @@ SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::Transf
       mapFrameId_(""),
       robotBaseFrameId_("")
 {
+  pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
 	transformationSensorToMap_.setIdentity();
 	transformListenerTimeout_.fromSec(1.0);
 }
