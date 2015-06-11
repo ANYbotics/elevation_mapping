@@ -157,7 +157,7 @@ bool ElevationMap::fuseAll(const bool computeSurfaceNormals)
 
 bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2d& length, const bool computeSurfaceNormals)
 {
-  ROS_DEBUG("Requested to fuse an area of the elevation map with center at (%f, %f) and side lenghts (%f, %f)",
+  ROS_DEBUG("Requested to fuse an area of the elevation map with center at (%f, %f) and side lengths (%f, %f)",
             position[0], position[1], length[0], length[1]);
 
   Index topLeftIndex;
