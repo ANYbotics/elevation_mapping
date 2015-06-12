@@ -68,7 +68,7 @@ bool ElevationChangeDetection::readParameters()
 
   std::string bagTopicName_, pathToBag_;
   nodeHandle_.param("bag_topic_name", bagTopicName_, std::string("grid_map"));
-  nodeHandle_.param("path_to_bag", pathToBag_, std::string("lee_ground_truth.bag"));
+  nodeHandle_.param("path_to_bag", pathToBag_, std::string("ground_truth.bag"));
   loadElevationMap(pathToBag_, bagTopicName_);
   if (!groundTruthMap_.exists(type_)) ROS_ERROR("Can't find bag or topic of the ground truth map!");
 
