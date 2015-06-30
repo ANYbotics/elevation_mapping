@@ -110,7 +110,7 @@ namespace elevation_change_detection {
     grid_map::Length mapLength_;
 
     //! Elevation map type
-    const std::string type_;
+    const std::string layer_;
 
     //! Publisher of elevation change map.
     ros::Publisher elevationChangePublisher_;

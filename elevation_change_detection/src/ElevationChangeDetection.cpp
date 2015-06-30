@@ -2,7 +2,7 @@
  * ElevationChangeDetection.cpp
  *
  *  Created on: Mar 26, 2015
- *      Author: Martin Wermelinger
+ *      Author: Martin Wermelinger, Peter Fankhauser
  *   Institute: ETH Zurich, Autonomous Systems Lab
  */
 
@@ -10,7 +10,7 @@
 
 #include <grid_map_msgs/GetGridMap.h>
 
-// Eigenvalues
+// Eigen
 #include <Eigen/Dense>
 
 using namespace Eigen;
@@ -20,7 +20,7 @@ namespace elevation_change_detection {
 
 ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-      type_("elevation")
+      layer_("elevation")
 {
   ROS_INFO("Elevation change detection node started.");
 
@@ -33,7 +33,7 @@ ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
   updateTimer_ = nodeHandle_.createTimer(updateDuration_,
                                          &ElevationChangeDetection::updateTimerCallback, this);
 
-  requestedMapTypes_.push_back(type_);
+  requestedMapTypes_.push_back(layer_);
 }
 
 ElevationChangeDetection::~ElevationChangeDetection()
@@ -70,7 +70,7 @@ bool ElevationChangeDetection::readParameters()
   nodeHandle_.param("bag_topic_name", bagTopicName_, std::string("grid_map"));
   nodeHandle_.param("path_to_bag", pathToBag_, std::string("ground_truth.bag"));
   loadElevationMap(pathToBag_, bagTopicName_);
-  if (!groundTruthMap_.exists(type_)) ROS_ERROR("Can't find bag or topic of the ground truth map!");
+  if (!groundTruthMap_.exists(layer_)) ROS_ERROR("Can't find bag or topic of the ground truth map!");
 
   return true;
 }
@@ -128,27 +128,22 @@ bool ElevationChangeDetection::getGridMap(grid_map_msgs::GridMap& map)
 
 void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevationMap)
 {
-  elevationMap.add("elevation_change", elevationMap.get(type_));
-  std::vector<std::string> validTypes;
-  std::vector<std::string> basicLayers;
-  validTypes.push_back(type_);
-  basicLayers.push_back("elevation_change");
-  elevationMap.setBasicLayers(basicLayers);
-  elevationMap.clear();
+  elevationMap.add("elevation_change", elevationMap.get(layer_));
+  elevationMap.clear("elevation_change");
 
   for (GridMapIterator iterator(elevationMap);
-      !iterator.isPassedEnd(); ++iterator) {
+      !iterator.isPastEnd(); ++iterator) {
     // Check if elevation map has valid value
-    if (!elevationMap.isValid(*iterator, validTypes)) continue;
-    double height = elevationMap.at(type_, *iterator);
+    if (!elevationMap.isValid(*iterator, layer_)) continue;
+    double height = elevationMap.at(layer_, *iterator);
 
     // Get the ground truth height
     Vector2d position, groundTruthPosition;
     Array2i groundTruthIndex;
     elevationMap.getPosition(*iterator, position);
     groundTruthMap_.getIndex(position, groundTruthIndex);
-    if (!groundTruthMap_.isValid(groundTruthIndex, validTypes)) continue;
-    double groundTruthHeight = groundTruthMap_.at(type_, groundTruthIndex);
+    if (!groundTruthMap_.isValid(groundTruthIndex, layer_)) continue;
+    double groundTruthHeight = groundTruthMap_.at(layer_, groundTruthIndex);
 
     // Add to elevation change map
     double diffElevation = std::abs(height - groundTruthHeight);

@@ -203,7 +203,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
   if (rawMapCopy.getPosition() != fusedMap_.getPosition()) fusedMap_.move(rawMapCopy.getPosition());
 
   // For each cell in requested area.
-  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndex, size); !areaIterator.isPassedEnd(); ++areaIterator) {
+  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
     if (timer.isTiming()) timer.stop();
     timer.start();
 
@@ -243,7 +243,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     // For each cell in submap.
     size_t i = 0;
-    for (SubmapIterator submapIterator(rawMapCopy, submapTopLeftIndex, submapBufferSize); !submapIterator.isPassedEnd(); ++submapIterator) {
+    for (SubmapIterator submapIterator(rawMapCopy, submapTopLeftIndex, submapBufferSize); !submapIterator.isPastEnd(); ++submapIterator) {
       if (!rawMapCopy.isValid(*submapIterator)) {
         // Empty cell in submap (cannot be center cell because we checked above).
         continue;
@@ -332,7 +332,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
   surfaceNormalTypes.push_back("surface_normal_z");
 
   // For each cell in requested area.
-  for (SubmapIterator areaIterator(fusedMap_, topLeftIndex, size); !areaIterator.isPassedEnd(); ++areaIterator) {
+  for (SubmapIterator areaIterator(fusedMap_, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
     if (timer.isTiming()) timer.stop();
     timer.start();
 
@@ -359,7 +359,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
 
     // Gather surrounding data.
     size_t nPoints = 0;
-    for (SubmapIterator submapIterator(fusedMap_, submapTopLeftIndex, submapBufferSize); !submapIterator.isPassedEnd(); ++submapIterator) {
+    for (SubmapIterator submapIterator(fusedMap_, submapTopLeftIndex, submapBufferSize); !submapIterator.isPastEnd(); ++submapIterator) {
       if (!fusedMap_.isValid(*submapIterator)) continue;
       Position3 point;
       fusedMap_.getPosition3("elevation", *submapIterator, point);
