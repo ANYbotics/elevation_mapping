@@ -153,6 +153,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
   nodeHandle_.param("surface_normal_estimation_radius", map_.surfaceNormalEstimationRadius_, 0.05);
+  nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
 
   string surfaceNormalPositiveAxis;
   nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
@@ -218,7 +219,7 @@ void ElevationMapping::pointCloudCallback(
   pcl_conversions::toPCL(rawPointCloud, pcl_pc);
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
-  Time time;
+  ros::Time time;
   time.fromNSec(1000 * pointCloud->header.stamp);
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
@@ -277,7 +278,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
   stopMapUpdateTimer();
-  Time time = Time::now();
+  ros::Time time = ros::Time::now();
 
   // Update map from motion prediction.
   if (!updatePrediction(time)) {
@@ -349,7 +350,7 @@ bool ElevationMapping::updateMapLocation()
 
   geometry_msgs::PointStamped trackPoint;
   trackPoint.header.frame_id = trackPointFrameId_;
-  trackPoint.header.stamp = Time(0);
+  trackPoint.header.stamp = ros::Time(0);
   convertToRosGeometryMsg(trackPoint_, trackPoint.point);
   geometry_msgs::PointStamped trackPointTransformed;
 
@@ -423,7 +424,7 @@ bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Em
 void ElevationMapping::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
-  Duration periodSinceLastUpdate = Time::now() - map_.getTimeOfLastUpdate();
+  Duration periodSinceLastUpdate = ros::Time::now() - map_.getTimeOfLastUpdate();
   if (periodSinceLastUpdate > maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
   mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - periodSinceLastUpdate);
   mapUpdateTimer_.start();

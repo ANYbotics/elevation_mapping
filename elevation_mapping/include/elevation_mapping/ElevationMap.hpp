@@ -195,6 +195,13 @@ class ElevationMap
    */
   bool hasFusedMapSubscribers() const;
 
+  /*!
+   * Callback method for the updates of the underlying map.
+   * Updates the internal underlying map.
+   * @param underlyingMap the underlying map.
+   */
+  void underlyingMapCallback(const grid_map_msgs::GridMap& underlyingMap);
+
   friend class ElevationMapping;
 
  private:
@@ -246,6 +253,12 @@ class ElevationMap
   //! Fused elevation map as grid map.
   grid_map::GridMap fusedMap_;
 
+  //! Underlying map, used for ground truth maps, multi-robot mapping etc.
+  grid_map::GridMap underlyingMap_;
+
+  //! True if underlying map has been set, false otherwise.
+  bool hasUnderlyingMap_;
+
   //! Pose of the elevation map frame w.r.t. the inertial parent frame of the robot (e.g. world, map etc.).
   kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
 
@@ -259,6 +272,9 @@ class ElevationMap
   //! Mutex lock for raw map.
   boost::recursive_mutex rawMapMutex_;
 
+  //! Underlying map subscriber.
+  ros::Subscriber underlyingMapSubscriber_;
+
   //! Parameters. Are set through the ElevationMapping class.
   double minVariance_;
   double maxVariance_;
@@ -268,6 +284,7 @@ class ElevationMap
   double maxHorizontalVariance_;
   double surfaceNormalEstimationRadius_;
   Eigen::Vector3d surfaceNormalPositiveAxis_;
+  std::string underlyingMapTopic_;
 };
 
 } /* namespace */

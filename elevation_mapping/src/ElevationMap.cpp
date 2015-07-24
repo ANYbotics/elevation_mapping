@@ -34,7 +34,8 @@ namespace elevation_mapping {
 ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color"}),
-      fusedMap_({"elevation", "variance", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"})
+      fusedMap_({"elevation", "variance", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
+      hasUnderlyingMap_(false)
 {
   minVariance_ = 0.0;
   maxVariance_ = 0.0;
@@ -48,6 +49,7 @@ ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
 
   elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map_raw", 1);
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map", 1);
+  underlyingMapSubscriber_ = nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
 }
 
 ElevationMap::~ElevationMap()
@@ -421,7 +423,29 @@ bool ElevationMap::clear()
 void ElevationMap::move(const Eigen::Vector2d& position)
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
-  rawMap_.move(position);
+  std::vector<Index> newRegionIndices;
+  std::vector<Size> newRegionSizes;
+
+  if (rawMap_.move(position, newRegionIndices, newRegionSizes)) {
+    ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(), rawMap_.getPosition().y());
+  }
+
+  if (hasUnderlyingMap_) {
+    if (newRegionIndices.size() != newRegionSizes.size()) {
+      ROS_ERROR("newRegionIndices (size: %i) and newRegionSizes (size: %i) are not the same size!",
+                (int) newRegionIndices.size(), (int) newRegionSizes.size());
+      return;
+    }
+
+    for (unsigned int i = 0; i < newRegionSizes.size(); i++) {
+      for (SubmapIterator iterator(rawMap_, newRegionIndices[i], newRegionSizes[i]);
+          !iterator.isPastEnd(); ++iterator) {
+        Position position;
+        rawMap_.getPosition(*iterator, position);
+        rawMap_.at("elevation", *iterator) = underlyingMap_.atPosition("elevation", position);
+      }
+    }
+  }
 }
 
 bool ElevationMap::publishRawElevationMap()
@@ -536,6 +560,13 @@ bool ElevationMap::hasFusedMapSubscribers() const
 {
   if (elevationMapFusedPublisher_.getNumSubscribers() < 1) return false;
   return true;
+}
+
+void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyingMap)
+{
+  ROS_INFO("Updating underlying map.");
+  GridMapRosConverter::fromMessage(underlyingMap, underlyingMap_);
+  hasUnderlyingMap_ = true;
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
