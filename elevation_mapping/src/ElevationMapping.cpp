@@ -55,15 +55,21 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
-      isContinouslyFusing_(false)
+      isContinouslyFusing_(false),
+      ignoreRobotMotionUpdates_(false)
 {
   ROS_INFO("Elevation mapping node started.");
 
   readParameters();
   pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
-  robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
-  robotPoseCache_.connectInput(robotPoseSubscriber_);
-  robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+  if (!robotPoseTopic_.empty()) {
+    robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
+    robotPoseCache_.connectInput(robotPoseSubscriber_);
+    robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+  } else {
+    ignoreRobotMotionUpdates_ = true;
+  }
+
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
   // Multi-threading for fusion.
@@ -103,7 +109,7 @@ bool ElevationMapping::readParameters()
 {
   // ElevationMapping parameters.
   nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/points"));
-  nodeHandle_.param("robot_pose_with_covariance_topic", robotPoseTopic_, string("/robot_state/pose"));
+  nodeHandle_.param("robot_pose_with_covariance_topic", robotPoseTopic_, string(""));
   nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/robot"));
   nodeHandle_.param("track_point_x", trackPoint_.x(), 0.0);
   nodeHandle_.param("track_point_y", trackPoint_.y(), 0.0);
@@ -235,14 +241,16 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Get robot pose covariance matrix at timestamp of point cloud.
-  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
-  if (!poseMessage)
-  {
-    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
-    return;
+  Eigen::Matrix<double, 6, 6> robotPoseCovariance;
+  robotPoseCovariance.setZero();
+  if (!ignoreRobotMotionUpdates_) {
+    boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
+    if (!poseMessage) {
+      ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
+      return;
+    }
+    robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
-
-  Eigen::Matrix<double, 6, 6> robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Process point cloud.
   PointCloud<PointXYZRGB>::Ptr pointCloudProcessed(new PointCloud<PointXYZRGB>);
@@ -316,6 +324,8 @@ bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty:
 
 bool ElevationMapping::updatePrediction(const ros::Time& time)
 {
+  if (ignoreRobotMotionUpdates_) return true;
+
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
 
   if (time < map_.getTimeOfLastUpdate())
