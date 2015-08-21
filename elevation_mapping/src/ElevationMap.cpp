@@ -423,23 +423,15 @@ bool ElevationMap::clear()
 void ElevationMap::move(const Eigen::Vector2d& position)
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
-  std::vector<Index> newRegionIndices;
-  std::vector<Size> newRegionSizes;
+  std::vector<BufferRegion> newRegions;
 
-  if (rawMap_.move(position, newRegionIndices, newRegionSizes)) {
+  if (rawMap_.move(position, newRegions)) {
     ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(), rawMap_.getPosition().y());
   }
 
   if (hasUnderlyingMap_) {
-    if (newRegionIndices.size() != newRegionSizes.size()) {
-      ROS_ERROR("newRegionIndices (size: %i) and newRegionSizes (size: %i) are not the same size!",
-                (int) newRegionIndices.size(), (int) newRegionSizes.size());
-      return;
-    }
-
-    for (unsigned int i = 0; i < newRegionSizes.size(); i++) {
-      for (SubmapIterator iterator(rawMap_, newRegionIndices[i], newRegionSizes[i]);
-          !iterator.isPastEnd(); ++iterator) {
+    for (const auto& region : newRegions) {
+      for (SubmapIterator iterator(rawMap_, region); !iterator.isPastEnd(); ++iterator) {
         Position position;
         rawMap_.getPosition(*iterator, position);
         rawMap_.at("elevation", *iterator) = underlyingMap_.atPosition("elevation", position);
@@ -566,6 +558,11 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
 {
   ROS_INFO("Updating underlying map.");
   GridMapRosConverter::fromMessage(underlyingMap, underlyingMap_);
+  if (underlyingMap_.getFrameId() != rawMap_.getFrameId()) {
+    ROS_ERROR_STREAM("The underlying map does not have the same map frame (" <<underlyingMap_.getFrameId()
+                     << ") as the elevation map (" << rawMap_.getFrameId() << ").");
+    return;
+  }
   hasUnderlyingMap_ = true;
 }
 
