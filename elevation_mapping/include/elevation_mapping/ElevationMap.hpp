@@ -44,7 +44,7 @@ class ElevationMap
   /*!
    * Constructor.
    */
-  ElevationMap(ros::NodeHandle& nodeHandle);
+  ElevationMap(ros::NodeHandle nodeHandle);
 
   /*!
    * Destructor.
@@ -207,6 +207,12 @@ class ElevationMap
  private:
 
   /*!
+   * Reads and verifies the ROS parameters.
+   * @return true if successful.
+   */
+  bool readParameters();
+
+  /*!
    * Fuses a region of the map.
    * @param topLeftIndex the top left index of the region.
    * @param size the size (in number of cells) of the region.
@@ -245,7 +251,7 @@ class ElevationMap
   float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
   //! ROS nodehandle.
-  ros::NodeHandle& nodeHandle_;
+  ros::NodeHandle nodeHandle_;
 
   //! Raw elevation map as grid map.
   grid_map::GridMap rawMap_;

@@ -31,29 +31,63 @@ using namespace sm::timing;
 
 namespace elevation_mapping {
 
-ElevationMap::ElevationMap(ros::NodeHandle& nodeHandle)
+ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color"}),
       fusedMap_({"elevation", "variance", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false)
 {
-  minVariance_ = 0.0;
-  maxVariance_ = 0.0;
-  mahalanobisDistanceThreshold_ = 0.0;
-  multiHeightNoise_ = 0.0;
-  minHorizontalVariance_ = 0.0;
-  maxHorizontalVariance_ = 0.0;
+  readParameters();
   rawMap_.setBasicLayers({"elevation", "variance"});
   fusedMap_.setBasicLayers({"elevation", "variance"});
   clear();
 
   elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map_raw", 1);
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map", 1);
-  underlyingMapSubscriber_ = nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
+  if (!underlyingMapTopic_.empty()) underlyingMapSubscriber_ =
+      nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
 }
 
 ElevationMap::~ElevationMap()
 {
+}
+
+bool ElevationMap::readParameters()
+{
+  string frameId;
+  nodeHandle_.param("map_frame_id", frameId, string("/map"));
+  setFrameId(frameId);
+
+  grid_map::Length length;
+  grid_map::Position position;
+  double resolution;
+  nodeHandle_.param("length_in_x", length(0), 1.5);
+  nodeHandle_.param("length_in_y", length(1), 1.5);
+  nodeHandle_.param("position_x", position.x(), 0.0);
+  nodeHandle_.param("position_y", position.y(), 0.0);
+  nodeHandle_.param("resolution", resolution, 0.01);
+  setGeometry(length, resolution, position);
+
+  nodeHandle_.param("min_variance", minVariance_, pow(0.003, 2));
+  nodeHandle_.param("max_variance", maxVariance_, pow(0.03, 2));
+  nodeHandle_.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.5);
+  nodeHandle_.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
+  nodeHandle_.param("min_horizontal_variance", minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
+  nodeHandle_.param("max_horizontal_variance", maxHorizontalVariance_, 0.5);
+  nodeHandle_.param("surface_normal_estimation_radius", surfaceNormalEstimationRadius_, 0.05);
+  nodeHandle_.param("underlying_map_topic", underlyingMapTopic_, string());
+
+  string surfaceNormalPositiveAxis;
+  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
+  if (surfaceNormalPositiveAxis == "z") {
+    surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
+  } else if (surfaceNormalPositiveAxis == "y") {
+    surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
+  } else if (surfaceNormalPositiveAxis == "x") {
+    surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
+  } else {
+    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
+  }
 }
 
 void ElevationMap::setGeometry(const Eigen::Array2d& length, const double& resolution, const Eigen::Vector2d& position)
