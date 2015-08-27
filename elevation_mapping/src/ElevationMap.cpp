@@ -464,11 +464,26 @@ void ElevationMap::move(const Eigen::Vector2d& position)
   }
 
   if (hasUnderlyingMap_) {
+    bool hasVariance = underlyingMap_.exists("variance");
+    bool hasHorizontalVariance = underlyingMap_.exists("horizontal_variance_x") && underlyingMap_.exists("horizontal_variance_y");
     for (const auto& region : newRegions) {
       for (SubmapIterator iterator(rawMap_, region); !iterator.isPastEnd(); ++iterator) {
         Position position;
         rawMap_.getPosition(*iterator, position);
-        rawMap_.at("elevation", *iterator) = underlyingMap_.atPosition("elevation", position);
+        Index index;
+
+        if (underlyingMap_.isInside(position)) {
+          underlyingMap_.getIndex(position, index);
+        } else {
+          continue;
+        }
+
+        rawMap_.at("elevation", *iterator) = underlyingMap_.at("elevation", index);
+        rawMap_.at("variance", *iterator) = hasVariance ? underlyingMap_.at("variance", index) : minVariance_;
+        rawMap_.at("horizontal_variance_x", *iterator) =
+            hasHorizontalVariance ? underlyingMap_.at("horizontal_variance_x", index) : minHorizontalVariance_;
+        rawMap_.at("horizontal_variance_y", *iterator) =
+            hasHorizontalVariance ? underlyingMap_.at("horizontal_variance_y", index) : minHorizontalVariance_;
       }
     }
   }
@@ -593,8 +608,12 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
   ROS_INFO("Updating underlying map.");
   GridMapRosConverter::fromMessage(underlyingMap, underlyingMap_);
   if (underlyingMap_.getFrameId() != rawMap_.getFrameId()) {
-    ROS_ERROR_STREAM("The underlying map does not have the same map frame (" <<underlyingMap_.getFrameId()
-                     << ") as the elevation map (" << rawMap_.getFrameId() << ").");
+    ROS_ERROR_STREAM("The underlying map does not have the same map frame ('" <<underlyingMap_.getFrameId()
+                     << "') as the elevation map ('" << rawMap_.getFrameId() << "').");
+    return;
+  }
+  if (!underlyingMap_.exists("elevation")) {
+    ROS_ERROR_STREAM("The underlying map does not have an 'elevation' layer.");
     return;
   }
   hasUnderlyingMap_ = true;
