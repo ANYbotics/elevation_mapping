@@ -461,31 +461,7 @@ void ElevationMap::move(const Eigen::Vector2d& position)
 
   if (rawMap_.move(position, newRegions)) {
     ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(), rawMap_.getPosition().y());
-  }
-
-  if (hasUnderlyingMap_) {
-    bool hasVariance = underlyingMap_.exists("variance");
-    bool hasHorizontalVariance = underlyingMap_.exists("horizontal_variance_x") && underlyingMap_.exists("horizontal_variance_y");
-    for (const auto& region : newRegions) {
-      for (SubmapIterator iterator(rawMap_, region); !iterator.isPastEnd(); ++iterator) {
-        Position position;
-        rawMap_.getPosition(*iterator, position);
-        Index index;
-
-        if (underlyingMap_.isInside(position)) {
-          underlyingMap_.getIndex(position, index);
-        } else {
-          continue;
-        }
-
-        rawMap_.at("elevation", *iterator) = underlyingMap_.at("elevation", index);
-        rawMap_.at("variance", *iterator) = hasVariance ? underlyingMap_.at("variance", index) : minVariance_;
-        rawMap_.at("horizontal_variance_x", *iterator) =
-            hasHorizontalVariance ? underlyingMap_.at("horizontal_variance_x", index) : minHorizontalVariance_;
-        rawMap_.at("horizontal_variance_y", *iterator) =
-            hasHorizontalVariance ? underlyingMap_.at("horizontal_variance_y", index) : minHorizontalVariance_;
-      }
-    }
+    if (hasUnderlyingMap_) rawMap_.fillHolesFrom(underlyingMap_);
   }
 }
 
@@ -616,7 +592,13 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
     ROS_ERROR_STREAM("The underlying map does not have an 'elevation' layer.");
     return;
   }
+  if (!underlyingMap_.exists("variance")) underlyingMap_.add("variance", minVariance_);
+  if (!underlyingMap_.exists("horizontal_variance_x")) underlyingMap_.add("horizontal_variance_x", minHorizontalVariance_);
+  if (!underlyingMap_.exists("horizontal_variance_y")) underlyingMap_.add("horizontal_variance_y", minHorizontalVariance_);
+  if (!underlyingMap_.exists("color")) underlyingMap_.add("color", 0.0);
+  underlyingMap_.setBasicLayers(rawMap_.getBasicLayers());
   hasUnderlyingMap_ = true;
+  rawMap_.fillHolesFrom(underlyingMap_);
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
