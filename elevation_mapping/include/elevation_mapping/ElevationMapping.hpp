@@ -209,6 +209,9 @@ class ElevationMapping
   //! Robot motion elevation map updater.
   RobotMotionMapUpdater robotMotionMapUpdater_;
 
+  //! If true, robot motion updates are ignored.
+  bool ignoreRobotMotionUpdates_;
+
   //! Timer for the robot motion update.
   ros::Timer mapUpdateTimer_;
 
