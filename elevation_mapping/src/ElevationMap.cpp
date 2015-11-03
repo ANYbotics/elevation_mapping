@@ -461,7 +461,7 @@ void ElevationMap::move(const Eigen::Vector2d& position)
 
   if (rawMap_.move(position, newRegions)) {
     ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(), rawMap_.getPosition().y());
-    if (hasUnderlyingMap_) rawMap_.fillHolesFrom(underlyingMap_);
+    if (hasUnderlyingMap_) rawMap_.addDataFrom(underlyingMap_, false, false, true);
   }
 }
 
@@ -598,7 +598,7 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
   if (!underlyingMap_.exists("color")) underlyingMap_.add("color", 0.0);
   underlyingMap_.setBasicLayers(rawMap_.getBasicLayers());
   hasUnderlyingMap_ = true;
-  rawMap_.fillHolesFrom(underlyingMap_);
+  rawMap_.addDataFrom(underlyingMap_, false, false, true);
 }
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
