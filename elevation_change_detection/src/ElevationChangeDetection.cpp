@@ -29,9 +29,13 @@ ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
   submapClient_ = nodeHandle_.serviceClient<grid_map_msgs::GetGridMap>(submapServiceName_);
   elevationChangePublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_change_map", 1, true);
   groundTruthPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("ground_truth_map", 1, true);
+  obstacleDetectionService_ = nodeHandle_.advertiseService("detect_obstacle", &ElevationChangeDetection::detectObstacle, this);
 
-  updateTimer_ = nodeHandle_.createTimer(updateDuration_,
-                                         &ElevationChangeDetection::updateTimerCallback, this);
+  if (!updateDuration_.isZero()) {
+    updateTimer_ = nodeHandle_.createTimer(updateDuration_, &ElevationChangeDetection::updateTimerCallback, this);
+  } else {
+    ROS_INFO("ElevationChangeDetection: Update rate is zero.");
+  }
 
   requestedMapTypes_.push_back(layer_);
 }
@@ -48,7 +52,11 @@ bool ElevationChangeDetection::readParameters()
 
   double updateRate;
   nodeHandle_.param("update_rate", updateRate, 1.0);
-  updateDuration_.fromSec(1.0 / updateRate);
+  if (updateRate != 0.0) {
+    updateDuration_.fromSec(1.0 / updateRate);
+  } else {
+    updateDuration_.fromSec(0.0);
+  }
 
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("map"));
   std::string robotFrameId;
@@ -150,6 +158,52 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
     if (diffElevation <= threshold_) continue;
     elevationMap.at("elevation_change", *iterator) = diffElevation;
   }
+}
+
+bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObstacle::Request& request, elevation_change_msgs::DetectObstacle::Response& response)
+{
+  const int nPoses = request.path.poses.poses.size();
+  if (nPoses == 0) {
+    ROS_WARN("ElevationChangeDetection: No path available to check for obstacles!");
+    return false;
+  }
+  // Get boundaries of submap.
+  double margin;
+  if (request.path.radius != 0.0) {
+    margin = request.path.radius;
+  } else {
+    margin = 0.5;
+  }
+  double lowX, lowY, highX, highY;
+  lowX = request.path.poses.poses[0].position.x - margin;
+  highX = lowX + 2 * margin;
+  lowY = request.path.poses.poses[0].position.y - margin;
+  highY = lowY + 2 * margin;
+  for (unsigned int i = 1; i < nPoses; ++i) {
+    if (request.path.poses.poses[i].position.x + margin > highX) highX = request.path.poses.poses[i].position.x + margin;
+    if (request.path.poses.poses[i].position.y + margin > highY) highY = request.path.poses.poses[i].position.y + margin;
+    if (request.path.poses.poses[i].position.x - margin < lowX) lowX = request.path.poses.poses[i].position.x - margin;
+    if (request.path.poses.poses[i].position.y - margin < lowY) lowY = request.path.poses.poses[i].position.y - margin;
+  }
+  grid_map_msgs::GetGridMap submapService;
+  submapService.request.position_x = (highX + lowX) / 2.0;
+  submapService.request.position_y = (highY + lowY) / 2.0;
+  submapService.request.length_x = highX - lowX;
+  submapService.request.length_y = highY - lowY;
+  submapService.request.layers.resize(requestedMapTypes_.size());
+  ROS_INFO_STREAM("ElevationChangeDetection: Requested map size x: " << lowX << " to " << highX);
+  ROS_INFO_STREAM("ElevationChangeDetection: Requested map size y: " << lowY << " to " << highY);
+
+  for (unsigned int i = 0; i < requestedMapTypes_.size(); ++i) {
+    submapService.request.layers[i] = requestedMapTypes_[i];
+  }
+
+  if (!submapClient_.call(submapService)) {
+    ROS_WARN("ElevationChangeDetection: Cannot get elevation submap!");
+    return false;
+  }
+//  map = submapService.response.map;
+  return true;
 }
 
 bool ElevationChangeDetection::publishElevationChangeMap(const grid_map::GridMap& map)

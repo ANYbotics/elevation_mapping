@@ -15,6 +15,8 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 
+#include <elevation_change_msgs/DetectObstacle.h>
+
 #include <string>
 
 namespace elevation_change_detection {
@@ -67,6 +69,15 @@ namespace elevation_change_detection {
     void updateTimerCallback(const ros::TimerEvent& timerEvent);
 
     /*!
+     * ROS service callback function to detect obstacles on a footprint path.
+     * @param request the ROS service request defining footprint path.
+     * @param response the ROS service response containing an array with obstacles on the path.
+     * @return true if successful.
+     */
+    bool detectObstacle(elevation_change_msgs::DetectObstacle::Request& request,
+                        elevation_change_msgs::DetectObstacle::Response& response);
+
+    /*!
      * Gets the grid map for the desired submap center point.
      * @param[out] map the map that is received.
      * @return true if successful, false if ROS service call failed.
@@ -84,6 +95,9 @@ namespace elevation_change_detection {
 
     //! Elevation map service client.
     ros::ServiceClient submapClient_;
+
+    //! Obstacle detection service server.
+    ros::ServiceServer obstacleDetectionService_;
 
     //! Name of the elevation submap service.
     std::string submapServiceName_;
