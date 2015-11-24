@@ -20,7 +20,8 @@ namespace elevation_change_detection {
 
 ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-      layer_("elevation")
+      layer_("elevation"),
+      elevationChangeLayer_("elevation_change")
 {
   ROS_INFO("Elevation change detection node started.");
 
@@ -78,7 +79,7 @@ bool ElevationChangeDetection::readParameters()
   nodeHandle_.param("bag_topic_name", bagTopicName_, std::string("grid_map"));
   nodeHandle_.param("path_to_bag", pathToBag_, std::string("ground_truth.bag"));
   loadElevationMap(pathToBag_, bagTopicName_);
-  if (!groundTruthMap_.exists(layer_)) ROS_ERROR("Can't find bag or topic of the ground truth map!");
+  if (!groundTruthMap_.exists(layer_)) ROS_ERROR_STREAM("ElevationChangeDetection: Bag file does not contain layer " << layer_ << "!");
 
   return true;
 }
@@ -90,11 +91,18 @@ bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag, co
 
 void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerEvent)
 {
+  submapPoint_.header.stamp = ros::Time(0);
+  geometry_msgs::PointStamped submapPointTransformed;
+  try {
+    transformListener_.transformPoint(mapFrameId_, submapPoint_, submapPointTransformed);
+  } catch (tf::TransformException &ex) {
+    ROS_ERROR("%s", ex.what());
+  }
+
   grid_map_msgs::GridMap mapMessage;
-  ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
-  submapClient_.waitForExistence();
-  ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
-  if (getGridMap(mapMessage)) {
+  grid_map::Position position(submapPointTransformed.point.x, submapPointTransformed.point.y);
+  grid_map::Length length(mapLength_.x(), mapLength_.y());
+  if (getGridMap(position, length, mapMessage)) {
     grid_map::GridMap elevationMap;
     grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
     computeElevationChange(elevationMap);
@@ -107,28 +115,18 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
   }
 }
 
-bool ElevationChangeDetection::getGridMap(grid_map_msgs::GridMap& map)
+bool ElevationChangeDetection::getGridMap(const grid_map::Position& position, const grid_map::Length& length, grid_map_msgs::GridMap& map)
 {
-  submapPoint_.header.stamp = ros::Time(0);
-  geometry_msgs::PointStamped submapPointTransformed;
-
-  try {
-    transformListener_.transformPoint(mapFrameId_, submapPoint_, submapPointTransformed);
-  } catch (tf::TransformException &ex) {
-    ROS_ERROR("%s", ex.what());
-  }
-
   grid_map_msgs::GetGridMap submapService;
-  submapService.request.position_x = submapPointTransformed.point.x;
-  submapService.request.position_y = submapPointTransformed.point.y;
-  submapService.request.length_x = mapLength_.x();
-  submapService.request.length_y = mapLength_.y();
-  submapService.request.layers.resize(requestedMapTypes_.size());
+  submapService.request.position_x = position.x();
+  submapService.request.position_y = position.y();
+  submapService.request.length_x = length.x();
+  submapService.request.length_y = length.y();
+  submapService.request.layers = requestedMapTypes_;
 
-  for (unsigned int i = 0; i < requestedMapTypes_.size(); ++i) {
-    submapService.request.layers[i] = requestedMapTypes_[i];
-  }
-
+  ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
+  submapClient_.waitForExistence();
+  ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
   if (!submapClient_.call(submapService)) return false;
   map = submapService.response.map;
   return true;
@@ -136,8 +134,8 @@ bool ElevationChangeDetection::getGridMap(grid_map_msgs::GridMap& map)
 
 void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevationMap)
 {
-  elevationMap.add("elevation_change", elevationMap.get(layer_));
-  elevationMap.clear("elevation_change");
+  elevationMap.add(elevationChangeLayer_, elevationMap.get(layer_));
+  elevationMap.clear(elevationChangeLayer_);
 
   for (GridMapIterator iterator(elevationMap);
       !iterator.isPastEnd(); ++iterator) {
@@ -154,9 +152,9 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
     double groundTruthHeight = groundTruthMap_.at(layer_, groundTruthIndex);
 
     // Add to elevation change map
-    double diffElevation = std::abs(height - groundTruthHeight);
-    if (diffElevation <= threshold_) continue;
-    elevationMap.at("elevation_change", *iterator) = diffElevation;
+    double diffElevation = height - groundTruthHeight;
+    if (std::abs(diffElevation) <= threshold_) continue;
+    elevationMap.at(elevationChangeLayer_, *iterator) = diffElevation;
   }
 }
 
@@ -185,24 +183,173 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     if (request.path.poses.poses[i].position.x - margin < lowX) lowX = request.path.poses.poses[i].position.x - margin;
     if (request.path.poses.poses[i].position.y - margin < lowY) lowY = request.path.poses.poses[i].position.y - margin;
   }
-  grid_map_msgs::GetGridMap submapService;
-  submapService.request.position_x = (highX + lowX) / 2.0;
-  submapService.request.position_y = (highY + lowY) / 2.0;
-  submapService.request.length_x = highX - lowX;
-  submapService.request.length_y = highY - lowY;
-  submapService.request.layers.resize(requestedMapTypes_.size());
   ROS_INFO_STREAM("ElevationChangeDetection: Requested map size x: " << lowX << " to " << highX);
   ROS_INFO_STREAM("ElevationChangeDetection: Requested map size y: " << lowY << " to " << highY);
+  // Get submap.
+  grid_map_msgs::GridMap mapMessage;
+  grid_map::GridMap elevationMap;
+  grid_map::Position position((highX + lowX) / 2.0, (highY + lowY) / 2.0);
+  grid_map::Length length(highX - lowX, highY - lowY);
+  if (getGridMap(position, length, mapMessage)) {
+    grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
+    computeElevationChange(elevationMap);
 
-  for (unsigned int i = 0; i < requestedMapTypes_.size(); ++i) {
-    submapService.request.layers[i] = requestedMapTypes_[i];
-  }
-
-  if (!submapClient_.call(submapService)) {
-    ROS_WARN("ElevationChangeDetection: Cannot get elevation submap!");
+    // Publish elevation change map.
+    if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
+    if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
+  } else {
+    ROS_WARN("ElevationChangeDetection: Failed to retrieve elevation grid map.");
     return false;
   }
-//  map = submapService.response.map;
+  // Check path for obstacles.
+  elevationMap.add("inquired_cells");
+  std::vector<elevation_change_msgs::Obstacle> obstacles;
+  double radius = request.path.radius;
+  grid_map::Polygon polygon;
+  grid_map::Position start, end;
+
+  if (request.path.footprint.polygon.points.size() == 0) {
+    for (int i = 0; i < nPoses; i++) {
+      start = end;
+      end.x() = request.path.poses.poses[i].position.x;
+      end.y() = request.path.poses.poses[i].position.y;
+
+      if (nPoses == 1) {
+        polygon = polygon.convexHullCircle(end, radius);
+      }
+
+      if (nPoses > 1 && i > 0) {
+        polygon = polygon.convexHullCircles(start, end, radius);
+      }
+    }
+  } else {
+    grid_map::Polygon polygon1, polygon2;
+    polygon1.setFrameId(mapFrameId_);
+    polygon2.setFrameId(mapFrameId_);
+    for (int i = 0; i < nPoses; i++) {
+      polygon1 = polygon2;
+      start = end;
+      polygon2.removeVertices();
+      grid_map::Position3 positionToVertex, positionToVertexTransformed;
+      Eigen::Translation<double, 3> toPosition;
+      Eigen::Quaterniond orientation;
+
+      toPosition.x() = request.path.poses.poses[i].position.x;
+      toPosition.y() = request.path.poses.poses[i].position.y;
+      toPosition.z() = request.path.poses.poses[i].position.z;
+      orientation.x() = request.path.poses.poses[i].orientation.x;
+      orientation.y() = request.path.poses.poses[i].orientation.y;
+      orientation.z() = request.path.poses.poses[i].orientation.z;
+      orientation.w() = request.path.poses.poses[i].orientation.w;
+      end.x() = toPosition.x();
+      end.y() = toPosition.y();
+
+      for (const auto& point : request.path.footprint.polygon.points) {
+        positionToVertex.x() = point.x;
+        positionToVertex.y() = point.y;
+        positionToVertex.z() = point.z;
+        positionToVertexTransformed = toPosition * orientation * positionToVertex;
+
+        grid_map::Position vertex;
+        vertex.x() = positionToVertexTransformed.x();
+        vertex.y() = positionToVertexTransformed.y();
+        polygon2.addVertex(vertex);
+      }
+
+      if (request.path.conservative && i > 0) {
+        grid_map::Vector startToEnd = end - start;
+        std::vector<grid_map::Position> vertices1 = polygon1.getVertices();
+        std::vector<grid_map::Position> vertices2 = polygon2.getVertices();
+        for (const auto& vertex : vertices1) {
+          polygon2.addVertex(vertex + startToEnd);
+        }
+        for (const auto& vertex : vertices2) {
+          polygon1.addVertex(vertex - startToEnd);
+        }
+      }
+
+      if (nPoses == 1) {
+        polygon = polygon2;
+        checkPolygonForObstacles(polygon, elevationMap, obstacles);
+      }
+
+      if (nPoses > 1 && i > 0) {
+        polygon = polygon.convexHull(polygon1, polygon2);
+        checkPolygonForObstacles(polygon, elevationMap, obstacles);
+      }
+    }
+  }
+
+  return true;
+}
+
+bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle> obstacles)
+{
+  ROS_INFO("ElevationChangeDetection: checkPolygonForObstacles.");
+  for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd(); ++iterator) {
+    // Check if cell already inquired.
+    if (map.isValid(*iterator, "inquired_cells")) {
+      continue;
+    }
+    if (!map.isValid(*iterator, elevationChangeLayer_)) {
+      map.at("inquired_cells", *iterator) = 0.0;
+      continue;
+    }
+    // New obstacle detected.
+    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForObstacles: New obstacle detected.");
+    elevation_change_msgs::Obstacle obstacle;
+    // Get size of obstacle by inquiring neighbor cells.
+    map.at("inquired_cells", *iterator) = 1.0;
+    std::vector<grid_map::Index> indexList;
+    std::vector<grid_map::Index> inquireList;
+    indexList.push_back(*iterator);
+    inquireList.push_back(*iterator);
+
+    while (!inquireList.empty()) {
+      grid_map::Index index = inquireList.back();
+      inquireList.pop_back();
+      // Get neighbor cells.
+      grid_map::Length subMapLength(3.0*map.getResolution(), 3.0*map.getResolution());
+      grid_map::Position subMapPos;
+      bool isSuccess;
+      map.getPosition(index, subMapPos);
+      grid_map::GridMap subMap = map.getSubmap(subMapPos, subMapLength, isSuccess);
+      if (!isSuccess) {
+        ROS_WARN("ElevationChangeDetection: checkPolygonForObstacles: Could not retrieve submap.");
+        map.at("inquired_cells", index) = 0.0;
+        continue;
+      }
+
+      for (grid_map::GridMapIterator subMapIterator(subMap); !subMapIterator.isPastEnd(); ++subMapIterator) {
+        if (subMap.isValid(*subMapIterator, "inquired_cells")) {
+          continue;
+        }
+        // Get index in map.
+        grid_map::Position pos;
+        subMap.getPosition(*subMapIterator, pos);
+        grid_map::Index mapIndex;
+        map.getIndex(pos, mapIndex);
+        if (!subMap.isValid(*subMapIterator, elevationChangeLayer_)) {
+          map.at("inquired_cells", mapIndex) = 0.0;
+          continue;
+        } else {
+          map.at("inquired_cells", mapIndex) = 1.0;
+          indexList.push_back(mapIndex);
+          inquireList.push_back(mapIndex);
+        }
+      }
+    }
+
+    // Compute size of obstacle.
+
+
+//    if (elevationMap.at("inquired_cells", *iterator) == 1.0) {
+//      elevationMap.at("inquired_cells", *iterator) = 0;
+//      continue;
+//    }
+//    elevation_change_msgs::Obstacle obstacle;
+//    std::vector<grid_map::Index> indexList;
+  }
   return true;
 }
 

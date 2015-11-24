@@ -17,6 +17,7 @@
 
 #include <elevation_change_msgs/DetectObstacle.h>
 
+#include <vector>
 #include <string>
 
 namespace elevation_change_detection {
@@ -78,11 +79,22 @@ namespace elevation_change_detection {
                         elevation_change_msgs::DetectObstacle::Response& response);
 
     /*!
-     * Gets the grid map for the desired submap center point.
+     * Checks the polygon for obstacles.
+     * @param[in] polygon the polygon to verify.
+     * @param[in] map the current elevation change map.
+     * @param[out] obstacles vector of found obstacles.
+     * @return true if obstacle found within polygon.
+     */
+    bool checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle> obstacles);
+
+    /*!
+     * Gets the grid map for the desired submap defined by position and length.
+     * @param[in] position position of the submap.
+     * @param[in] length length of the submap.
      * @param[out] map the map that is received.
      * @return true if successful, false if ROS service call failed.
      */
-    bool getGridMap(grid_map_msgs::GridMap& map);
+    bool getGridMap(const grid_map::Position& position, const grid_map::Length& length, grid_map_msgs::GridMap& map);
 
     /*!
      * Compute the elevation change map and add it to the elevation map.
@@ -123,8 +135,11 @@ namespace elevation_change_detection {
     //! Requested map length in [m].
     grid_map::Length mapLength_;
 
-    //! Elevation map type
+    //! Elevation map type.
     const std::string layer_;
+
+    //! Elevation change map type.
+    const std::string elevationChangeLayer_;
 
     //! Publisher of elevation change map.
     ros::Publisher elevationChangePublisher_;
