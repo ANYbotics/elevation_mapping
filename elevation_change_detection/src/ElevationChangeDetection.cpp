@@ -183,8 +183,8 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     if (request.path.poses.poses[i].position.x - margin < lowX) lowX = request.path.poses.poses[i].position.x - margin;
     if (request.path.poses.poses[i].position.y - margin < lowY) lowY = request.path.poses.poses[i].position.y - margin;
   }
-  ROS_INFO_STREAM("ElevationChangeDetection: Requested map size x: " << lowX << " to " << highX);
-  ROS_INFO_STREAM("ElevationChangeDetection: Requested map size y: " << lowY << " to " << highY);
+  ROS_DEBUG_STREAM("ElevationChangeDetection: Requested map size x: " << lowX << " to " << highX);
+  ROS_DEBUG_STREAM("ElevationChangeDetection: Requested map size y: " << lowY << " to " << highY);
   // Get submap.
   grid_map_msgs::GridMap mapMessage;
   grid_map::GridMap elevationMap;
@@ -279,14 +279,14 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
       }
     }
   }
+  ROS_INFO_STREAM("ElevationChangeDetection: detectObstacle: Number of obstacles within all polygons: " << obstacles.size());
   response.obstacles = obstacles;
 
   return true;
 }
 
-bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle> obstacles)
+bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles)
 {
-  ROS_INFO("ElevationChangeDetection: checkPolygonForObstacles.");
   for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd(); ++iterator) {
     // Check if cell already inquired.
     if (map.isValid(*iterator, "inquired_cells")) {
@@ -378,7 +378,6 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
     obstacle.pose.position.y = obstaclePosition.y();
     obstacle.pose.position.z = obstaclePosition.z();
     obstacles.push_back(obstacle);
-
   }
   return true;
 }

@@ -87,7 +87,7 @@ namespace elevation_change_detection {
      * @param[out] obstacles vector of found obstacles.
      * @return true if obstacle found within polygon.
      */
-    bool checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle> obstacles);
+    bool checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
 
     /*!
      * Gets the grid map for the desired submap defined by position and length.
