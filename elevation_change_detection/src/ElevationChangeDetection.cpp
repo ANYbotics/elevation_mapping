@@ -279,6 +279,7 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
       }
     }
   }
+  response.obstacles = obstacles;
 
   return true;
 }
@@ -298,6 +299,8 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
     // New obstacle detected.
     ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForObstacles: New obstacle detected.");
     elevation_change_msgs::Obstacle obstacle;
+    grid_map::Position3 obstaclePosition;
+    map.getPosition3(layer_, *iterator, obstaclePosition);
     // Get size of obstacle by inquiring neighbor cells.
     map.at("inquired_cells", *iterator) = 1.0;
     std::vector<grid_map::Index> indexList;
@@ -305,6 +308,7 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
     indexList.push_back(*iterator);
     inquireList.push_back(*iterator);
 
+    // Populate list with cells that belong to the obstacle.
     while (!inquireList.empty()) {
       grid_map::Index index = inquireList.back();
       inquireList.pop_back();
@@ -341,14 +345,40 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
     }
 
     // Compute size of obstacle.
+    double minX = obstaclePosition.x();
+    double minY = obstaclePosition.y();
+    double maxX = obstaclePosition.x();
+    double maxY = obstaclePosition.y();
+    double maxHeight = 0;
+    obstaclePosition.setZero();
+    grid_map::Position3 point;
+    unsigned int nCells = indexList.size();
+    for (unsigned int i = 0; i < nCells; ++i) {
+      map.getPosition3(layer_, indexList[i], point);
+      obstaclePosition += point;
+      minX = std::min(minX, point.x());
+      maxX = std::max(maxX, point.x());
+      minY = std::min(minY, point.y());
+      maxY = std::max(maxY, point.y());
+      double elevationChange = map.at(elevationChangeLayer_, indexList[i]);
+      if (std::abs(elevationChange) > std::abs(maxHeight)) maxHeight = elevationChange;
+    }
+    obstaclePosition /= nCells;
 
+    // Classify // TODO: type "supended"
+    if (maxHeight > 0) {
+      obstacle.type = "positive";
+    } else {
+      obstacle.type = "negative";
+    }
+    obstacle.length = maxX - minX;
+    obstacle.width = maxY - minY;
+    obstacle.height = maxHeight;
+    obstacle.pose.position.x = obstaclePosition.x();
+    obstacle.pose.position.y = obstaclePosition.y();
+    obstacle.pose.position.z = obstaclePosition.z();
+    obstacles.push_back(obstacle);
 
-//    if (elevationMap.at("inquired_cells", *iterator) == 1.0) {
-//      elevationMap.at("inquired_cells", *iterator) = 0;
-//      continue;
-//    }
-//    elevation_change_msgs::Obstacle obstacle;
-//    std::vector<grid_map::Index> indexList;
   }
   return true;
 }

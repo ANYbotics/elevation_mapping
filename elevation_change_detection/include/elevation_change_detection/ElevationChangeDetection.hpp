@@ -17,8 +17,10 @@
 
 #include <elevation_change_msgs/DetectObstacle.h>
 
+// STL
 #include <vector>
 #include <string>
+#include <algorithm>
 
 namespace elevation_change_detection {
 
