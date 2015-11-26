@@ -160,28 +160,48 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
 
 bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObstacle::Request& request, elevation_change_msgs::DetectObstacle::Response& response)
 {
-  const int nPoses = request.path.poses.poses.size();
+  const int nPaths = request.path.size();
+  if (nPaths == 0) {
+    ROS_WARN("ElevationChangeDetection: No path available to check for obstacles!");
+    return false;
+  }
+
+  traversability_msgs::FootprintPath path;
+  for (int i = 0; i < nPaths; i++) {
+    path = request.path[i];
+    std::vector<elevation_change_msgs::Obstacle> obstacles;
+    if (!checkPathForObstacles(path, obstacles)) return false;
+    for (int j = 0; j < obstacles.size(); ++j) {
+      response.obstacles[i].obstacles.push_back(obstacles[j]);
+    }
+  }
+  return true;
+}
+
+bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::FootprintPath& path, std::vector<elevation_change_msgs::Obstacle>& obstacles)
+{
+  const int nPoses = path.poses.poses.size();
   if (nPoses == 0) {
     ROS_WARN("ElevationChangeDetection: No path available to check for obstacles!");
     return false;
   }
   // Get boundaries of submap.
   double margin;
-  if (request.path.radius != 0.0) {
-    margin = request.path.radius;
+  if (path.radius != 0.0) {
+    margin = path.radius;
   } else {
     margin = 0.5;
   }
   double lowX, lowY, highX, highY;
-  lowX = request.path.poses.poses[0].position.x - margin;
+  lowX = path.poses.poses[0].position.x - margin;
   highX = lowX + 2 * margin;
-  lowY = request.path.poses.poses[0].position.y - margin;
+  lowY = path.poses.poses[0].position.y - margin;
   highY = lowY + 2 * margin;
   for (unsigned int i = 1; i < nPoses; ++i) {
-    if (request.path.poses.poses[i].position.x + margin > highX) highX = request.path.poses.poses[i].position.x + margin;
-    if (request.path.poses.poses[i].position.y + margin > highY) highY = request.path.poses.poses[i].position.y + margin;
-    if (request.path.poses.poses[i].position.x - margin < lowX) lowX = request.path.poses.poses[i].position.x - margin;
-    if (request.path.poses.poses[i].position.y - margin < lowY) lowY = request.path.poses.poses[i].position.y - margin;
+    if (path.poses.poses[i].position.x + margin > highX) highX = path.poses.poses[i].position.x + margin;
+    if (path.poses.poses[i].position.y + margin > highY) highY = path.poses.poses[i].position.y + margin;
+    if (path.poses.poses[i].position.x - margin < lowX) lowX = path.poses.poses[i].position.x - margin;
+    if (path.poses.poses[i].position.y - margin < lowY) lowY = path.poses.poses[i].position.y - margin;
   }
   ROS_DEBUG_STREAM("ElevationChangeDetection: Requested map size x: " << lowX << " to " << highX);
   ROS_DEBUG_STREAM("ElevationChangeDetection: Requested map size y: " << lowY << " to " << highY);
@@ -203,16 +223,15 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
   }
   // Check path for obstacles.
   elevationMap.add("inquired_cells");
-  std::vector<elevation_change_msgs::Obstacle> obstacles;
-  double radius = request.path.radius;
+  double radius = path.radius;
   grid_map::Polygon polygon;
   grid_map::Position start, end;
 
-  if (request.path.footprint.polygon.points.size() == 0) {
+  if (path.footprint.polygon.points.size() == 0) {
     for (int i = 0; i < nPoses; i++) {
       start = end;
-      end.x() = request.path.poses.poses[i].position.x;
-      end.y() = request.path.poses.poses[i].position.y;
+      end.x() = path.poses.poses[i].position.x;
+      end.y() = path.poses.poses[i].position.y;
 
       if (nPoses == 1) {
         polygon = polygon.convexHullCircle(end, radius);
@@ -234,17 +253,17 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
       Eigen::Translation<double, 3> toPosition;
       Eigen::Quaterniond orientation;
 
-      toPosition.x() = request.path.poses.poses[i].position.x;
-      toPosition.y() = request.path.poses.poses[i].position.y;
-      toPosition.z() = request.path.poses.poses[i].position.z;
-      orientation.x() = request.path.poses.poses[i].orientation.x;
-      orientation.y() = request.path.poses.poses[i].orientation.y;
-      orientation.z() = request.path.poses.poses[i].orientation.z;
-      orientation.w() = request.path.poses.poses[i].orientation.w;
+      toPosition.x() = path.poses.poses[i].position.x;
+      toPosition.y() = path.poses.poses[i].position.y;
+      toPosition.z() = path.poses.poses[i].position.z;
+      orientation.x() = path.poses.poses[i].orientation.x;
+      orientation.y() = path.poses.poses[i].orientation.y;
+      orientation.z() = path.poses.poses[i].orientation.z;
+      orientation.w() = path.poses.poses[i].orientation.w;
       end.x() = toPosition.x();
       end.y() = toPosition.y();
 
-      for (const auto& point : request.path.footprint.polygon.points) {
+      for (const auto& point : path.footprint.polygon.points) {
         positionToVertex.x() = point.x;
         positionToVertex.y() = point.y;
         positionToVertex.z() = point.z;
@@ -256,7 +275,7 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
         polygon2.addVertex(vertex);
       }
 
-      if (request.path.conservative && i > 0) {
+      if (path.conservative && i > 0) {
         grid_map::Vector startToEnd = end - start;
         std::vector<grid_map::Position> vertices1 = polygon1.getVertices();
         std::vector<grid_map::Position> vertices2 = polygon2.getVertices();
@@ -280,7 +299,6 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     }
   }
   ROS_INFO_STREAM("ElevationChangeDetection: detectObstacle: Number of obstacles within all polygons: " << obstacles.size());
-  response.obstacles = obstacles;
 
   return true;
 }

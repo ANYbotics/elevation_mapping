@@ -16,6 +16,7 @@
 #include <tf/transform_listener.h>
 
 #include <elevation_change_msgs/DetectObstacle.h>
+#include <traversability_msgs/FootprintPath.h>
 
 // STL
 #include <vector>
@@ -73,12 +74,21 @@ namespace elevation_change_detection {
 
     /*!
      * ROS service callback function to detect obstacles on a footprint path.
+     * @param request the ROS service request defining footprint paths.
+     * @param response the ROS service response containing arrays with obstacles on the paths.
+     * @return true if successful.
+     */
+    bool detectObstacle(
+      elevation_change_msgs::DetectObstacle::Request& request,
+      elevation_change_msgs::DetectObstacle::Response& response);
+
+    /*!
+     * ROS service callback function to detect obstacles on a footprint path.
      * @param request the ROS service request defining footprint path.
      * @param response the ROS service response containing an array with obstacles on the path.
      * @return true if successful.
      */
-    bool detectObstacle(elevation_change_msgs::DetectObstacle::Request& request,
-                        elevation_change_msgs::DetectObstacle::Response& response);
+    bool checkPathForObstacles(const traversability_msgs::FootprintPath& path, std::vector<elevation_change_msgs::Obstacle>& obstacles);
 
     /*!
      * Checks the polygon for obstacles.
