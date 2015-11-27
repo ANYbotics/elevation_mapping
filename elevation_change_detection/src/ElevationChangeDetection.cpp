@@ -170,10 +170,12 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
   for (int i = 0; i < nPaths; i++) {
     path = request.path[i];
     std::vector<elevation_change_msgs::Obstacle> obstacles;
+    elevation_change_msgs::ObstacleResult result;
     if (!checkPathForObstacles(path, obstacles)) return false;
     for (int j = 0; j < obstacles.size(); ++j) {
-      response.obstacles[i].obstacles.push_back(obstacles[j]);
+      result.obstacles.push_back(obstacles[j]);
     }
+    response.obstacles.push_back(result);
   }
   return true;
 }
