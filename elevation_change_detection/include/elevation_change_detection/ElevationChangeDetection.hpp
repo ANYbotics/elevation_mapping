@@ -16,6 +16,7 @@
 #include <tf/transform_listener.h>
 
 #include <elevation_change_msgs/DetectObstacle.h>
+#include <elevation_change_msgs/ObstacleResult.h>
 #include <traversability_msgs/FootprintPath.h>
 
 // STL

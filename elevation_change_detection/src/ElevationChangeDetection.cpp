@@ -184,7 +184,7 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
 {
   const int nPoses = path.poses.poses.size();
   if (nPoses == 0) {
-    ROS_WARN("ElevationChangeDetection: No path available to check for obstacles!");
+    ROS_WARN("ElevationChangeDetection: No poses available on the path to check for obstacles!");
     return false;
   }
   // Get boundaries of submap.
@@ -221,7 +221,7 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
     if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
   } else {
     ROS_WARN("ElevationChangeDetection: Failed to retrieve elevation grid map.");
-    return false;
+    return true;
   }
   // Check path for obstacles.
   elevationMap.add("inquired_cells");
@@ -300,7 +300,7 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
       }
     }
   }
-  ROS_INFO_STREAM("ElevationChangeDetection: detectObstacle: Number of obstacles within all polygons: " << obstacles.size());
+  ROS_DEBUG_STREAM("ElevationChangeDetection: detectObstacle: Number of obstacles within all polygons: " << obstacles.size());
 
   return true;
 }
@@ -317,7 +317,7 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
       continue;
     }
     // New obstacle detected.
-    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForObstacles: New obstacle detected.");
+    ROS_DEBUG_STREAM("ElevationChangeDetection: checkPolygonForObstacles: New obstacle detected.");
     elevation_change_msgs::Obstacle obstacle;
     grid_map::Position3 obstaclePosition;
     map.getPosition3(layer_, *iterator, obstaclePosition);
