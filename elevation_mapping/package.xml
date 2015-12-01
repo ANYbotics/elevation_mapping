@@ -21,6 +21,4 @@
   <depend>tf</depend>
   <depend>tf_conversions</depend>
   <depend>eigen_conversions</depend>
-  <depend>sm_common</depend>
-  <depend>sm_timing</depend>
 </package>

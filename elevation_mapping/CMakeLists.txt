@@ -39,9 +39,6 @@ if(NOT kindr_FOUND)
   pkg_check_modules(kindr kindr REQUIRED)
 endif()
 
-pkg_check_modules(SM_COMMON schweizer-messer-common REQUIRED)
-pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
-
 ###################################
 ## catkin specific configuration ##
 ###################################

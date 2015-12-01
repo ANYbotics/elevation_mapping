@@ -23,9 +23,6 @@
 #include <kindr/poses/PoseEigen.hpp>
 #include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
 
-// Schweizer-Messer
-#include <sm/timing/Timer.hpp>
-
 // Boost
 #include <boost/thread/recursive_mutex.hpp>
 

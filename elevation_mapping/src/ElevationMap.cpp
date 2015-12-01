@@ -26,8 +26,6 @@
 
 using namespace std;
 using namespace grid_map;
-using namespace sm;
-using namespace sm::timing;
 
 namespace elevation_mapping {
 
@@ -222,9 +220,7 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
   if ((size == 0).any()) return false;
 
   // Initializations.
-  string timerId = "map_fusion_timer";
-  Timer timer(timerId, true);
-
+  ros::WallTime time = ros::WallTime::now();
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   // Copy raw elevation map data for safe multi-threading.
@@ -240,8 +236,6 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
   // For each cell in requested area.
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
-    if (timer.isTiming()) timer.stop();
-    timer.start();
 
     // Check if fusion for this cell has already been done earlier.
     if (fusedMap_.isValid(*areaIterator)) continue;
@@ -337,15 +331,12 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
     fusedMap_.at("surface_normal_x", *areaIterator) = NAN;
     fusedMap_.at("surface_normal_y", *areaIterator) = NAN;
     fusedMap_.at("surface_normal_z", *areaIterator) = NAN;
-
-    timer.stop();
   }
 
   fusedMap_.setTimestamp(rawMapCopy.getTimestamp());
 
-  ROS_INFO("Elevation map has been fused in %f s.", Timing::getTotalSeconds(timerId));
-  ROS_DEBUG("Mean: %f s, Min: %f s, Max: %f s.", Timing::getMeanSeconds(timerId), Timing::getMinSeconds(timerId), Timing::getMaxSeconds(timerId));
-  Timing::reset(timerId);
+  ros::WallDuration duration(ros::WallTime::now() - time);
+  ROS_INFO("Elevation map has been fused in %f s.", duration.toSec());
 
   if (computeSurfaceNormals) return ElevationMap::computeSurfaceNormals(topLeftIndex, size);
   return true;
@@ -357,9 +348,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
   ROS_DEBUG("Computing surface normals...");
 
   // Initializations.
-  string timerId = "map_surface_normal_computation_timer";
-  Timer timer(timerId, true);
-
+  ros::WallTime time = ros::WallTime::now();
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   vector<string> surfaceNormalTypes;
@@ -369,8 +358,6 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
 
   // For each cell in requested area.
   for (SubmapIterator areaIterator(fusedMap_, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
-    if (timer.isTiming()) timer.stop();
-    timer.start();
 
     // Check if this is an empty cell (hole in the map).
     if (!fusedMap_.isValid(*areaIterator)) continue;
@@ -433,12 +420,10 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
     fusedMap_.at("surface_normal_x", *areaIterator) = eigenvector.x();
     fusedMap_.at("surface_normal_y", *areaIterator) = eigenvector.y();
     fusedMap_.at("surface_normal_z", *areaIterator) = eigenvector.z();
-    timer.stop();
   }
 
-  ROS_INFO("Surface normals have been computed in %f s.", Timing::getTotalSeconds(timerId));
-  ROS_DEBUG("Mean: %f s, Min: %f s, Max: %f s.", Timing::getMeanSeconds(timerId), Timing::getMinSeconds(timerId), Timing::getMaxSeconds(timerId));
-  Timing::reset(timerId);
+  ros::WallDuration duration(ros::WallTime::now() - time);
+  ROS_INFO("Surface normals have been computed in %f s.", duration.toSec());
   return true;
 }
 
