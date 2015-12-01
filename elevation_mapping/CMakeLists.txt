@@ -42,7 +42,6 @@ endif()
 pkg_check_modules(SM_COMMON schweizer-messer-common REQUIRED)
 pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
 
-
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -53,8 +52,10 @@ pkg_check_modules(SM_TIMING schweizer-messer-timing REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-    INCLUDE_DIRS include
-#  LIBRARIES elevation_mapping
+    INCLUDE_DIRS
+      include
+    LIBRARIES
+      ${PROJECT_NAME}_library
     CATKIN_DEPENDS  
 	  grid_map  
 	  grid_map_core
@@ -88,14 +89,7 @@ include_directories(
 )
 
 ## Declare a cpp library
-# add_library(elevation_mapping
-#   src/${PROJECT_NAME}/elevation_mapping.cpp
-# )
-
-## Declare a cpp executable
-add_executable(
-  ${PROJECT_NAME}
-  src/elevation_mapping_node.cpp
+add_library(${PROJECT_NAME}_library
   src/ElevationMapping.cpp
   src/ElevationMap.cpp
   src/RobotMotionMapUpdater.cpp
@@ -106,11 +100,31 @@ add_executable(
   src/sensor_processors/PerfectSensorProcessor.cpp
 )
 
-
-## Specify libraries to link a library or executable target against
-target_link_libraries(
-  ${PROJECT_NAME}
+target_link_libraries(${PROJECT_NAME}_library
   ${catkin_LIBRARIES}
   ${SM_COMMON_LIBRARIES}
   ${SM_TIMING_LIBRARIES}
 )
+
+## Declare a cpp executable
+add_executable(
+  ${PROJECT_NAME}
+  src/elevation_mapping_node.cpp
+)
+
+target_link_libraries(${PROJECT_NAME}
+  ${PROJECT_NAME}_library
+)
+
+#############
+## Testing ##
+#############
+
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
+# Add gtest based cpp test target and link libraries
+catkin_add_gtest(${PROJECT_NAME}-test
+  test/test_elevation_mapping.cpp
+  test/ElevationMapTest.cpp)
+if(TARGET ${PROJECT_NAME}-test)
+  target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME}_library)
+endif()

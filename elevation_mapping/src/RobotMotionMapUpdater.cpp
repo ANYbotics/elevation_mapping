@@ -18,7 +18,7 @@ using namespace kindr::rotations::eigen_impl;
 
 namespace elevation_mapping {
 
-RobotMotionMapUpdater::RobotMotionMapUpdater(ros::NodeHandle& nodeHandle)
+RobotMotionMapUpdater::RobotMotionMapUpdater(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle)
 {
   previousRobotPoseCovariance_.setZero();

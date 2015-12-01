@@ -32,7 +32,7 @@ class RobotMotionMapUpdater
   /*!
    * Constructor.
    */
-  RobotMotionMapUpdater(ros::NodeHandle& nodeHandle);
+  RobotMotionMapUpdater(ros::NodeHandle nodeHandle);
 
   /*!
    * Destructor.
@@ -62,7 +62,7 @@ class RobotMotionMapUpdater
  private:
 
   //! ROS nodehandle.
-  ros::NodeHandle& nodeHandle_;
+  ros::NodeHandle nodeHandle_;
 
   //! Robot pose covariance from the previous update.
   Eigen::Matrix<double, 6, 6> previousRobotPoseCovariance_;

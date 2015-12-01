@@ -29,7 +29,7 @@
 // Boost
 #include <boost/thread/recursive_mutex.hpp>
 
-// ROS (time)
+// ROS
 #include <ros/ros.h>
 
 namespace elevation_mapping {
@@ -58,7 +58,7 @@ class ElevationMap
    * @param position the 2d position of the elevation map in the elevation map frame [m].
    * @return true if successful.
    */
-  void setGeometry(const Eigen::Array2d& length, const double& resolution, const Eigen::Vector2d& position);
+  void setGeometry(const grid_map::Length& length, const double& resolution, const grid_map::Position& position);
 
   /*!
    * Add new measurements to the elevation map.
