@@ -236,11 +236,13 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
       end.y() = path.poses.poses[i].position.y;
 
       if (nPoses == 1) {
-        polygon = polygon.convexHullCircle(end, radius);
+        polygon = grid_map::Polygon::fromCircle(end, radius);
+        checkPolygonForObstacles(polygon, elevationMap, obstacles);
       }
 
       if (nPoses > 1 && i > 0) {
-        polygon = polygon.convexHullCircles(start, end, radius);
+        polygon = grid_map::Polygon::convexHullOfTwoCircles(start, end, radius);
+        checkPolygonForObstacles(polygon, elevationMap, obstacles);
       }
     }
   } else {
@@ -295,7 +297,7 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
       }
 
       if (nPoses > 1 && i > 0) {
-        polygon = polygon.convexHull(polygon1, polygon2);
+        polygon = grid_map::Polygon::convexHull(polygon1, polygon2);
         checkPolygonForObstacles(polygon, elevationMap, obstacles);
       }
     }
