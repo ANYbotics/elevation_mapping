@@ -121,7 +121,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")
 # Add gtest based cpp test target and link libraries
 catkin_add_gtest(${PROJECT_NAME}-test
   test/test_elevation_mapping.cpp
-  test/ElevationMapTest.cpp)
+  test/ElevationMapTest.cpp
+  test/WeightedEmpiricalCumulativeDistributionFunctionTest.cpp
+)
 if(TARGET ${PROJECT_NAME}-test)
   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME}_library)
 endif()
