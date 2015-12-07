@@ -15,7 +15,7 @@ using namespace elevation_mapping;
 
 TEST(WeightedEmpiricalCumulativeDistributionFunction, Initialization)
 {
-  WeightedEmpiricalCumulativeDistributionFunction<double> wecdf;
+  WeightedEmpiricalCumulativeDistributionFunction<float> wecdf;
   EXPECT_FALSE(wecdf.compute());
   wecdf.clear();
   EXPECT_FALSE(wecdf.compute());
@@ -50,4 +50,19 @@ TEST(WeightedEmpiricalCumulativeDistributionFunction, LinearEquallySpaced)
   EXPECT_DOUBLE_EQ(5.0, wecdf.quantile(0.5));
   EXPECT_DOUBLE_EQ(20.0/3.0, wecdf.quantile(2.0/3.0));
   EXPECT_DOUBLE_EQ(9.5, wecdf.quantile(0.95));
+  EXPECT_DOUBLE_EQ(10.0, wecdf.quantile(1.1));
+}
+
+TEST(WeightedEmpiricalCumulativeDistributionFunction, SingleValue)
+{
+  WeightedEmpiricalCumulativeDistributionFunction<double> wecdf;
+  wecdf.add(3.0);
+  wecdf.add(3.0);
+  wecdf.add(3.0);
+  EXPECT_TRUE(wecdf.compute());
+  EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(0.0));
+  EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(0.25));
+  EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(0.5));
+  EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(1.0));
+  EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(2.0));
 }

@@ -49,15 +49,23 @@ class WeightedEmpiricalCumulativeDistributionFunction
 
   bool compute()
   {
-    if (data_.size() < 2) return false;
+    if (data_.size() < 1) return false;
     distribution_.clear();
     inverseDistribution_.clear();
+
+    if (data_.size() == 1) {
+      // Special treatment for size 1.
+      inverseDistribution_.insert(std::pair<double, Type>(0.0, data_.begin()->first));
+      inverseDistribution_.insert(std::pair<double, Type>(1.0, data_.begin()->first));
+      return isComputed_ = true;
+    }
+
     double cumulativeWeight = -data_.begin()->second; // Smallest observation corresponds to a probability of 0.
-    totalWeight_ -= data_.begin()->second;
+    const double adaptedTotalWeight = totalWeight_ - data_.begin()->second;
     for (const auto& point : data_) {
       cumulativeWeight += point.second;
       inverseDistribution_.insert(inverseDistribution_.end(),
-                           std::pair<double, Type>(cumulativeWeight / totalWeight_, point.first));
+                           std::pair<double, Type>(cumulativeWeight / adaptedTotalWeight, point.first));
     }
     return isComputed_ = true;
   }
@@ -70,11 +78,12 @@ class WeightedEmpiricalCumulativeDistributionFunction
    * @param probability the order of the quantile.
    * @return the quantile for the given probability.
    */
-  const Type quantile(const double probability)
+  const Type quantile(const double probability) const
   {
-    if (!isComputed_) compute();
+    if (!isComputed_) throw std::runtime_error(
+          "WeightedEmpiricalCumulativeDistributionFunction::quantile(...): The distribution functions needs to be computed (compute()) first.");
     if (probability <= 0.0) return inverseDistribution_.begin()->second;
-    if (probability >= 1.0) return inverseDistribution_.end()->second;
+    if (probability >= 1.0) return inverseDistribution_.rbegin()->second;
     const auto& up = inverseDistribution_.lower_bound(probability);
     const auto& low = --(inverseDistribution_.lower_bound(probability));
     return low->second + (probability - low->first) * (up->second - low->second) / (up->first - low->first);
@@ -113,7 +122,7 @@ class WeightedEmpiricalCumulativeDistributionFunction
 
   //! Cumulative distribution function (and its inverse) stored as value pair/cumulative probability.
   std::map<Type, double> distribution_;
-  std::map<Type, double> inverseDistribution_;
+  std::map<double, Type> inverseDistribution_;
 
   //! Total weight.
   double totalWeight_;
