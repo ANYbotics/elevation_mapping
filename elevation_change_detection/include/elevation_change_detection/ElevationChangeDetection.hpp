@@ -96,7 +96,7 @@ namespace elevation_change_detection {
      * @param[in] polygon the polygon to verify.
      * @param[in] map the current elevation change map.
      * @param[out] obstacles vector of found obstacles.
-     * @return true if obstacle found within polygon.
+     * @return true if successful.
      */
     bool checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
 
@@ -165,6 +165,9 @@ namespace elevation_change_detection {
 
     //! Threshold for minimal elevation difference
     double threshold_;
+
+    //! Minimal number of adjacent cells to indicate obstacle
+    int minNumberAdjacentCells_;
 
   };
 

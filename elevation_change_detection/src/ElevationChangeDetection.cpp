@@ -74,6 +74,7 @@ bool ElevationChangeDetection::readParameters()
   nodeHandle_.param("map_length_y", mapLength_.y(), 5.0);
 
   nodeHandle_.param("threshold", threshold_, 0.0);
+  nodeHandle_.param("min_cell_number_obstacle", minNumberAdjacentCells_, 0);
 
   std::string bagTopicName_, pathToBag_;
   nodeHandle_.param("bag_topic_name", bagTopicName_, std::string("grid_map"));
@@ -105,7 +106,7 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
   if (getGridMap(position, length, mapMessage)) {
     grid_map::GridMap elevationMap;
     grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
-    computeElevationChange(elevationMap);
+    (elevationMap);
 
     // Publish elevation change map.
     if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
@@ -220,7 +221,7 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
     if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
     if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
   } else {
-    ROS_WARN("ElevationChangeDetection: Failed to retrieve elevation grid map.");
+    ROS_DEBUG("ElevationChangeDetection: Failed to retrieve elevation grid map.");
     return true;
   }
   // Check path for obstacles.
@@ -366,6 +367,7 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
       }
     }
 
+    if (indexList.size() < minNumberAdjacentCells_) continue;
     // Compute size of obstacle.
     double minX = obstaclePosition.x();
     double minY = obstaclePosition.y();
