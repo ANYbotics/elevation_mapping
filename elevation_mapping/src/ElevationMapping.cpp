@@ -53,7 +53,6 @@ namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-//      map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
       isContinuouslyFusing_(false),
       ignoreRobotMotionUpdates_(false),
@@ -139,49 +138,11 @@ bool ElevationMapping::readParameters()
 
   nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag")); // TODO Add this as parameter in the service call.
 
-  // ElevationMap parameters. TODO Move this to the elevation map class.
-//  ElevationMap mapLevel(nodeHandle_);
-//  string frameId;
-//  nodeHandle_.param("map_frame_id", frameId, string("/map"));
-//  mapLevel.setFrameId(frameId);
-//
-//  grid_map::Length length;
-//  grid_map::Position position;
-//  double resolution;
-//  nodeHandle_.param("length_in_x", length(0), 1.5);
-//  nodeHandle_.param("length_in_y", length(1), 1.5);
-//  nodeHandle_.param("position_x", position.x(), 0.0);
-//  nodeHandle_.param("position_y", position.y(), 0.0);
-//  nodeHandle_.param("resolution", resolution, 0.01);
-//  mapLevel.setGeometry(length, resolution, position);
-//
-//  nodeHandle_.param("min_variance", mapLevel.minVariance_, pow(0.003, 2));
-//  nodeHandle_.param("max_variance", mapLevel.maxVariance_, pow(0.03, 2));
-//  nodeHandle_.param("mahalanobis_distance_threshold", mapLevel.mahalanobisDistanceThreshold_, 2.5);
-//  nodeHandle_.param("multi_height_noise", mapLevel.multiHeightNoise_, pow(0.003, 2));
-//  nodeHandle_.param("min_horizontal_variance", mapLevel.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
-//  nodeHandle_.param("max_horizontal_variance", mapLevel.maxHorizontalVariance_, 0.5);
-//  nodeHandle_.param("surface_normal_estimation_radius", mapLevel.surfaceNormalEstimationRadius_, 0.05);
-//  nodeHandle_.param("underlying_map_topic", mapLevel.underlyingMapTopic_, string());
-//
-//  string surfaceNormalPositiveAxis;
-//  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
-//  if (surfaceNormalPositiveAxis == "z") {
-//    mapLevel.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
-//  } else if (surfaceNormalPositiveAxis == "y") {
-//    mapLevel.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
-//  } else if (surfaceNormalPositiveAxis == "x") {
-//    mapLevel.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
-//  } else {
-//    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
-//  }
-
   // Read level height.
   XmlRpc::XmlRpcValue levelHeight;
   if (!nodeHandle_.getParam("level_extent_z", levelHeight) || levelHeight.size() == 0) {
     ROS_WARN("ElevationMapping: No level height provided. Using only one map level.");
     map_.push_back(std::shared_ptr<ElevationMap>(new ElevationMap(nodeHandle_)));
-//    map_.push_back(mapLevel);
     nLevels_ = 1;
   } else {
     for (unsigned int i = 0; i < levelHeight.size(); ++i) {
@@ -459,18 +420,19 @@ bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Em
 bool ElevationMapping::setCurrentLevel()
 {
   // Find current level of the elevation map.
-  ROS_INFO_STREAM("ElevationMapping: setCurrentLevel.");
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(ros::Time::now());
+  double position_z = poseMessage->pose.pose.position.z;
+  // Check if current level is still valid.
+  if (map_.at(currentLevel_)->lowerLevelBound_ < position_z && map_.at(currentLevel_)->upperLevelBound_ > position_z) return true;
+  // Get new level.
   bool levelExists = false;
   for (int i = 0; i < nLevels_; ++i) {
-    double position_z = poseMessage->pose.pose.position.z;
     if (map_.at(i)->lowerLevelBound_ < position_z && map_.at(i)->upperLevelBound_ > position_z) {
       currentLevel_ = i;
       levelExists = true;
       break;
     }
   }
-  ROS_INFO_STREAM("ElevationMapping: Number of levels: " << nLevels_ << " Current level: " << currentLevel_);
   if (!levelExists) {
     ROS_WARN("ElevationMapping: Current robot pose does not belong to a elevation map level.");
   }
