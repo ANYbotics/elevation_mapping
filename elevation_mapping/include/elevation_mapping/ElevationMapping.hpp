@@ -36,6 +36,9 @@
 // Boost
 #include <boost/thread.hpp>
 
+// STL
+#include <vector>
+
 
 namespace elevation_mapping {
 
@@ -152,6 +155,12 @@ class ElevationMapping
   bool updateMapLocation();
 
   /*!
+   * Choose the level of the elevation map dependent on the current robot pose.
+   * @return true if successful.
+   */
+  bool setCurrentLevel();
+
+  /*!
    * Reset and start the map update timer.
    */
   void resetMapUpdateTimer();
@@ -201,7 +210,9 @@ class ElevationMapping
   std::string pathToBag_;
 
   //! Elevation map.
-  ElevationMap map_;
+  std::vector<std::shared_ptr<ElevationMap>> map_;
+  unsigned int nLevels_;
+  unsigned int currentLevel_;
 
   //! Sensor processors.
   SensorProcessorBase::Ptr sensorProcessor_;
@@ -225,7 +236,7 @@ class ElevationMapping
   ros::Duration fusedMapPublishTimerDuration_;
 
   //! If map is fused after every change for debugging/analysis purposes.
-  bool isContinouslyFusing_;
+  bool isContinuouslyFusing_;
 };
 
 } /* namespace */
