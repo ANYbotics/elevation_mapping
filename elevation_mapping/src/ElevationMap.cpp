@@ -10,6 +10,7 @@
 
 // Elevation Mapping
 #include "elevation_mapping/ElevationMapFunctors.hpp"
+#include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 
 // Grid Map
 #include <grid_map_msgs/GridMap.h>
@@ -20,8 +21,7 @@
 // ROS Logging
 #include <ros/ros.h>
 
-// Eigenvalues
-#include <Eigen/Core>
+// Eigen
 #include <Eigen/Dense>
 
 using namespace std;
@@ -31,13 +31,13 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color"}),
-      fusedMap_({"elevation", "variance", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
+      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color"}),
+      fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false)
 {
   readParameters();
   rawMap_.setBasicLayers({"elevation", "variance"});
-  fusedMap_.setBasicLayers({"elevation", "variance"});
+  fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
   clear();
 
   elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map_raw", 1);
@@ -116,6 +116,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& variance = rawMap_.at("variance", index);
     auto& horizontalVarianceX = rawMap_.at("horizontal_variance_x", index);
     auto& horizontalVarianceY = rawMap_.at("horizontal_variance_y", index);
+    auto& horizontalVarianceXY = rawMap_.at("horizontal_variance_xy", index);
     auto& color = rawMap_.at("color", index);
     const float& pointVariance = pointCloudVariances(i);
 
@@ -126,6 +127,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       variance = pointVariance;
       horizontalVarianceX = minHorizontalVariance_;
       horizontalVarianceY = minHorizontalVariance_;
+      horizontalVarianceXY = 0.0;
       colorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
@@ -149,6 +151,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     // Horizontal variances are reset.
     horizontalVarianceX = minHorizontalVariance_;
     horizontalVarianceY = minHorizontalVariance_;
+    horizontalVarianceXY = 0.0;
   }
 
   clean();
@@ -156,8 +159,8 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   return true;
 }
 
-bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX,
-                          Eigen::MatrixXf horizontalVarianceUpdateY, const ros::Time& time)
+bool ElevationMap::update(const grid_map::Matrix& varianceUpdate, const grid_map::Matrix& horizontalVarianceUpdateX,
+                          const grid_map::Matrix& horizontalVarianceUpdateY, const grid_map::Matrix& horizontalVarianceUpdateXY, const ros::Time& time)
 {
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
 
@@ -166,7 +169,8 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
   if (!(
       (Index(varianceUpdate.rows(), varianceUpdate.cols()) == size).all() &&
       (Index(horizontalVarianceUpdateX.rows(), horizontalVarianceUpdateX.cols()) == size).all() &&
-      (Index(horizontalVarianceUpdateY.rows(), horizontalVarianceUpdateY.cols()) == size).all()
+      (Index(horizontalVarianceUpdateY.rows(), horizontalVarianceUpdateY.cols()) == size).all() &&
+      (Index(horizontalVarianceUpdateXY.rows(), horizontalVarianceUpdateXY.cols()) == size).all()
       ))
   {
     ROS_ERROR("The size of the update matrices does not match.");
@@ -176,6 +180,7 @@ bool ElevationMap::update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizo
   rawMap_.get("variance") += varianceUpdate;
   rawMap_.get("horizontal_variance_x") += horizontalVarianceUpdateX;
   rawMap_.get("horizontal_variance_y") += horizontalVarianceUpdateY;
+  rawMap_.get("horizontal_variance_xy") += horizontalVarianceUpdateXY;
   clean();
   rawMap_.setTimestamp(time.toNSec());
 
@@ -212,7 +217,7 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
   return fuse(topLeftIndex, submapBufferSize, computeSurfaceNormals);
 }
 
-bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size, const bool computeSurfaceNormals)
+bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const bool computeSurfaceNormals)
 {
   ROS_DEBUG("Fusing elevation map...");
 
@@ -222,6 +227,8 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
   // Initializations.
   ros::WallTime time = ros::WallTime::now();
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
+  // Conservative cell inclusion for ellipse iterator.
+  const double ellipseExtension = M_SQRT2 * fusedMap_.getResolution();
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
@@ -242,15 +249,32 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
 
     if (!rawMapCopy.isValid(*areaIterator)) {
       // This is an empty cell (hole in the map).
+      // TODO.
       continue;
     }
 
-    // Size of submap (2 sigma bound). TODO Add minimum/maximum submap size?
-    Length requestedSubmapLength = 4.0
-        * Length(rawMapCopy.at("horizontal_variance_x", *areaIterator),
-                 rawMapCopy.at("horizontal_variance_y", *areaIterator)).sqrt();
+    // Get size of error ellipse.
+    const float& sigmaXsquare = rawMapCopy.at("horizontal_variance_x", *areaIterator);
+    const float& sigmaYsquare = rawMapCopy.at("horizontal_variance_y", *areaIterator);
+    const float& sigmaXYsquare = rawMapCopy.at("horizontal_variance_xy", *areaIterator);
 
-    // Requested position (center) of submap in map.
+    Eigen::Matrix2d covarianceMatrix;
+    covarianceMatrix << sigmaXsquare, sigmaXYsquare, sigmaXYsquare, sigmaYsquare;
+    // 95.45% confidence ellipse which is 2.486-sigma for 2 dof problem.
+    // http://www.reid.ai/2012/09/chi-squared-distribution-table-with.html
+    const double uncertaintyFactor = 2.486; // sqrt(6.18)
+    Eigen::EigenSolver<Eigen::Matrix2d> solver(covarianceMatrix);
+    Eigen::Array2d eigenvalues(solver.eigenvalues().real().cwiseAbs());
+
+    Eigen::Array2d::Index maxEigenvalueIndex;
+    eigenvalues.maxCoeff(&maxEigenvalueIndex);
+    Eigen::Array2d::Index minEigenvalueIndex;
+    maxEigenvalueIndex == Eigen::Array2d::Index(0) ? minEigenvalueIndex = 1 : minEigenvalueIndex = 0;
+    const Length ellipseLength =  2.0 * uncertaintyFactor * Length(eigenvalues(maxEigenvalueIndex), eigenvalues(minEigenvalueIndex)).sqrt() + ellipseExtension;
+    const double ellipseRotation(atan2(solver.eigenvectors().col(maxEigenvalueIndex).real()(1), solver.eigenvectors().col(maxEigenvalueIndex).real()(0)));
+
+    // Requested length and position (center) of submap in map.
+    const Length requestedSubmapLength = 2.0 * uncertaintyFactor * Length(sqrt(sigmaXsquare), sqrt(sigmaYsquare)) + ellipseExtension;
     Position requestedSubmapPosition;
     rawMapCopy.getPosition(*areaIterator, requestedSubmapPosition);
 
@@ -265,65 +289,71 @@ bool ElevationMap::fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i
                          rawMapCopy.getStartIndex());
 
     // Prepare data fusion.
-    Eigen::ArrayXf means, variances, weights;
+    Eigen::ArrayXf means, weights;
     int maxNumberOfCellsToFuse = submapBufferSize.prod();
     means.resize(maxNumberOfCellsToFuse);
-    variances.resize(maxNumberOfCellsToFuse);
     weights.resize(maxNumberOfCellsToFuse);
+    WeightedEmpiricalCumulativeDistributionFunction<float> lowerBoundDistribution;
+    WeightedEmpiricalCumulativeDistributionFunction<float> upperBoundDistribution;
 
     // For each cell in submap.
     size_t i = 0;
-    for (SubmapIterator submapIterator(rawMapCopy, submapTopLeftIndex, submapBufferSize); !submapIterator.isPastEnd(); ++submapIterator) {
-      if (!rawMapCopy.isValid(*submapIterator)) {
+    for (EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation); !ellipseIterator.isPastEnd(); ++ellipseIterator) {
+      if (!rawMapCopy.isValid(*ellipseIterator)) {
         // Empty cell in submap (cannot be center cell because we checked above).
         continue;
       }
 
-      means[i] = rawMapCopy.at("elevation", *submapIterator);
-      variances[i] = rawMapCopy.at("variance", *submapIterator);
+      means[i] = rawMapCopy.at("elevation", *ellipseIterator);
 
       // Compute weight from probability.
       Position position;
-      rawMapCopy.getPosition(*submapIterator, position);
+      rawMapCopy.getPosition(*ellipseIterator, position);
 
-      Eigen::Vector2d distanceToCenter = (position - submapPosition).cwiseAbs();
+      Eigen::Vector2d distanceToCenter = (position - requestedSubmapPosition).cwiseAbs();
 
       float probabilityX =
-            cumulativeDistributionFunction(distanceToCenter.x() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *submapIterator)))
-          - cumulativeDistributionFunction(distanceToCenter.x() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *submapIterator)));
+            cumulativeDistributionFunction(distanceToCenter.x() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *ellipseIterator)))
+          - cumulativeDistributionFunction(distanceToCenter.x() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *ellipseIterator)));
       float probabilityY =
-            cumulativeDistributionFunction(distanceToCenter.y() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *submapIterator)))
-          - cumulativeDistributionFunction(distanceToCenter.y() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *submapIterator)));
+            cumulativeDistributionFunction(distanceToCenter.y() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *ellipseIterator)))
+          - cumulativeDistributionFunction(distanceToCenter.y() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *ellipseIterator)));
 
-      weights[i] = probabilityX * probabilityY;
+      const float weight = probabilityX * probabilityY;
+      weights[i] = weight;
+      const float standardDeviation = sqrt(rawMapCopy.at("variance", *ellipseIterator));
+      lowerBoundDistribution.add(means[i] - 2.0 * standardDeviation, weight);
+      upperBoundDistribution.add(means[i] + 2.0 * standardDeviation, weight);
+
       i++;
     }
 
     if (i == 0) {
       // Nothing to fuse.
       fusedMap_.at("elevation", *areaIterator) = rawMapCopy.at("elevation", *areaIterator);
-      fusedMap_.at("variance", *areaIterator) = rawMapCopy.at("variance", *areaIterator);
+      fusedMap_.at("lower_bound", *areaIterator) = rawMapCopy.at("elevation", *areaIterator) - 2.0 * sqrt(rawMapCopy.at("variance", *areaIterator));
+      fusedMap_.at("upper_bound", *areaIterator) = rawMapCopy.at("elevation", *areaIterator) + 2.0 * sqrt(rawMapCopy.at("variance", *areaIterator));
       fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
       continue;
     }
 
     // Fuse.
     means.conservativeResize(i);
-    variances.conservativeResize(i);
     weights.conservativeResize(i);
 
     float mean = (weights * means).sum() / weights.sum();
-    float variance = (weights * (variances + means.square())).sum() / weights.sum() - pow(mean, 2);
 
-    if (!(std::isfinite(variance) && std::isfinite(mean))) {
-      ROS_ERROR("Something went wrong when fusing the map: Mean = %f, Variance = %f", mean, variance);
+    if (!std::isfinite(mean)) {
+      ROS_ERROR("Something went wrong when fusing the map: Mean = %f", mean);
       continue;
     }
 
     // Add to fused map.
     fusedMap_.at("elevation", *areaIterator) = mean;
-    fusedMap_.at("variance", *areaIterator) = variance;
-
+    lowerBoundDistribution.compute();
+    upperBoundDistribution.compute();
+    fusedMap_.at("lower_bound", *areaIterator) = lowerBoundDistribution.quantile(0.0);
+    fusedMap_.at("upper_bound", *areaIterator) = upperBoundDistribution.quantile(1.0);
     // TODO Add fusion of colors.
     fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
 
@@ -472,8 +502,7 @@ bool ElevationMap::publishFusedElevationMap()
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
   GridMap fusedMapCopy = fusedMap_;
   scopedLock.unlock();
-  fusedMapCopy.add("standard_deviation", fusedMapCopy.get("variance").array().sqrt().matrix());
-  fusedMapCopy.add("two_sigma_bound", fusedMapCopy.get("elevation") + 2.0 * fusedMapCopy.get("variance").array().sqrt().matrix());
+  fusedMapCopy.add("uncertainty_range", fusedMapCopy.get("upper_bound") - fusedMapCopy.get("lower_bound"));
   grid_map_msgs::GridMap message;
   GridMapRosConverter::toMessage(fusedMapCopy, message);
   elevationMapFusedPublisher_.publish(message);

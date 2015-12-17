@@ -12,6 +12,7 @@
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
+#include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 
 // Grid Map
 #include "grid_map_msgs/GetGridMap.h"

@@ -70,11 +70,14 @@ class ElevationMap
    * @param varianceUpdate the variance update in vertical direction.
    * @param horizontalVarianceUpdateX the variance update in horizontal x-direction.
    * @param horizontalVarianceUpdateY the variance update in horizontal y-direction.
+   * @param horizontalVarianceUpdateXY the correlated variance update in horizontal xy-direction.
    * @param time the time of the update.
    * @return true if successful.
    */
-  bool update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX,
-              Eigen::MatrixXf horizontalVarianceUpdateY, const ros::Time& time);
+  bool update(const grid_map::Matrix& varianceUpdate,
+              const grid_map::Matrix& horizontalVarianceUpdateX,
+              const grid_map::Matrix& horizontalVarianceUpdateY,
+              const grid_map::Matrix& horizontalVarianceUpdateXY, const ros::Time& time);
 
   /*!
    * Triggers the fusion of the entire elevation map.
@@ -216,7 +219,7 @@ class ElevationMap
    * @param computeSurfaceNormals if the surface normals should be computed after the fusion step.
    * @return true if successful.
    */
-  bool fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size, const bool computeSurfaceNormals);
+  bool fuse(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const bool computeSurfaceNormals);
 
   /*!
    * Computes the surface normals of the fused elevation map for a region of the map.

@@ -55,6 +55,7 @@ bool RobotMotionMapUpdater::update(
   Matrix varianceUpdate(size(0), size(1));
   Matrix horizontalVarianceUpdateX(size(0), size(1));
   Matrix horizontalVarianceUpdateY(size(0), size(1));
+  Matrix horizontalVarianceUpdateXY(size(0), size(1));
 
   // Covariance matrices.
   Eigen::Matrix3d previousPositionCovariance = previousRobotPoseCovariance_.topLeftCorner<3, 3>();
@@ -90,14 +91,14 @@ bool RobotMotionMapUpdater::update(
             * kindr::linear_algebra::getSkewMatrixFromVector((cellPosition - robotPosition).vector());
 
         // Rotation variance update.
-        Eigen::Vector3f rotationVarianceUpdate = (rotationJacobian *
-                                           (rotationCovariance - previousRotationCovariance) *
-                                           rotationJacobian.transpose()).diagonal().cast<float>();
+        Eigen::Matrix2f rotationVarianceUpdate = (rotationJacobian * (rotationCovariance - previousRotationCovariance) *
+                                                 rotationJacobian.transpose()).topLeftCorner<2,2>().cast<float>();
 
         // Variance update.
-        varianceUpdate(i, j) = translationVarianceUpdate.z() + rotationVarianceUpdate.z();
-        horizontalVarianceUpdateX(i, j) = translationVarianceUpdate.x() + rotationVarianceUpdate.x();
-        horizontalVarianceUpdateY(i, j) = translationVarianceUpdate.y() + rotationVarianceUpdate.y();
+        varianceUpdate(i, j) = translationVarianceUpdate.z();
+        horizontalVarianceUpdateX(i, j) = translationVarianceUpdate.x() + rotationVarianceUpdate(0, 0);
+        horizontalVarianceUpdateY(i, j) = translationVarianceUpdate.y() + rotationVarianceUpdate(1, 1);
+        horizontalVarianceUpdateXY(i, j) = rotationVarianceUpdate(0, 1);
       }
       else
       {
@@ -105,12 +106,12 @@ bool RobotMotionMapUpdater::update(
         varianceUpdate(i, j) = numeric_limits<float>::infinity();
         horizontalVarianceUpdateX(i, j) = numeric_limits<float>::infinity();
         horizontalVarianceUpdateY(i, j) = numeric_limits<float>::infinity();
+        horizontalVarianceUpdateXY(i, j) = numeric_limits<float>::infinity();
       }
-
     }
   }
 
-  map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, time);
+  map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, horizontalVarianceUpdateXY, time);
   previousRobotPoseCovariance_ = robotPoseCovarianceScaled;
   return true;
 }

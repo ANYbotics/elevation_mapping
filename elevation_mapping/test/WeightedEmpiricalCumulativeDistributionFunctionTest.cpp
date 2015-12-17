@@ -66,3 +66,13 @@ TEST(WeightedEmpiricalCumulativeDistributionFunction, SingleValue)
   EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(1.0));
   EXPECT_DOUBLE_EQ(3.0, wecdf.quantile(2.0));
 }
+
+TEST(WeightedEmpiricalCumulativeDistributionFunction, SyntheticDataDebug)
+{
+  WeightedEmpiricalCumulativeDistributionFunction<double> wecdf;
+  for (unsigned int i = 0; i < 10; ++i) wecdf.add(1.0);
+  wecdf.add(2.0);
+  EXPECT_TRUE(wecdf.compute());
+  EXPECT_DOUBLE_EQ(1.05, wecdf.quantile(0.05));
+  EXPECT_DOUBLE_EQ(1.95, wecdf.quantile(0.95));
+}

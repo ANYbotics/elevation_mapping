@@ -60,6 +60,14 @@ class WeightedEmpiricalCumulativeDistributionFunction
       return isComputed_ = true;
     }
 
+//    double cumulativeWeight = 0.0;
+//    inverseDistribution_.insert(std::pair<double, Type>(0.0, data_.begin()->first));
+//    for (const auto& point : data_) {
+//      cumulativeWeight += point.second;
+//      inverseDistribution_.insert(inverseDistribution_.end(),
+//                           std::pair<double, Type>(cumulativeWeight / totalWeight_, point.first));
+//    }
+
     double cumulativeWeight = -data_.begin()->second; // Smallest observation corresponds to a probability of 0.
     const double adaptedTotalWeight = totalWeight_ - data_.begin()->second;
     for (const auto& point : data_) {
@@ -67,6 +75,7 @@ class WeightedEmpiricalCumulativeDistributionFunction
       inverseDistribution_.insert(inverseDistribution_.end(),
                            std::pair<double, Type>(cumulativeWeight / adaptedTotalWeight, point.first));
     }
+
     return isComputed_ = true;
   }
 
