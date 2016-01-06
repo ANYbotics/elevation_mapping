@@ -227,13 +227,17 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
   // Initializations.
   ros::WallTime time = ros::WallTime::now();
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
-  // Conservative cell inclusion for ellipse iterator.
-  const double ellipseExtension = M_SQRT2 * fusedMap_.getResolution();
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   auto rawMapCopy = rawMap_;
   scopedLockForRawData.unlock();
+
+  // More initializations.
+  const double halfResolution = fusedMap_.getResolution() / 2.0;
+  const float minimalWeight = std::numeric_limits<float>::epsilon() * (float) 2.0;
+  // Conservative cell inclusion for ellipse iterator.
+  const double ellipseExtension = M_SQRT2 * fusedMap_.getResolution();
 
   // Check if there is the need to reset out-dated data.
   if (fusedMap_.getTimestamp() != rawMapCopy.getTimestamp()) resetFusedData();
@@ -296,7 +300,19 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     WeightedEmpiricalCumulativeDistributionFunction<float> lowerBoundDistribution;
     WeightedEmpiricalCumulativeDistributionFunction<float> upperBoundDistribution;
 
-    // For each cell in submap.
+    float maxStandardDeviation = sqrt(eigenvalues(maxEigenvalueIndex));
+    float minStandardDeviation = sqrt(eigenvalues(minEigenvalueIndex));
+    Eigen::Rotation2Dd rotationMatrix(ellipseRotation);
+    std::string maxEigenvalueLayer, minEigenvalueLayer;
+    if (maxEigenvalueIndex == 0) {
+      maxEigenvalueLayer = "horizontal_variance_x";
+      minEigenvalueLayer = "horizontal_variance_y";
+    } else {
+      maxEigenvalueLayer = "horizontal_variance_y";
+      minEigenvalueLayer = "horizontal_variance_x";
+    }
+
+    // For each cell in error ellipse.
     size_t i = 0;
     for (EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation); !ellipseIterator.isPastEnd(); ++ellipseIterator) {
       if (!rawMapCopy.isValid(*ellipseIterator)) {
@@ -307,19 +323,18 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
       means[i] = rawMapCopy.at("elevation", *ellipseIterator);
 
       // Compute weight from probability.
-      Position position;
-      rawMapCopy.getPosition(*ellipseIterator, position);
+      Position absolutePosition;
+      rawMapCopy.getPosition(*ellipseIterator, absolutePosition);
+      Eigen::Vector2d distanceToCenter = (rotationMatrix * (absolutePosition - requestedSubmapPosition)).cwiseAbs();
 
-      Eigen::Vector2d distanceToCenter = (position - requestedSubmapPosition).cwiseAbs();
+      float probability1 =
+            cumulativeDistributionFunction(distanceToCenter.x() + halfResolution, 0.0, maxStandardDeviation)
+          - cumulativeDistributionFunction(distanceToCenter.x() - halfResolution, 0.0, maxStandardDeviation);
+      float probability2 =
+            cumulativeDistributionFunction(distanceToCenter.y() + halfResolution, 0.0, minStandardDeviation)
+          - cumulativeDistributionFunction(distanceToCenter.y() - halfResolution, 0.0, minStandardDeviation);
 
-      float probabilityX =
-            cumulativeDistributionFunction(distanceToCenter.x() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *ellipseIterator)))
-          - cumulativeDistributionFunction(distanceToCenter.x() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_x", *ellipseIterator)));
-      float probabilityY =
-            cumulativeDistributionFunction(distanceToCenter.y() + rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *ellipseIterator)))
-          - cumulativeDistributionFunction(distanceToCenter.y() - rawMapCopy.getResolution() / 2.0, 0.0, sqrt(rawMapCopy.at("horizontal_variance_y", *ellipseIterator)));
-
-      const float weight = probabilityX * probabilityY;
+      const float weight = max(minimalWeight, probability1 * probability2);
       weights[i] = weight;
       const float standardDeviation = sqrt(rawMapCopy.at("variance", *ellipseIterator));
       lowerBoundDistribution.add(means[i] - 2.0 * standardDeviation, weight);
@@ -617,7 +632,7 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
 
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
 {
-  return 0.5 * erfc(-(x-mean)/(standardDeviation*sqrt(2.0)));
+  return 0.5 * erfc(-(x - mean) / (standardDeviation * sqrt(2.0)));
 }
 
 } /* namespace */
