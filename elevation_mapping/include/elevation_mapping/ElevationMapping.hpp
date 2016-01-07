@@ -15,7 +15,8 @@
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 
 // Grid Map
-#include "grid_map_msgs/GetGridMap.h"
+#include <grid_map_msgs/GetGridMap.h>
+#include <grid_map_msgs/ProcessFile.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -106,12 +107,12 @@ class ElevationMapping
   bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-   * Saves the grid map with all layer to a ROS bag.
+   * Saves the grid map with all layers to a ROS bag file.
    * @param request the ROS service request.
    * @param response the ROS service response.
    * @return true if successful.
    */
-  bool saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+  bool saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
 
  private:
 
@@ -173,7 +174,7 @@ class ElevationMapping
   ros::ServiceServer fusionTriggerService_;
   ros::ServiceServer submapService_;
   ros::ServiceServer clearMapService_;
-  ros::ServiceServer saveToBagService_;
+  ros::ServiceServer saveMapService_;
 
   //! Callback thread for the fusion services.
   boost::thread fusionServiceThread_;
@@ -197,9 +198,6 @@ class ElevationMapping
   //! ROS topics for subscriptions.
   std::string pointCloudTopic_;
   std::string robotPoseTopic_;
-
-  //! Path to save the ROS bag
-  std::string pathToBag_;
 
   //! Elevation map.
   ElevationMap map_;

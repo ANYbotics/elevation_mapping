@@ -92,7 +92,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
-  saveToBagService_ = nodeHandle_.advertiseService("save_to_bag", &ElevationMapping::saveToBag, this);
+  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
 
   initialize();
 }
@@ -134,8 +134,6 @@ bool ElevationMapping::readParameters()
   } else {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
   }
-
-  nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag")); // TODO Add this as parameter in the service call.
 
   // ElevationMap parameters. TODO Move this to the elevation map class.
   string frameId;
@@ -421,14 +419,15 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
   return map_.clear();
 }
 
-bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)
 {
-  ROS_INFO("Save to bag.");
+  ROS_INFO("Saving map to file.");
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll(true);
-  grid_map::GridMap gridMap = map_.getFusedGridMap();
-  std::string topic = "grid_map";
-  return GridMapRosConverter::saveToBag(gridMap, pathToBag_, topic);
+  std::string topic = nodeHandle_.getNamespace() + "/elevation_map";
+  response.success = GridMapRosConverter::saveToBag(map_.getFusedGridMap(), request.file_path, topic);
+  response.success = GridMapRosConverter::saveToBag(map_.getRawGridMap(), request.file_path + "_raw", topic + "_raw");
+  return response.success;
 }
 
 void ElevationMapping::resetMapUpdateTimer()
