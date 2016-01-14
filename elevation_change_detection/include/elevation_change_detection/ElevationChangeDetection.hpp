@@ -86,10 +86,11 @@ namespace elevation_change_detection {
     /*!
      * ROS service callback function to detect obstacles on a footprint path.
      * @param request the ROS service request defining footprint path.
+     * @param elevationMap elevation map used to check for obstacles.
      * @param response the ROS service response containing an array with obstacles on the path.
      * @return true if successful.
      */
-    bool checkPathForObstacles(const traversability_msgs::FootprintPath& path, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+    bool checkPathForObstacles(const traversability_msgs::FootprintPath& path, grid_map::GridMap elevationMap, std::vector<elevation_change_msgs::Obstacle>& obstacles);
 
     /*!
      * Checks the polygon for obstacles.
@@ -115,8 +116,17 @@ namespace elevation_change_detection {
      */
     void computeElevationChange(grid_map::GridMap& elevationMap);
 
+    /*!
+     * Callback function set the current map.
+     * @param[in] map current elevation map.
+     */
+    void mapCallback(const grid_map_msgs::GridMap& map);
+
     //! ROS node handle.
     ros::NodeHandle& nodeHandle_;
+
+    //! Elevation map subscriber.
+    ros::Subscriber mapSubscriber_;
 
     //! Elevation map service client.
     ros::ServiceClient submapClient_;
@@ -162,6 +172,10 @@ namespace elevation_change_detection {
 
     //! Publisher of the ground truth map.
     ros::Publisher groundTruthPublisher_;
+
+    //! Current elevation map.
+    grid_map::GridMap currentElevationMap_;
+    std::string mapTopic_;
 
     //! Threshold for minimal elevation difference
     double threshold_;

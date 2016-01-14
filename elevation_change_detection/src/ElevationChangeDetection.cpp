@@ -27,6 +27,9 @@ ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
 
   readParameters();
 
+  // Subscriber.
+  mapSubscriber_ = nodeHandle_.subscribe(mapTopic_, 1, &ElevationChangeDetection::mapCallback, this);
+
   submapClient_ = nodeHandle_.serviceClient<grid_map_msgs::GetGridMap>(submapServiceName_);
   elevationChangePublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_change_map", 1, true);
   groundTruthPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("ground_truth_map", 1, true);
@@ -52,7 +55,7 @@ bool ElevationChangeDetection::readParameters()
   nodeHandle_.param("submap_service", submapServiceName_, std::string("/get_grid_map"));
 
   double updateRate;
-  nodeHandle_.param("update_rate", updateRate, 1.0);
+  nodeHandle_.param("update_rate", updateRate, 0.0);
   if (updateRate != 0.0) {
     updateDuration_.fromSec(1.0 / updateRate);
   } else {
@@ -75,6 +78,7 @@ bool ElevationChangeDetection::readParameters()
 
   nodeHandle_.param("threshold", threshold_, 0.0);
   nodeHandle_.param("min_cell_number_obstacle", minNumberAdjacentCells_, 0);
+  nodeHandle_.param("elevation_map_topic", mapTopic_, std::string("/elevation_map"));
 
   std::string bagTopicName_, pathToBag_;
   nodeHandle_.param("bag_topic_name", bagTopicName_, std::string("grid_map"));
@@ -167,12 +171,15 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     return false;
   }
 
+  // Set elevation map.
+  grid_map::GridMap elevationMap = currentElevationMap_;
+  computeElevationChange(elevationMap);
   traversability_msgs::FootprintPath path;
   for (int i = 0; i < nPaths; i++) {
     path = request.path[i];
     std::vector<elevation_change_msgs::Obstacle> obstacles;
     elevation_change_msgs::ObstacleResult result;
-    if (!checkPathForObstacles(path, obstacles)) return false;
+    if (!checkPathForObstacles(path, elevationMap, obstacles)) return false;
     for (int j = 0; j < obstacles.size(); ++j) {
       result.obstacles.push_back(obstacles[j]);
     }
@@ -181,49 +188,14 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
   return true;
 }
 
-bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::FootprintPath& path, std::vector<elevation_change_msgs::Obstacle>& obstacles)
+bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::FootprintPath& path, grid_map::GridMap elevationMap, std::vector<elevation_change_msgs::Obstacle>& obstacles)
 {
   const int nPoses = path.poses.poses.size();
   if (nPoses == 0) {
     ROS_WARN("ElevationChangeDetection: No poses available on the path to check for obstacles!");
     return false;
   }
-  // Get boundaries of submap.
-  double margin;
-  if (path.radius != 0.0) {
-    margin = path.radius;
-  } else {
-    margin = 0.5;
-  }
-  double lowX, lowY, highX, highY;
-  lowX = path.poses.poses[0].position.x - margin;
-  highX = lowX + 2 * margin;
-  lowY = path.poses.poses[0].position.y - margin;
-  highY = lowY + 2 * margin;
-  for (unsigned int i = 1; i < nPoses; ++i) {
-    if (path.poses.poses[i].position.x + margin > highX) highX = path.poses.poses[i].position.x + margin;
-    if (path.poses.poses[i].position.y + margin > highY) highY = path.poses.poses[i].position.y + margin;
-    if (path.poses.poses[i].position.x - margin < lowX) lowX = path.poses.poses[i].position.x - margin;
-    if (path.poses.poses[i].position.y - margin < lowY) lowY = path.poses.poses[i].position.y - margin;
-  }
-  ROS_DEBUG_STREAM("ElevationChangeDetection: Requested map size x: " << lowX << " to " << highX);
-  ROS_DEBUG_STREAM("ElevationChangeDetection: Requested map size y: " << lowY << " to " << highY);
-  // Get submap.
-  grid_map_msgs::GridMap mapMessage;
-  grid_map::GridMap elevationMap;
-  grid_map::Position position((highX + lowX) / 2.0, (highY + lowY) / 2.0);
-  grid_map::Length length(highX - lowX, highY - lowY);
-  if (getGridMap(position, length, mapMessage)) {
-    grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
-    computeElevationChange(elevationMap);
 
-    // Publish elevation change map.
-    if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
-    if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
-  } else {
-    ROS_DEBUG("ElevationChangeDetection: Failed to retrieve elevation grid map.");
-    return true;
-  }
   // Check path for obstacles.
   elevationMap.add("inquired_cells");
   double radius = path.radius;
@@ -404,6 +376,11 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
     obstacles.push_back(obstacle);
   }
   return true;
+}
+
+void ElevationChangeDetection::mapCallback(const grid_map_msgs::GridMap& map)
+{
+  grid_map::GridMapRosConverter::fromMessage(map, currentElevationMap_);
 }
 
 bool ElevationChangeDetection::publishElevationChangeMap(const grid_map::GridMap& map)
