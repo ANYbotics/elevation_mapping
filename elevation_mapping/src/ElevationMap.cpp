@@ -120,8 +120,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& color = rawMap_.at("color", index);
     const float& pointVariance = pointCloudVariances(i);
 
-    if (!rawMap_.isValid(index))
-    {
+    if (!rawMap_.isValid(index)) {
       // No prior information in elevation map, use measurement.
       elevation = point.z;
       variance = pointVariance;
@@ -134,19 +133,18 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
     double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
 
-    if (mahalanobisDistance < mahalanobisDistanceThreshold_)
-    {
-      // Fuse measurement with elevation map data.
-      elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
-      variance =  (pointVariance * variance) / (pointVariance + variance);
-      // TODO Add color fusion.
-      colorVectorToValue(point.getRGBVector3i(), color);
+    if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
+      // Add noise to cells which have ignored lower values,
+      // such that outliers and moving objects are removed.
+      variance += multiHeightNoise_;
       continue;
     }
 
-    // Add noise to cells which have ignored lower values,
-    // such that outliers and moving objects are removed.
-    variance += multiHeightNoise_;
+    // Fuse measurement with elevation map data.
+    elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
+    variance = (pointVariance * variance) / (pointVariance + variance);
+    // TODO Add color fusion.
+    colorVectorToValue(point.getRGBVector3i(), color);
 
     // Horizontal variances are reset.
     horizontalVarianceX = minHorizontalVariance_;
@@ -367,8 +365,8 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     fusedMap_.at("elevation", *areaIterator) = mean;
     lowerBoundDistribution.compute();
     upperBoundDistribution.compute();
-    fusedMap_.at("lower_bound", *areaIterator) = lowerBoundDistribution.quantile(0.0);
-    fusedMap_.at("upper_bound", *areaIterator) = upperBoundDistribution.quantile(1.0);
+    fusedMap_.at("lower_bound", *areaIterator) = lowerBoundDistribution.quantile(0.01); // TODO
+    fusedMap_.at("upper_bound", *areaIterator) = upperBoundDistribution.quantile(0.99); // TODO
     // TODO Add fusion of colors.
     fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
 
