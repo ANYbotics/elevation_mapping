@@ -110,11 +110,7 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
   if (getGridMap(position, length, mapMessage)) {
     grid_map::GridMap elevationMap;
     grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
-    (elevationMap);
-
-    // Publish elevation change map.
-    if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
-    if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
+    computeElevationChange(elevationMap);
   } else {
     ROS_WARN("Failed to retrieve elevation grid map.");
   }
@@ -161,6 +157,10 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
     if (std::abs(diffElevation) <= threshold_) continue;
     elevationMap.at(elevationChangeLayer_, *iterator) = diffElevation;
   }
+
+  // Publish elevation change map.
+  if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
+  if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
 }
 
 bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObstacle::Request& request, elevation_change_msgs::DetectObstacle::Response& response)
