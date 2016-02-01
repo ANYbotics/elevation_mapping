@@ -438,7 +438,7 @@ void ElevationMapping::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
   Duration periodSinceLastUpdate = ros::Time::now() - map_.getTimeOfLastUpdate();
-  if (periodSinceLastUpdate > maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
+  if (periodSinceLastUpdate >= maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
   mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - periodSinceLastUpdate);
   mapUpdateTimer_.start();
 }
