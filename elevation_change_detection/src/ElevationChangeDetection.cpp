@@ -148,7 +148,7 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
     Vector2d position, groundTruthPosition;
     Array2i groundTruthIndex;
     elevationMap.getPosition(*iterator, position);
-    groundTruthMap_.getIndex(position, groundTruthIndex);
+    if (!groundTruthMap_.getIndex(position, groundTruthIndex)) continue;
     if (!groundTruthMap_.isValid(groundTruthIndex, layer_)) continue;
     double groundTruthHeight = groundTruthMap_.at(layer_, groundTruthIndex);
 
