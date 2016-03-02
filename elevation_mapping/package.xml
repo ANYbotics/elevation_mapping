@@ -15,8 +15,8 @@
   <depend>pcl_ros</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>grid_map</depend>
   <depend>grid_map_core</depend>
+  <depend>grid_map_ros</depend>
   <depend>grid_map_msgs</depend>
   <depend>tf</depend>
   <depend>tf_conversions</depend>

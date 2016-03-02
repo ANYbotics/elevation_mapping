@@ -15,7 +15,7 @@
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
 
 // Grid Map
-#include <grid_map/grid_map.hpp>
+#include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
 
 //PCL
