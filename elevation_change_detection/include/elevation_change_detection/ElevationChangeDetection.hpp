@@ -9,7 +9,7 @@
 #pragma once
 
 // Grid Map
-#include <grid_map/grid_map.hpp>
+#include <grid_map_ros/grid_map_ros.hpp>
 
 // ROS
 #include <ros/ros.h>
