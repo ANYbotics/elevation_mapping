@@ -210,10 +210,12 @@ namespace elevation_change_detection {
 
     //! Minimal number of adjacent cells to indicate obstacle
     int minNumberAdjacentCells_;
+    int minNumberAdjacentCellsUnknownArea_;
 
     //! Horizon to check for unknown cells.
     double unknownCellsHorizon_;
     double minDistanceToUnknownCell_;
+    bool checkForUnkownAreas_;
 
   };
 

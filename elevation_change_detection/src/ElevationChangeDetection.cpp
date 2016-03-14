@@ -78,8 +78,10 @@ bool ElevationChangeDetection::readParameters()
 
   nodeHandle_.param("threshold", threshold_, 0.0);
   nodeHandle_.param("min_cell_number_obstacle", minNumberAdjacentCells_, 0);
+  nodeHandle_.param("min_cell_number_unknown_area", minNumberAdjacentCellsUnknownArea_, 0);
   nodeHandle_.param("unknown_cells_horizon", unknownCellsHorizon_, 1.0);
   nodeHandle_.param("min_distance_to_unknown_cells", minDistanceToUnknownCell_, 1.0);
+  nodeHandle_.param("check_for_unknown_areas", checkForUnkownAreas_, false);
   nodeHandle_.param("elevation_map_topic", mapTopic_, std::string("/elevation_map"));
 
   std::string bagTopicName_, pathToBag_;
@@ -182,9 +184,10 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     std::vector<elevation_change_msgs::Obstacle> obstacles;
     elevation_change_msgs::ObstacleResult result;
     if (!checkPathForObstacles(path, elevationMap, obstacles)) return false;
-    if (i == nPaths - 1)
+    if (i == nPaths - 1 && checkForUnkownAreas_)
     {
       checkPathForUnknownAreas(path, elevationMap, obstacles);
+      // TODO: add obstacle to list (after testing).
     }
     for (int j = 0; j < obstacles.size(); ++j) {
       result.obstacles.push_back(obstacles[j]);
@@ -411,7 +414,6 @@ bool ElevationChangeDetection::checkPathForUnknownAreas(
   }
 
   unsigned int nPoses = localPath.poses.poses.size();
-  ROS_INFO_STREAM("ElevationChangeDetection: checkPathForUnknownAreas: nPoses: " << nPoses);
   map.add("inquired_cells");
   double radius = path.radius;
   grid_map::Polygon polygon;
@@ -497,10 +499,7 @@ bool ElevationChangeDetection::checkPathForUnknownAreas(
 
 bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polygon& polygon, const geometry_msgs::PoseStamped& currentPose, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles)
 {
-  ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas");
-  geometry_msgs::PolygonStamped polygonMsg;
-  grid_map::PolygonRosConverter::toMessage(polygon, polygonMsg);
-  ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: Check polygon: " << polygonMsg);
+  ROS_DEBUG_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas");
   for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
       ++iterator) {
     // Check if cell already inquired.
@@ -512,22 +511,9 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
       map.at("inquired_cells", *iterator) = 0.0;
       continue;
     }
-    // New obstacle detected.
-//    geometry_msgs::PolygonStamped polygonMsg;
-//    grid_map::PolygonRosConverter::toMessage(polygon, polygonMsg);
-//    ROS_INFO_STREAM(
-//        "ElevationChangeDetection: checkPolygonForUnknownAreas: New obstacle detected in polygon: " << polygonMsg);
     elevation_change_msgs::Obstacle obstacle;
     grid_map::Position obstaclePosition;
-//    // Get index in map.
-//    grid_map::Position pos;
-//    subMap.getPosition(*subMapIterator, pos);
-//    grid_map::Index mapIndex;
-//    map.getIndex(pos, mapIndex);
     map.getPosition(*iterator, obstaclePosition);
-//    map.getPosition3(layer_, *iterator, obstaclePosition);
-//    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: Index: " << *iterator);
-    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: Position: " << obstaclePosition);
     // Get size of obstacle by inquiring neighbor cells.
     map.at("inquired_cells", *iterator) = 1.0;
     std::vector<grid_map::Index> indexList;
@@ -580,11 +566,9 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
       }
     }
 
-    if (indexList.size() < minNumberAdjacentCells_)
+    if (indexList.size() < minNumberAdjacentCellsUnknownArea_)
       continue;
     // Compute size of obstacle.
-    ROS_INFO_STREAM(
-        "ElevationChangeDetection: checkPolygonForUnknownAreas: Obstacle position: " << obstaclePosition);
     double minX = obstaclePosition.x();
     double minY = obstaclePosition.y();
     double maxX = obstaclePosition.x();
