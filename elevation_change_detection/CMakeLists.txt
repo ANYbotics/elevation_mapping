@@ -15,11 +15,11 @@ set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 find_package(catkin REQUIRED COMPONENTS
   cmake_modules
   elevation_change_msgs
+  geometry_msgs
   grid_map_core
   grid_map_ros
   grid_map_msgs
   roscpp
-  nav_msgs
   tf
   tf_conversions
 )
@@ -43,11 +43,11 @@ catkin_package(
 #  LIBRARIES elevation_change_detection
   CATKIN_DEPENDS
     elevation_change_msgs
+    geometry_msgs
     grid_map_ros
     grid_map_core
     grid_map_msgs
     roscpp
-    nav_msgs
     tf
     tf_conversions
   DEPENDS

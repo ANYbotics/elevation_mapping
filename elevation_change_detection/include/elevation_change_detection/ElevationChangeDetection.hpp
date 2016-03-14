@@ -23,6 +23,7 @@
 #include <vector>
 #include <string>
 #include <algorithm>
+#include <math.h>
 
 namespace elevation_change_detection {
 
@@ -102,6 +103,24 @@ namespace elevation_change_detection {
     bool checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
 
     /*!
+     * Checks the path for unknown areas (negative obstacles).
+     * @param[in] path the path to verify.
+     * @param[in] map the current elevation change map.
+     * @param[out] obstacles vector of found obstacles.
+     * @return true if successful.
+     */
+    bool checkPathForUnknownAreas(const traversability_msgs::FootprintPath& path, grid_map::GridMap map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+
+    /*!
+     * Checks the polygon for unknown areas (negative obstacles).
+     * @param[in] polygon the polygon to verify.
+     * @param[in] map the current elevation change map.
+     * @param[out] obstacles vector of found obstacles.
+     * @return true if successful.
+     */
+    bool checkPolygonForUnknownAreas(const grid_map::Polygon& polygon, const geometry_msgs::PoseStamped& currentPose, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+
+    /*!
      * Gets the grid map for the desired submap defined by position and length.
      * @param[in] position position of the submap.
      * @param[in] length length of the submap.
@@ -121,6 +140,12 @@ namespace elevation_change_detection {
      * @param[in] map current elevation map.
      */
     void mapCallback(const grid_map_msgs::GridMap& map);
+
+    /*!
+     * Get the current robot pose.
+     * @return current robot pose.
+     */
+    geometry_msgs::PoseStamped getCurrentPose() const;
 
     //! ROS node handle.
     ros::NodeHandle& nodeHandle_;
@@ -148,6 +173,9 @@ namespace elevation_change_detection {
 
     //! Id of the frame of the elevation map.
     std::string mapFrameId_;
+
+    //! Robot frame Id.
+    std::string robotFrameId_;
 
     //! TF listener.
     tf::TransformListener transformListener_;
@@ -182,6 +210,10 @@ namespace elevation_change_detection {
 
     //! Minimal number of adjacent cells to indicate obstacle
     int minNumberAdjacentCells_;
+
+    //! Horizon to check for unknown cells.
+    double unknownCellsHorizon_;
+    double minDistanceToUnknownCell_;
 
   };
 

@@ -8,6 +8,7 @@
 
 #include "elevation_change_detection/ElevationChangeDetection.hpp"
 
+#include <geometry_msgs/PoseStamped.h>
 #include <grid_map_msgs/GetGridMap.h>
 
 // Eigen
@@ -63,12 +64,11 @@ bool ElevationChangeDetection::readParameters()
   }
 
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("map"));
-  std::string robotFrameId;
-  nodeHandle_.param("robot_frame_id", robotFrameId, std::string("base"));
+  nodeHandle_.param("robot_frame_id", robotFrameId_, std::string("base"));
   double mapCenterX, mapCenterY;
   nodeHandle_.param("map_center_x", mapCenterX, 0.0);
   nodeHandle_.param("map_center_y", mapCenterY, 0.0);
-  submapPoint_.header.frame_id = robotFrameId;
+  submapPoint_.header.frame_id = robotFrameId_;
   submapPoint_.point.x = mapCenterX;
   submapPoint_.point.y = mapCenterY;
   submapPoint_.point.z = 0.0;
@@ -78,6 +78,8 @@ bool ElevationChangeDetection::readParameters()
 
   nodeHandle_.param("threshold", threshold_, 0.0);
   nodeHandle_.param("min_cell_number_obstacle", minNumberAdjacentCells_, 0);
+  nodeHandle_.param("unknown_cells_horizon", unknownCellsHorizon_, 1.0);
+  nodeHandle_.param("min_distance_to_unknown_cells", minDistanceToUnknownCell_, 1.0);
   nodeHandle_.param("elevation_map_topic", mapTopic_, std::string("/elevation_map"));
 
   std::string bagTopicName_, pathToBag_;
@@ -180,6 +182,10 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     std::vector<elevation_change_msgs::Obstacle> obstacles;
     elevation_change_msgs::ObstacleResult result;
     if (!checkPathForObstacles(path, elevationMap, obstacles)) return false;
+    if (i == nPaths - 1)
+    {
+      checkPathForUnknownAreas(path, elevationMap, obstacles);
+    }
     for (int j = 0; j < obstacles.size(); ++j) {
       result.obstacles.push_back(obstacles[j]);
     }
@@ -280,9 +286,12 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
   return true;
 }
 
-bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles)
+bool ElevationChangeDetection::checkPolygonForObstacles(
+    const grid_map::Polygon& polygon, grid_map::GridMap& map,
+    std::vector<elevation_change_msgs::Obstacle>& obstacles)
 {
-  for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd(); ++iterator) {
+  for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
+      ++iterator) {
     // Check if cell already inquired.
     if (map.isValid(*iterator, "inquired_cells")) {
       continue;
@@ -292,7 +301,8 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
       continue;
     }
     // New obstacle detected.
-    ROS_DEBUG_STREAM("ElevationChangeDetection: checkPolygonForObstacles: New obstacle detected.");
+    ROS_DEBUG_STREAM(
+        "ElevationChangeDetection: checkPolygonForObstacles: New obstacle detected.");
     elevation_change_msgs::Obstacle obstacle;
     grid_map::Position3 obstaclePosition;
     map.getPosition3(layer_, *iterator, obstaclePosition);
@@ -308,18 +318,22 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
       grid_map::Index index = inquireList.back();
       inquireList.pop_back();
       // Get neighbor cells.
-      grid_map::Length subMapLength(3.0*map.getResolution(), 3.0*map.getResolution());
+      grid_map::Length subMapLength(3.0 * map.getResolution(),
+                                    3.0 * map.getResolution());
       grid_map::Position subMapPos;
       bool isSuccess;
       map.getPosition(index, subMapPos);
-      grid_map::GridMap subMap = map.getSubmap(subMapPos, subMapLength, isSuccess);
+      grid_map::GridMap subMap = map.getSubmap(subMapPos, subMapLength,
+                                               isSuccess);
       if (!isSuccess) {
-        ROS_WARN("ElevationChangeDetection: checkPolygonForObstacles: Could not retrieve submap.");
+        ROS_WARN(
+            "ElevationChangeDetection: checkPolygonForObstacles: Could not retrieve submap.");
         map.at("inquired_cells", index) = 0.0;
         continue;
       }
 
-      for (grid_map::GridMapIterator subMapIterator(subMap); !subMapIterator.isPastEnd(); ++subMapIterator) {
+      for (grid_map::GridMapIterator subMapIterator(subMap);
+          !subMapIterator.isPastEnd(); ++subMapIterator) {
         if (subMap.isValid(*subMapIterator, "inquired_cells")) {
           continue;
         }
@@ -339,7 +353,8 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
       }
     }
 
-    if (indexList.size() < minNumberAdjacentCells_) continue;
+    if (indexList.size() < minNumberAdjacentCells_)
+      continue;
     // Compute size of obstacle.
     double minX = obstaclePosition.x();
     double minY = obstaclePosition.y();
@@ -357,7 +372,8 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
       minY = std::min(minY, point.y());
       maxY = std::max(maxY, point.y());
       double elevationChange = map.at(elevationChangeLayer_, indexList[i]);
-      if (std::abs(elevationChange) > std::abs(maxHeight)) maxHeight = elevationChange;
+      if (std::abs(elevationChange) > std::abs(maxHeight))
+        maxHeight = elevationChange;
     }
     obstaclePosition /= nCells;
 
@@ -376,6 +392,246 @@ bool ElevationChangeDetection::checkPolygonForObstacles(const grid_map::Polygon&
     obstacles.push_back(obstacle);
   }
   return true;
+}
+
+bool ElevationChangeDetection::checkPathForUnknownAreas(
+    const traversability_msgs::FootprintPath& path, grid_map::GridMap map,
+    std::vector<elevation_change_msgs::Obstacle>& obstacles)
+{
+  // Get current pose.
+  geometry_msgs::PoseStamped currentPose = getCurrentPose();
+  // Get poses to verify.
+  traversability_msgs::FootprintPath localPath;
+  localPath.poses.header = path.poses.header;
+  for (unsigned int i = 1; i < path.poses.poses.size(); ++i) {
+    double distance = std::pow((currentPose.pose.position.x - path.poses.poses[i].position.x), 2) + std::pow((currentPose.pose.position.y - path.poses.poses[i].position.y), 2);
+    distance = std::sqrt(distance);
+    if (distance > unknownCellsHorizon_) break;
+    localPath.poses.poses.push_back(path.poses.poses[i]);
+  }
+
+  unsigned int nPoses = localPath.poses.poses.size();
+  ROS_INFO_STREAM("ElevationChangeDetection: checkPathForUnknownAreas: nPoses: " << nPoses);
+  map.add("inquired_cells");
+  double radius = path.radius;
+  grid_map::Polygon polygon;
+  grid_map::Position start, end;
+
+  if (path.footprint.polygon.points.size() == 0) {
+    for (int i = 0; i < nPoses; i++) {
+      start = end;
+      end.x() = path.poses.poses[i].position.x;
+      end.y() = path.poses.poses[i].position.y;
+
+      if (nPoses == 1) {
+        polygon = grid_map::Polygon::fromCircle(end, radius);
+        checkPolygonForUnknownAreas(polygon, currentPose, map, obstacles);
+      }
+
+      if (nPoses > 1 && i > 0) {
+        polygon = grid_map::Polygon::convexHullOfTwoCircles(start, end, radius);
+        checkPolygonForUnknownAreas(polygon, currentPose, map, obstacles);
+      }
+    }
+  } else {
+    grid_map::Polygon polygon1, polygon2;
+    polygon1.setFrameId(mapFrameId_);
+    polygon2.setFrameId(mapFrameId_);
+    for (int i = 0; i < nPoses; i++) {
+      polygon1 = polygon2;
+      start = end;
+      polygon2.removeVertices();
+      grid_map::Position3 positionToVertex, positionToVertexTransformed;
+      Eigen::Translation<double, 3> toPosition;
+      Eigen::Quaterniond orientation;
+
+      toPosition.x() = path.poses.poses[i].position.x;
+      toPosition.y() = path.poses.poses[i].position.y;
+      toPosition.z() = path.poses.poses[i].position.z;
+      orientation.x() = path.poses.poses[i].orientation.x;
+      orientation.y() = path.poses.poses[i].orientation.y;
+      orientation.z() = path.poses.poses[i].orientation.z;
+      orientation.w() = path.poses.poses[i].orientation.w;
+      end.x() = toPosition.x();
+      end.y() = toPosition.y();
+
+      for (const auto& point : path.footprint.polygon.points) {
+        positionToVertex.x() = point.x;
+        positionToVertex.y() = point.y;
+        positionToVertex.z() = point.z;
+        positionToVertexTransformed = toPosition * orientation * positionToVertex;
+
+        grid_map::Position vertex;
+        vertex.x() = positionToVertexTransformed.x();
+        vertex.y() = positionToVertexTransformed.y();
+        polygon2.addVertex(vertex);
+      }
+
+      if (path.conservative && i > 0) {
+        grid_map::Vector startToEnd = end - start;
+        std::vector<grid_map::Position> vertices1 = polygon1.getVertices();
+        std::vector<grid_map::Position> vertices2 = polygon2.getVertices();
+        for (const auto& vertex : vertices1) {
+          polygon2.addVertex(vertex + startToEnd);
+        }
+        for (const auto& vertex : vertices2) {
+          polygon1.addVertex(vertex - startToEnd);
+        }
+      }
+
+      if (nPoses == 1) {
+        polygon = polygon2;
+        checkPolygonForUnknownAreas(polygon, currentPose, map, obstacles);
+      }
+
+      if (nPoses > 1 && i > 0) {
+        polygon = grid_map::Polygon::convexHull(polygon1, polygon2);
+        checkPolygonForUnknownAreas(polygon, currentPose, map, obstacles);
+      }
+    }
+  }
+
+
+  return true;
+}
+
+bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polygon& polygon, const geometry_msgs::PoseStamped& currentPose, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles)
+{
+  ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas");
+  geometry_msgs::PolygonStamped polygonMsg;
+  grid_map::PolygonRosConverter::toMessage(polygon, polygonMsg);
+  ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: Check polygon: " << polygonMsg);
+  for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
+      ++iterator) {
+    // Check if cell already inquired.
+    if (map.isValid(*iterator, "inquired_cells")) {
+      continue;
+    }
+    // Continue if cell is valid.
+    if (map.isValid(*iterator, layer_)) {
+      map.at("inquired_cells", *iterator) = 0.0;
+      continue;
+    }
+    // New obstacle detected.
+//    geometry_msgs::PolygonStamped polygonMsg;
+//    grid_map::PolygonRosConverter::toMessage(polygon, polygonMsg);
+//    ROS_INFO_STREAM(
+//        "ElevationChangeDetection: checkPolygonForUnknownAreas: New obstacle detected in polygon: " << polygonMsg);
+    elevation_change_msgs::Obstacle obstacle;
+    grid_map::Position obstaclePosition;
+//    // Get index in map.
+//    grid_map::Position pos;
+//    subMap.getPosition(*subMapIterator, pos);
+//    grid_map::Index mapIndex;
+//    map.getIndex(pos, mapIndex);
+    map.getPosition(*iterator, obstaclePosition);
+//    map.getPosition3(layer_, *iterator, obstaclePosition);
+//    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: Index: " << *iterator);
+    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: Position: " << obstaclePosition);
+    // Get size of obstacle by inquiring neighbor cells.
+    map.at("inquired_cells", *iterator) = 1.0;
+    std::vector<grid_map::Index> indexList;
+    std::vector<grid_map::Index> inquireList;
+    indexList.push_back(*iterator);
+    inquireList.push_back(*iterator);
+
+    // Populate list with cells that belong to the obstacle.
+    while (!inquireList.empty()) {
+      grid_map::Index index = inquireList.back();
+      inquireList.pop_back();
+      // Get neighbor cells.
+      grid_map::Length subMapLength(3.0 * map.getResolution(),
+                                    3.0 * map.getResolution());
+      grid_map::Position subMapPos;
+      bool isSuccess;
+      map.getPosition(index, subMapPos);
+      grid_map::GridMap subMap = map.getSubmap(subMapPos, subMapLength,
+                                               isSuccess);
+      if (!isSuccess) {
+        ROS_WARN_STREAM(
+            "ElevationChangeDetection: checkPolygonForUnknownAreas: Could not retrieve submap at: " << subMapPos);
+        map.at("inquired_cells", index) = 0.0;
+        continue;
+      }
+
+      for (grid_map::GridMapIterator subMapIterator(subMap);
+          !subMapIterator.isPastEnd(); ++subMapIterator) {
+        if (subMap.isValid(*subMapIterator, "inquired_cells")) {
+          continue;
+        }
+        // Get index in map.
+        grid_map::Position pos;
+        subMap.getPosition(*subMapIterator, pos);
+        grid_map::Index mapIndex;
+        map.getIndex(pos, mapIndex);
+        double distance = std::pow(currentPose.pose.position.x - pos.x(), 2) + std::pow(currentPose.pose.position.y - pos.y(), 2);
+        distance = std::sqrt(distance);
+        if (subMap.isValid(*subMapIterator, layer_)) {
+          map.at("inquired_cells", mapIndex) = 0.0;
+          continue;
+        } else if (distance < minDistanceToUnknownCell_ || distance > unknownCellsHorizon_) {
+          map.at("inquired_cells", mapIndex) = 0.0;
+          continue;
+        } else {
+          map.at("inquired_cells", mapIndex) = 1.0;
+          indexList.push_back(mapIndex);
+          inquireList.push_back(mapIndex);
+        }
+      }
+    }
+
+    if (indexList.size() < minNumberAdjacentCells_)
+      continue;
+    // Compute size of obstacle.
+    ROS_INFO_STREAM(
+        "ElevationChangeDetection: checkPolygonForUnknownAreas: Obstacle position: " << obstaclePosition);
+    double minX = obstaclePosition.x();
+    double minY = obstaclePosition.y();
+    double maxX = obstaclePosition.x();
+    double maxY = obstaclePosition.y();
+    obstaclePosition.setZero();
+    grid_map::Position point;
+    unsigned int nCells = indexList.size();
+    for (unsigned int i = 0; i < nCells; ++i) {
+      map.getPosition(indexList[i], point);
+      obstaclePosition += point;
+      minX = std::min(minX, point.x());
+      maxX = std::max(maxX, point.x());
+      minY = std::min(minY, point.y());
+      maxY = std::max(maxY, point.y());
+    }
+    obstaclePosition /= nCells;
+    obstacle.type = "negative";
+
+    obstacle.length = maxX - minX;
+    obstacle.width = maxY - minY;
+    obstacle.height = -0.1; //TODO
+    obstacle.pose.position.x = obstaclePosition.x();
+    obstacle.pose.position.y = obstaclePosition.y();
+    obstacles.push_back(obstacle);
+    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: obstacle: " << obstacle);
+  }
+  return true;
+}
+
+geometry_msgs::PoseStamped ElevationChangeDetection::getCurrentPose() const
+{
+  geometry_msgs::PoseStamped pose;
+  // Get the current pose of the robot by listening to tf.
+  tf::StampedTransform transformationRobotToMap;
+  transformListener_.lookupTransform(mapFrameId_, robotFrameId_, ros::Time(0), transformationRobotToMap);
+
+  pose.header.frame_id = transformationRobotToMap.frame_id_;
+  pose.header.seq = 0;
+  pose.header.stamp = transformationRobotToMap.stamp_;
+  pose.pose.position.x = transformationRobotToMap.getOrigin().getX();
+  pose.pose.position.y = transformationRobotToMap.getOrigin().getY();
+  pose.pose.position.z = transformationRobotToMap.getOrigin().getZ();
+  pose.pose.orientation.w = transformationRobotToMap.getRotation().getW();
+  pose.pose.orientation.x = transformationRobotToMap.getRotation().getX();
+  pose.pose.orientation.y = transformationRobotToMap.getRotation().getY();
+  pose.pose.orientation.z = transformationRobotToMap.getRotation().getZ();
+  return pose;
 }
 
 void ElevationChangeDetection::mapCallback(const grid_map_msgs::GridMap& map)

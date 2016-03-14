@@ -13,9 +13,11 @@
   <depend>cmake_modules</depend>
   <depend>elevation_change_msgs</depend>
   <depend>roscpp</depend>
+  <depend>geometry_msgs</depend>
   <depend>grid_map_core</depend>
   <depend>grid_map_ros</depend>
   <depend>grid_map_msgs</depend>
+  <depend>navigation_common</depend>
   <depend>tf</depend>
   <depend>tf_conversions</depend>
   <depend>sensor_msgs</depend>
