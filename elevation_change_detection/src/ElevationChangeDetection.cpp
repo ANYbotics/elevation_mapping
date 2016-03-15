@@ -149,7 +149,7 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
     double height = elevationMap.at(layer_, *iterator);
 
     // Get the ground truth height
-    Vector2d position, groundTruthPosition;
+    Vector2d position;
     Array2i groundTruthIndex;
     elevationMap.getPosition(*iterator, position);
     if (!groundTruthMap_.getIndex(position, groundTruthIndex)) continue;
@@ -574,17 +574,25 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     double maxX = obstaclePosition.x();
     double maxY = obstaclePosition.y();
     obstaclePosition.setZero();
-    grid_map::Position point;
+    grid_map::Position pos;
+    double obstaclePositionZ = 0;
+    unsigned int nCellsWithHeightValue = 0;
     unsigned int nCells = indexList.size();
     for (unsigned int i = 0; i < nCells; ++i) {
-      map.getPosition(indexList[i], point);
-      obstaclePosition += point;
-      minX = std::min(minX, point.x());
-      maxX = std::max(maxX, point.x());
-      minY = std::min(minY, point.y());
-      maxY = std::max(maxY, point.y());
+      map.getPosition(indexList[i], pos);
+      obstaclePosition += pos;
+      double groundTruthHeight = groundTruthMap_.atPosition(layer_, pos);
+      if (std::isfinite(groundTruthHeight)) {
+        obstaclePositionZ += groundTruthHeight;
+        nCellsWithHeightValue++;
+      }
+      minX = std::min(minX, pos.x());
+      maxX = std::max(maxX, pos.x());
+      minY = std::min(minY, pos.y());
+      maxY = std::max(maxY, pos.y());
     }
     obstaclePosition /= nCells;
+    obstaclePositionZ /= nCellsWithHeightValue;
     obstacle.type = "negative";
 
     obstacle.length = maxX - minX;
@@ -592,6 +600,7 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     obstacle.height = -0.1; //TODO
     obstacle.pose.position.x = obstaclePosition.x();
     obstacle.pose.position.y = obstaclePosition.y();
+    obstacle.pose.position.z = obstaclePositionZ;
     obstacles.push_back(obstacle);
     ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: obstacle: " << obstacle);
   }
