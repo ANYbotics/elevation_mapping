@@ -415,13 +415,17 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
     obstacle.pose.position.y = obstaclePosition.y();
     obstacle.pose.position.z = obstaclePosition.z();
     // Reject obstacles within defined area.
+    bool insideObstacleFreeArea = false;
     grid_map::Position position;
     position.x() = obstaclePosition.x();
     position.y() = obstaclePosition.y();
     for (unsigned int i = 0; i < obstacleFreeAreas_.size(); ++i) {
-      if (obstacleFreeAreas_.at(i).isInside(position)) continue;
+      if (obstacleFreeAreas_.at(i).isInside(position)) {
+        insideObstacleFreeArea = true;
+        break;
+      }
     }
-    obstacles.push_back(obstacle);
+    if (!insideObstacleFreeArea) obstacles.push_back(obstacle);
   }
   return true;
 }
