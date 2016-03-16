@@ -217,6 +217,9 @@ namespace elevation_change_detection {
     double minDistanceToUnknownCell_;
     bool checkForUnkownAreas_;
 
+    //! Defined obstacle free areas.
+    std::vector<grid_map::Polygon> obstacleFreeAreas_;
+
   };
 
 } /* namespace elevation_change_detection*/

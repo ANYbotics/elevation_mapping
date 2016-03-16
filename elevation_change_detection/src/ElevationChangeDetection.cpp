@@ -90,6 +90,28 @@ bool ElevationChangeDetection::readParameters()
   loadElevationMap(pathToBag_, bagTopicName_);
   if (!groundTruthMap_.exists(layer_)) ROS_ERROR_STREAM("ElevationChangeDetection: Bag file does not contain layer " << layer_ << "!");
 
+  // Get obstacle free areas.
+  XmlRpc::XmlRpcValue polygons;
+  if (nodeHandle_.getParam("obstacle_free_areas", polygons)) {
+    for (unsigned int i = 0; i < polygons.size(); ++i) {
+      if (polygons[i].size() < 3) {
+        ROS_WARN("Obstacle free area must consist of at least 3 points. Only %i points found.", polygons[i].size());
+        continue;
+      } else {
+        grid_map::Polygon polygon;
+        polygon.setFrameId(mapFrameId_);
+        polygon.setTimestamp(ros::Time::now().toNSec());
+        for (unsigned int j = 0; j < polygons[i].size(); ++j) {
+          grid_map::Position position;
+          position.x() = (double) polygons[i][j][0];
+          position.y() = (double) polygons[i][j][1];
+          polygon.addVertex(position);
+        }
+        obstacleFreeAreas_.push_back(polygon);
+      }
+    }
+  }
+
   return true;
 }
 
@@ -392,6 +414,13 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
     obstacle.pose.position.x = obstaclePosition.x();
     obstacle.pose.position.y = obstaclePosition.y();
     obstacle.pose.position.z = obstaclePosition.z();
+    // Reject obstacles within defined area.
+    grid_map::Position position;
+    position.x() = obstaclePosition.x();
+    position.y() = obstaclePosition.y();
+    for (unsigned int i = 0; i < obstacleFreeAreas_.size(); ++i) {
+      if (obstacleFreeAreas_.at(i).isInside(position)) continue;
+    }
     obstacles.push_back(obstacle);
   }
   return true;
@@ -601,6 +630,10 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     obstacle.pose.position.x = obstaclePosition.x();
     obstacle.pose.position.y = obstaclePosition.y();
     obstacle.pose.position.z = obstaclePositionZ;
+    // Reject obstacles within defined area.
+    for (unsigned int i = 0; i < obstacleFreeAreas_.size(); ++i) {
+      if (obstacleFreeAreas_.at(i).isInside(obstaclePosition)) continue;
+    }
     obstacles.push_back(obstacle);
     ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: obstacle: " << obstacle);
   }
