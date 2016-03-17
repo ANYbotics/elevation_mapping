@@ -206,11 +206,7 @@ bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObsta
     std::vector<elevation_change_msgs::Obstacle> obstacles;
     elevation_change_msgs::ObstacleResult result;
     if (!checkPathForObstacles(path, elevationMap, obstacles)) return false;
-    if (i == nPaths - 1 && checkForUnkownAreas_)
-    {
-      checkPathForUnknownAreas(path, elevationMap, obstacles);
-      // TODO: add obstacle to list (after testing).
-    }
+    if (checkForUnkownAreas_) checkPathForUnknownAreas(path, elevationMap, obstacles);
     for (int j = 0; j < obstacles.size(); ++j) {
       result.obstacles.push_back(obstacles[j]);
     }
@@ -437,16 +433,21 @@ bool ElevationChangeDetection::checkPathForUnknownAreas(
   // Get current pose.
   geometry_msgs::PoseStamped currentPose = getCurrentPose();
   // Get poses to verify.
-  traversability_msgs::FootprintPath localPath;
-  localPath.poses.header = path.poses.header;
-  for (unsigned int i = 1; i < path.poses.poses.size(); ++i) {
-    double distance = std::pow((currentPose.pose.position.x - path.poses.poses[i].position.x), 2) + std::pow((currentPose.pose.position.y - path.poses.poses[i].position.y), 2);
-    distance = std::sqrt(distance);
-    if (distance > unknownCellsHorizon_) break;
-    localPath.poses.poses.push_back(path.poses.poses[i]);
-  }
+//  traversability_msgs::FootprintPath localPath;
+//  localPath.poses.header = path.poses.header;
+//  for (unsigned int i = 1; i < path.poses.poses.size(); ++i) {
+//    double distance = std::pow((currentPose.pose.position.x - path.poses.poses[i].position.x), 2) + std::pow((currentPose.pose.position.y - path.poses.poses[i].position.y), 2);
+//    distance = std::sqrt(distance);
+//    if (distance > unknownCellsHorizon_) break;
+//    localPath.poses.poses.push_back(path.poses.poses[i]);
+//  }
 
-  unsigned int nPoses = localPath.poses.poses.size();
+//  unsigned int nPoses = localPath.poses.poses.size();
+  unsigned int nPoses = path.poses.poses.size();
+  if (nPoses == 0) {
+    ROS_WARN("ElevationChangeDetection: No poses available on the path to check for obstacles!");
+    return false;
+  }
   map.add("inquired_cells");
   double radius = path.radius;
   grid_map::Polygon polygon;
@@ -639,7 +640,6 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
       if (obstacleFreeAreas_.at(i).isInside(obstaclePosition)) continue;
     }
     obstacles.push_back(obstacle);
-    ROS_INFO_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas: obstacle: " << obstacle);
   }
   return true;
 }
