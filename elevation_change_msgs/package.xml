@@ -1,0 +1,23 @@
+<?xml version="1.0"?>
+<package>
+  <name>elevation_change_msgs</name>
+  <version>0.1.0</version>
+  <description>ROS Message definitions for elevation change detection.</description>
+  <maintainer email="martiwer@mavt.ethz.ch">Martin Wermelinger</maintainer>
+  <author email="martiwer@mavt.ethz.ch">Martin Wermelinger</author>
+  <license>MIT</license>
+  <url type="website">https://github.com/ethz-asl/elevation_mapping</url>
+  <url type="bugtracker">https://github.com/ethz-asl/elevation_mapping/issues</url>
+
+  <buildtool_depend>catkin</buildtool_depend>
+  
+  <build_depend>geometry_msgs</build_depend>
+  <build_depend>std_msgs</build_depend>
+  <build_depend>traversability_msgs</build_depend>
+  <build_depend>message_generation</build_depend>
+  
+  <run_depend>geometry_msgs</run_depend>
+  <run_depend>std_msgs</run_depend>
+  <run_depend>traversability_msgs</run_depend>
+  <run_depend>message_runtime</run_depend>
+</package>

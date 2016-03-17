@@ -1,0 +1,7 @@
+# Footprint path to check for obstacles.
+traversability_msgs/FootprintPath[] path
+
+---
+
+# Detected obstacles.
+ObstacleResult[] obstacles

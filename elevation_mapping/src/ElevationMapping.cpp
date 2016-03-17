@@ -53,10 +53,11 @@ namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
-      map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
-      isContinouslyFusing_(false),
-      ignoreRobotMotionUpdates_(false)
+      isContinuouslyFusing_(false),
+      ignoreRobotMotionUpdates_(false),
+      nLevels_(0),
+      currentLevel_(0)
 {
   ROS_INFO("Elevation mapping node started.");
 
@@ -129,7 +130,7 @@ bool ElevationMapping::readParameters()
     fusedMapPublishTimerDuration_.fromSec(0.0);
     ROS_WARN("Rate for publishing the fused map is zero. The fused elevation map will not be published unless the service `triggerFusion` is called.");
   } else if (std::isinf(fusedMapPublishingRate)){
-    isContinouslyFusing_ = true;
+    isContinuouslyFusing_ = true;
     fusedMapPublishTimerDuration_.fromSec(0.0);
   } else {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
@@ -137,40 +138,22 @@ bool ElevationMapping::readParameters()
 
   nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag")); // TODO Add this as parameter in the service call.
 
-  // ElevationMap parameters. TODO Move this to the elevation map class.
-  string frameId;
-  nodeHandle_.param("map_frame_id", frameId, string("/map"));
-  map_.setFrameId(frameId);
-
-  grid_map::Length length;
-  grid_map::Position position;
-  double resolution;
-  nodeHandle_.param("length_in_x", length(0), 1.5);
-  nodeHandle_.param("length_in_y", length(1), 1.5);
-  nodeHandle_.param("position_x", position.x(), 0.0);
-  nodeHandle_.param("position_y", position.y(), 0.0);
-  nodeHandle_.param("resolution", resolution, 0.01);
-  map_.setGeometry(length, resolution, position);
-
-  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
-  nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
-  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.5);
-  nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
-  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
-  nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
-  nodeHandle_.param("surface_normal_estimation_radius", map_.surfaceNormalEstimationRadius_, 0.05);
-  nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
-
-  string surfaceNormalPositiveAxis;
-  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
-  if (surfaceNormalPositiveAxis == "z") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
-  } else if (surfaceNormalPositiveAxis == "y") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
-  } else if (surfaceNormalPositiveAxis == "x") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
+  // Read level height.
+  XmlRpc::XmlRpcValue levelHeight;
+  if (!nodeHandle_.getParam("level_extent_z", levelHeight) || levelHeight.size() == 0) {
+    ROS_WARN("ElevationMapping: No level height provided. Using only one map level.");
+    map_.push_back(std::shared_ptr<ElevationMap>(new ElevationMap(nodeHandle_)));
+    nLevels_ = 1;
   } else {
-    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
+    for (unsigned int i = 0; i < levelHeight.size(); ++i) {
+      std::shared_ptr<ElevationMap> elevationMapPtr(new ElevationMap(nodeHandle_));
+      elevationMapPtr->lowerLevelBound_ = (double) levelHeight[i][0];
+      elevationMapPtr->upperLevelBound_ = (double) levelHeight[i][1];
+      if (i == 0) elevationMapPtr->lowerLevelBound_ = -std::numeric_limits<double>::infinity();
+      if (i == levelHeight.size()-1) elevationMapPtr->upperLevelBound_ = std::numeric_limits<double>::infinity();
+      map_.push_back(elevationMapPtr);
+      nLevels_++;
+    }
   }
 
   // SensorProcessor parameters.
@@ -217,7 +200,8 @@ void ElevationMapping::pointCloudCallback(
 {
   stopMapUpdateTimer();
 
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
+  if (!setCurrentLevel()) return;
+  boost::recursive_mutex::scoped_lock scopedLock(map_.at(currentLevel_)->getRawDataMutex());
 
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   // TODO Double check with http://wiki.ros.org/hydro/Migration
@@ -263,17 +247,17 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances)) {
+  if (!map_.at(currentLevel_)->add(pointCloudProcessed, measurementVariances)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;
   }
 
   // Publish elevation map.
-  map_.publishRawElevationMap();
-  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
-    map_.publishFusedElevationMap();
+  map_.at(currentLevel_)->publishRawElevationMap();
+  if (isContinuouslyFusing_ && map_.at(currentLevel_)->hasFusedMapSubscribers()) {
+    map_.at(currentLevel_)->fuseAll(true);
+    map_.at(currentLevel_)->publishFusedElevationMap();
   }
 
   resetMapUpdateTimer();
@@ -283,7 +267,8 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
 {
   ROS_WARN("Elevation map is updated without data from the sensor.");
 
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
+  if (!setCurrentLevel()) return;
+  boost::recursive_mutex::scoped_lock scopedLock(map_.at(currentLevel_)->getRawDataMutex());
 
   stopMapUpdateTimer();
   ros::Time time = ros::Time::now();
@@ -296,10 +281,10 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
   }
 
   // Publish elevation map.
-  map_.publishRawElevationMap();
-  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
-    map_.publishFusedElevationMap();
+  map_.at(currentLevel_)->publishRawElevationMap();
+  if (isContinuouslyFusing_ && map_.at(currentLevel_)->hasFusedMapSubscribers()) {
+    map_.at(currentLevel_)->fuseAll(false);
+    map_.at(currentLevel_)->publishFusedElevationMap();
   }
 
   resetMapUpdateTimer();
@@ -307,18 +292,19 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
 
 void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
 {
-  if (!map_.hasFusedMapSubscribers()) return;
+  if (!map_.at(currentLevel_)->hasFusedMapSubscribers()) return;
   ROS_DEBUG("Elevation map is fused and published from timer.");
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(false);
-  map_.publishFusedElevationMap();
+  boost::recursive_mutex::scoped_lock scopedLock(map_.at(currentLevel_)->getFusedDataMutex());
+  map_.at(currentLevel_)->fuseAll(false);
+  map_.at(currentLevel_)->publishFusedElevationMap();
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
-  map_.publishFusedElevationMap();
+  setCurrentLevel();
+  boost::recursive_mutex::scoped_lock scopedLock(map_.at(currentLevel_)->getFusedDataMutex());
+  map_.at(currentLevel_)->fuseAll(true);
+  map_.at(currentLevel_)->publishFusedElevationMap();
   return true;
 }
 
@@ -328,9 +314,9 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
 
-  if (time < map_.getTimeOfLastUpdate())
+  if (time < map_.at(currentLevel_)->getTimeOfLastUpdate())
   {
-    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), map_.getTimeOfLastUpdate().toSec());
+    ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), map_.at(currentLevel_)->getTimeOfLastUpdate().toSec());
     return false;
   }
 
@@ -349,7 +335,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
       const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Compute map variance update from motion prediction.
-  robotMotionMapUpdater_.update(map_, robotPose, robotPoseCovariance, time);
+  robotMotionMapUpdater_.update(*map_.at(currentLevel_), robotPose, robotPoseCovariance, time);
 
   return true;
 }
@@ -365,7 +351,7 @@ bool ElevationMapping::updateMapLocation()
   geometry_msgs::PointStamped trackPointTransformed;
 
   try {
-    transformListener_.transformPoint(map_.getFrameId(), trackPoint, trackPointTransformed);
+    transformListener_.transformPoint(map_.at(currentLevel_)->getFrameId(), trackPoint, trackPointTransformed);
   } catch (TransformException &ex) {
     ROS_ERROR("%s", ex.what());
     return false;
@@ -374,7 +360,7 @@ bool ElevationMapping::updateMapLocation()
   Position3D position3d;
   convertFromRosGeometryMsg(trackPointTransformed.point, position3d);
   grid_map::Position position = position3d.vector().head(2);
-  map_.move(position);
+  map_.at(currentLevel_)->move(position);
   return true;
 }
 
@@ -393,12 +379,12 @@ bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, gr
     }
   }
 
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength, computeSurfaceNormals);
+  boost::recursive_mutex::scoped_lock scopedLock(map_.at(currentLevel_)->getFusedDataMutex());
+  map_.at(currentLevel_)->fuseArea(requestedSubmapPosition, requestedSubmapLength, computeSurfaceNormals);
 
   bool isSuccess;
   Index index;
-  GridMap subMap = map_.getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
+  GridMap subMap = map_.at(currentLevel_)->getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
   scopedLock.unlock();
 
   if (request.layers.empty()) {
@@ -410,32 +396,57 @@ bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, gr
     }
     GridMapRosConverter::toMessage(subMap, layers, response.map);
   }
+  // Set current robot z position as map z position.
+  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(ros::Time::now());
+  response.map.info.pose.position.z = poseMessage->pose.pose.position.z;
 
-  ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
+  ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.at(currentLevel_)->getTimeOfLastFusion().toSec());
   return isSuccess;
 }
 
 bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
   ROS_INFO("Clearing map.");
-  return map_.clear();
+  return map_.at(currentLevel_)->clear();
 }
 
 bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
   ROS_INFO("Save to bag.");
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
-  grid_map::GridMap gridMap = map_.getFusedGridMap();
+  boost::recursive_mutex::scoped_lock scopedLock(map_.at(currentLevel_)->getFusedDataMutex());
+  map_.at(currentLevel_)->fuseAll(false);
+  grid_map::GridMap gridMap = map_.at(currentLevel_)->getFusedGridMap();
   std::string topic = "grid_map";
   return GridMapRosConverter::saveToBag(gridMap, pathToBag_, topic);
+}
+
+bool ElevationMapping::setCurrentLevel()
+{
+  // Find current level of the elevation map.
+  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(ros::Time::now());
+  double position_z = poseMessage->pose.pose.position.z;
+  // Check if current level is still valid.
+  if (map_.at(currentLevel_)->lowerLevelBound_ < position_z && map_.at(currentLevel_)->upperLevelBound_ > position_z) return true;
+  // Get new level.
+  bool levelExists = false;
+  for (int i = 0; i < nLevels_; ++i) {
+    if (map_.at(i)->lowerLevelBound_ < position_z && map_.at(i)->upperLevelBound_ > position_z) {
+      currentLevel_ = i;
+      levelExists = true;
+      break;
+    }
+  }
+  if (!levelExists) {
+    ROS_WARN("ElevationMapping: Current robot pose does not belong to a elevation map level.");
+  }
+  return levelExists;
 }
 
 void ElevationMapping::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
-  Duration periodSinceLastUpdate = ros::Time::now() - map_.getTimeOfLastUpdate();
-  if (periodSinceLastUpdate > maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
+  Duration periodSinceLastUpdate = ros::Time::now() - map_.at(currentLevel_)->getTimeOfLastUpdate();
+  if (periodSinceLastUpdate >= maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
   mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - periodSinceLastUpdate);
   mapUpdateTimer_.start();
 }

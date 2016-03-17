@@ -289,6 +289,8 @@ class ElevationMap
   double minHorizontalVariance_;
   double maxHorizontalVariance_;
   double surfaceNormalEstimationRadius_;
+  double lowerLevelBound_;
+  double upperLevelBound_;
   Eigen::Vector3d surfaceNormalPositiveAxis_;
   std::string underlyingMapTopic_;
 };
