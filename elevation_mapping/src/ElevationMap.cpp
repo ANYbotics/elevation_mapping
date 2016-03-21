@@ -33,8 +33,6 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      lowerLevelBound_(-std::numeric_limits<double>::infinity()),
-      upperLevelBound_(std::numeric_limits<double>::infinity()),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "color"}),
       fusedMap_({"elevation", "variance", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false)

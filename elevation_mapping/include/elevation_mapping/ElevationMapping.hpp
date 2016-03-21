@@ -36,9 +36,6 @@
 // Boost
 #include <boost/thread.hpp>
 
-// STL
-#include <vector>
-
 
 namespace elevation_mapping {
 
@@ -155,12 +152,6 @@ class ElevationMapping
   bool updateMapLocation();
 
   /*!
-   * Choose the level of the elevation map dependent on the current robot pose.
-   * @return true if successful.
-   */
-  bool setCurrentLevel();
-
-  /*!
    * Reset and start the map update timer.
    */
   void resetMapUpdateTimer();
@@ -210,9 +201,7 @@ class ElevationMapping
   std::string pathToBag_;
 
   //! Elevation map.
-  std::vector<std::shared_ptr<ElevationMap>> map_;
-  unsigned int nLevels_;
-  unsigned int currentLevel_;
+  ElevationMap map_;
 
   //! Sensor processors.
   SensorProcessorBase::Ptr sensorProcessor_;
