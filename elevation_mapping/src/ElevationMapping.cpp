@@ -234,7 +234,7 @@ void ElevationMapping::pointCloudCallback(
   // Publish elevation map.
   map_.publishRawElevationMap();
   if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
+    map_.fuseAll(false);
     map_.publishFusedElevationMap();
   }
 
@@ -279,7 +279,7 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
+  map_.fuseAll(false);
   map_.publishFusedElevationMap();
   return true;
 }
@@ -372,9 +372,6 @@ bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, gr
     }
     GridMapRosConverter::toMessage(subMap, layers, response.map);
   }
-  // Set current robot z position as map z position.
-  boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(ros::Time::now());
-  response.map.info.pose.position.z = poseMessage->pose.pose.position.z;
 
   ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
   return isSuccess;
