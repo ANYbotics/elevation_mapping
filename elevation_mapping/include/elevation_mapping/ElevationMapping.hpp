@@ -218,6 +218,10 @@ class ElevationMapping
   //! Maximum time that the map will not be updated.
   ros::Duration maxNoUpdateDuration_;
 
+  //! Time tolerance for updating the map with data before the last update.
+  //! This is useful when having multiple sensors adding data to the map.
+  ros::Duration timeTolerance_;
+
   //! Timer for publishing the fused map.
   ros::Timer fusedMapPublishTimer_;
 

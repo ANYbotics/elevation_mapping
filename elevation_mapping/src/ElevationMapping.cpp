@@ -123,6 +123,10 @@ bool ElevationMapping::readParameters()
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
+  double timeTolerance;
+  nodeHandle_.param("time_tolerance", timeTolerance, 0.0);
+  timeTolerance_.fromSec(timeTolerance);
+
   double fusedMapPublishingRate;
   nodeHandle_.param("fused_map_publishing_rate", fusedMapPublishingRate, 1.0);
   if (fusedMapPublishingRate == 0.0) {
@@ -328,16 +332,17 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
 
   ROS_DEBUG("Updating map with latest prediction from time %f.", robotPoseCache_.getLatestTime().toSec());
 
-  if (time < map_.getTimeOfLastUpdate())
-  {
+  if (time + timeTolerance_ < map_.getTimeOfLastUpdate()) {
     ROS_ERROR("Requested update with time stamp %f, but time of last update was %f.", time.toSec(), map_.getTimeOfLastUpdate().toSec());
     return false;
+  } else if (time < map_.getTimeOfLastUpdate()) {
+    ROS_DEBUG("Requested update with time stamp %f, but time of last update was %f. Ignoring update.", time.toSec(), map_.getTimeOfLastUpdate().toSec());
+    return true;
   }
 
   // Get robot pose at requested time.
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
-  if (!poseMessage)
-  {
+  if (!poseMessage) {
     ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
     return false;
   }
