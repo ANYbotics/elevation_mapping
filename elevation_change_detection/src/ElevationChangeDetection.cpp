@@ -405,6 +405,8 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
     } else {
       obstacle.type = "negative";
     }
+    obstacle.header.stamp = ros::Time::now();
+    obstacle.header.frame_id = groundTruthMap_.getFrameId();
     obstacle.length = maxX - minX;
     obstacle.width = maxY - minY;
     obstacle.height = maxHeight;
@@ -629,7 +631,8 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     obstaclePosition /= nCells;
     obstaclePositionZ /= nCellsWithHeightValue;
     obstacle.type = "negative";
-
+    obstacle.header.stamp = ros::Time::now();
+    obstacle.header.frame_id = groundTruthMap_.getFrameId();
     obstacle.length = maxX - minX;
     obstacle.width = maxY - minY;
     obstacle.height = -0.1; //TODO
