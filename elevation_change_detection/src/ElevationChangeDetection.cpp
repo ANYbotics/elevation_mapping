@@ -304,6 +304,7 @@ bool ElevationChangeDetection::checkPathForObstacles(const traversability_msgs::
   }
   ROS_DEBUG_STREAM("ElevationChangeDetection: detectObstacle: Number of obstacles within all polygons: " << obstacles.size());
 
+  elevationMap.erase("inquired_cells");
   return true;
 }
 
