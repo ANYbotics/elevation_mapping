@@ -1,3 +1,4 @@
+Header header               # Header.
 uint32 id                   # Id of the obstacle.
 string type                 # Type of the obstacle (positive, negative, supended).
 geometry_msgs/Pose pose     # Approximate pose of the obstacle (only position).
