@@ -78,6 +78,7 @@ bool ElevationChangeDetection::readParameters()
 
   nodeHandle_.param("threshold", threshold_, 0.0);
   nodeHandle_.param("min_cell_number_obstacle", minNumberAdjacentCells_, 0);
+  nodeHandle_.param("max_cell_number_obstacle", maxNumberAdjacentCells_, 0);
   nodeHandle_.param("min_cell_number_unknown_area", minNumberAdjacentCellsUnknownArea_, 0);
   nodeHandle_.param("unknown_cells_horizon", unknownCellsHorizon_, 1.0);
   nodeHandle_.param("min_distance_to_unknown_cells", minDistanceToUnknownCell_, 1.0);
@@ -337,11 +338,11 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
 
     // Populate list with cells that belong to the obstacle.
     while (!inquireList.empty()) {
-      grid_map::Index index = inquireList.back();
-      inquireList.pop_back();
+      grid_map::Index index = inquireList.front();
+      inquireList.erase(inquireList.begin());
       // Get neighbor cells.
-      grid_map::Length subMapLength(3.0 * map.getResolution(),
-                                    3.0 * map.getResolution());
+      grid_map::Length subMapLength(2.7 * map.getResolution(),
+                                    2.7 * map.getResolution());
       grid_map::Position subMapPos;
       bool isSuccess;
       map.getPosition(index, subMapPos);
@@ -373,6 +374,7 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
           inquireList.push_back(mapIndex);
         }
       }
+      if (indexList.size() > maxNumberAdjacentCells_) break;
     }
 
     if (indexList.size() < minNumberAdjacentCells_)
@@ -560,11 +562,11 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
 
     // Populate list with cells that belong to the obstacle.
     while (!inquireList.empty()) {
-      grid_map::Index index = inquireList.back();
-      inquireList.pop_back();
+      grid_map::Index index = inquireList.front();
+      inquireList.erase(inquireList.begin());
       // Get neighbor cells.
-      grid_map::Length subMapLength(3.0 * map.getResolution(),
-                                    3.0 * map.getResolution());
+      grid_map::Length subMapLength(2.7 * map.getResolution(),
+                                    2.7 * map.getResolution());
       grid_map::Position subMapPos;
       bool isSuccess;
       map.getPosition(index, subMapPos);
@@ -601,6 +603,7 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
           inquireList.push_back(mapIndex);
         }
       }
+      if (indexList.size() > maxNumberAdjacentCells_) break;
     }
 
     if (indexList.size() < minNumberAdjacentCellsUnknownArea_)
