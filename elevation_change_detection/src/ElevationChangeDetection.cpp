@@ -679,10 +679,14 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     obstacle.pose.position.y = obstaclePosition.y();
     obstacle.pose.position.z = obstaclePositionZ;
     // Reject obstacles within defined area.
+    bool insideObstacleFreeArea = false;
     for (unsigned int i = 0; i < obstacleFreeAreas_.size(); ++i) {
-      if (obstacleFreeAreas_.at(i).isInside(obstaclePosition)) continue;
+      if (obstacleFreeAreas_.at(i).isInside(obstaclePosition)) {
+        insideObstacleFreeArea = true;
+        break;
+      }
     }
-    obstacles.push_back(obstacle);
+    if (!insideObstacleFreeArea) obstacles.push_back(obstacle);
   }
   return true;
 }
