@@ -24,6 +24,7 @@
 #include <string>
 #include <algorithm>
 #include <math.h>
+#include <XmlRpc.h>
 
 namespace elevation_change_detection {
 
@@ -63,9 +64,11 @@ namespace elevation_change_detection {
     /*!
     * Loads the ground truth elevation map from a ROS bag file.
     * @param[in] pathToBag string with the path to the Bag file containing the ground truth data
+    * @param[in] topicName topic of the grid map.
+    * @param[in] level level of the map (floor).
     * @return true if successful.
     */
-    bool loadElevationMap(const std::string& pathToBag, const std::string& topicName);
+    bool loadElevationMap(const std::string& pathToBag, const std::string& topicName, const unsigned int& level);
 
     /*!
     * Callback function for the update timer. Forces an update of the elevation
@@ -147,6 +150,8 @@ namespace elevation_change_detection {
      */
     geometry_msgs::PoseStamped getCurrentPose() const;
 
+    unsigned int getCurrentLevel();
+
     //! ROS node handle.
     ros::NodeHandle& nodeHandle_;
 
@@ -196,7 +201,9 @@ namespace elevation_change_detection {
     ros::Publisher elevationChangePublisher_;
 
     //! Ground Truth elevation map
-    grid_map::GridMap groundTruthMap_;
+    std::vector<grid_map::GridMap> groundTruthMap_;
+    XmlRpc::XmlRpcValue levelHeight_;
+//    grid_map::GridMap groundTruthMap_;
 
     //! Publisher of the ground truth map.
     ros::Publisher groundTruthPublisher_;

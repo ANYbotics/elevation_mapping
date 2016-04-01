@@ -88,8 +88,30 @@ bool ElevationChangeDetection::readParameters()
   std::string bagTopicName_, pathToBag_;
   nodeHandle_.param("bag_topic_name", bagTopicName_, std::string("grid_map"));
   nodeHandle_.param("path_to_bag", pathToBag_, std::string("ground_truth.bag"));
-  loadElevationMap(pathToBag_, bagTopicName_);
-  if (!groundTruthMap_.exists(layer_)) ROS_ERROR_STREAM("ElevationChangeDetection: Bag file does not contain layer " << layer_ << "!");
+//  loadElevationMap(pathToBag_, bagTopicName_);
+
+  // Get level heights and initialize different levels.
+  try {
+    if (!nodeHandle_.getParam("level_extent_z", levelHeight_) || levelHeight_.size() == 0) {
+      ROS_WARN("ElevationChangeDetection: No level height provided. Using only one map level.");
+      loadElevationMap(pathToBag_, bagTopicName_, 0);
+    } else {
+      for (unsigned int i = 0; i < levelHeight_.size(); ++i) {
+        std::string path = pathToBag_;
+        path.erase(path.size() - 4);
+        path += "_level_" + std::to_string(i) + ".bag";
+        if (!loadElevationMap(path, bagTopicName_, i)) {
+          ROS_WARN_STREAM("ElevationChangeDetection: No ground truth map found for level " << i);
+          loadElevationMap(pathToBag_, bagTopicName_, i);
+        }
+
+      }
+    }
+  } catch (const XmlRpc::XmlRpcException& exception) {
+    ROS_ERROR_STREAM("ElevationChangeDetection: Caught an XmlRpc exception: " << exception.getMessage() << ".");
+    ROS_DEBUG_STREAM("ElevationChangeDetection: Number of levels of traversability maps: " << levelHeight_.size());
+  }
+
 
   // Get obstacle free areas.
   XmlRpc::XmlRpcValue polygons;
@@ -116,9 +138,10 @@ bool ElevationChangeDetection::readParameters()
   return true;
 }
 
-bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag, const std::string& topicName)
+bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag, const std::string& topicName, const unsigned int& level)
 {
-  return grid_map::GridMapRosConverter::loadFromBag(pathToBag, topicName, groundTruthMap_);
+  groundTruthMap_.push_back(grid_map::GridMap());
+  return grid_map::GridMapRosConverter::loadFromBag(pathToBag, topicName, groundTruthMap_.at(level));
 }
 
 void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerEvent)
@@ -165,6 +188,9 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
   elevationMap.add(elevationChangeLayer_, elevationMap.get(layer_));
   elevationMap.clear(elevationChangeLayer_);
 
+  // Get current level.
+  unsigned int currentLevel = getCurrentLevel();
+
   for (GridMapIterator iterator(elevationMap);
       !iterator.isPastEnd(); ++iterator) {
     // Check if elevation map has valid value
@@ -175,9 +201,9 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
     Vector2d position;
     Array2i groundTruthIndex;
     elevationMap.getPosition(*iterator, position);
-    if (!groundTruthMap_.getIndex(position, groundTruthIndex)) continue;
-    if (!groundTruthMap_.isValid(groundTruthIndex, layer_)) continue;
-    double groundTruthHeight = groundTruthMap_.at(layer_, groundTruthIndex);
+    if (!groundTruthMap_.at(currentLevel).getIndex(position, groundTruthIndex)) continue;
+    if (!groundTruthMap_.at(currentLevel).isValid(groundTruthIndex, layer_)) continue;
+    double groundTruthHeight = groundTruthMap_.at(currentLevel).at(layer_, groundTruthIndex);
 
     // Add to elevation change map
     double diffElevation = height - groundTruthHeight;
@@ -187,7 +213,7 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
 
   // Publish elevation change map.
   if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
-  if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
+  if (!publishGroundTruthMap(groundTruthMap_.at(currentLevel))) ROS_DEBUG("Ground truth map has not been broadcasted.");
 }
 
 bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObstacle::Request& request, elevation_change_msgs::DetectObstacle::Response& response)
@@ -313,6 +339,9 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
     const grid_map::Polygon& polygon, grid_map::GridMap& map,
     std::vector<elevation_change_msgs::Obstacle>& obstacles)
 {
+  // Get current level.
+  unsigned int currentLevel = getCurrentLevel();
+
   for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
       ++iterator) {
     // Check if cell already inquired.
@@ -408,7 +437,7 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
       obstacle.type = "negative";
     }
     obstacle.header.stamp = ros::Time::now();
-    obstacle.header.frame_id = groundTruthMap_.getFrameId();
+    obstacle.header.frame_id = groundTruthMap_.at(currentLevel).getFrameId();
     obstacle.length = maxX - minX;
     obstacle.width = maxY - minY;
     obstacle.height = maxHeight;
@@ -539,6 +568,9 @@ bool ElevationChangeDetection::checkPathForUnknownAreas(
 bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polygon& polygon, const geometry_msgs::PoseStamped& currentPose, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles)
 {
   ROS_DEBUG_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas");
+  // Get current level.
+  unsigned int currentLevel = getCurrentLevel();
+
   for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
       ++iterator) {
     // Check if cell already inquired.
@@ -621,7 +653,7 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     for (unsigned int i = 0; i < nCells; ++i) {
       map.getPosition(indexList[i], pos);
       obstaclePosition += pos;
-      double groundTruthHeight = groundTruthMap_.atPosition(layer_, pos);
+      double groundTruthHeight = groundTruthMap_.at(currentLevel).atPosition(layer_, pos);
       if (std::isfinite(groundTruthHeight)) {
         obstaclePositionZ += groundTruthHeight;
         nCellsWithHeightValue++;
@@ -635,7 +667,7 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     obstaclePositionZ /= nCellsWithHeightValue;
     obstacle.type = "negative";
     obstacle.header.stamp = ros::Time::now();
-    obstacle.header.frame_id = groundTruthMap_.getFrameId();
+    obstacle.header.frame_id = groundTruthMap_.at(currentLevel).getFrameId();
     obstacle.length = maxX - minX;
     obstacle.width = maxY - minY;
     obstacle.height = -0.1; //TODO
@@ -669,6 +701,27 @@ geometry_msgs::PoseStamped ElevationChangeDetection::getCurrentPose() const
   pose.pose.orientation.y = transformationRobotToMap.getRotation().getY();
   pose.pose.orientation.z = transformationRobotToMap.getRotation().getZ();
   return pose;
+}
+
+unsigned int ElevationChangeDetection::getCurrentLevel()
+{
+  unsigned int level = 0;
+  if (levelHeight_.size() == 0) return level;
+
+  geometry_msgs::PoseStamped currentPose = getCurrentPose();
+  try {
+  for (unsigned int i = 0; i < levelHeight_.size(); ++i) {
+    double lowerBound = (double) levelHeight_[i][0];
+    double upperBound = (double) levelHeight_[i][1];
+    if (currentPose.pose.position.z > lowerBound && currentPose.pose.position.z < upperBound) {
+      return i;
+    }
+  }
+  } catch (const XmlRpc::XmlRpcException& exception) {
+    ROS_ERROR_STREAM("ElevationChangeDetection: Caught an XmlRpc exception: " << exception.getMessage() << ".");
+  }
+  ROS_WARN_STREAM("ElevationChangeDetection: getCurrentLevel: level not found for robot pose z = " << currentPose.pose.position.z << ". Return zero level.");
+  return level;
 }
 
 void ElevationChangeDetection::mapCallback(const grid_map_msgs::GridMap& map)
