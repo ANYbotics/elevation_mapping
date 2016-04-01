@@ -82,7 +82,11 @@ bool ElevationChangeDetection::readParameters()
   nodeHandle_.param("min_cell_number_unknown_area", minNumberAdjacentCellsUnknownArea_, 0);
   nodeHandle_.param("unknown_cells_horizon", unknownCellsHorizon_, 1.0);
   nodeHandle_.param("min_distance_to_unknown_cells", minDistanceToUnknownCell_, 1.0);
+  // Check for unknown areas only if actuated lidar is used.
+  bool actuatedLidar;
   nodeHandle_.param("check_for_unknown_areas", checkForUnkownAreas_, false);
+  nodeHandle_.param("actuated_lidar", actuatedLidar, false);
+  if (!actuatedLidar) checkForUnkownAreas_ = false;
   nodeHandle_.param("elevation_map_topic", mapTopic_, std::string("/elevation_map"));
 
   std::string bagTopicName_, pathToBag_;
