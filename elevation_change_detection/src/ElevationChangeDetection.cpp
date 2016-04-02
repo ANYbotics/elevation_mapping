@@ -14,6 +14,9 @@
 // Eigen
 #include <Eigen/Dense>
 
+#include <sys/stat.h>
+#include <unistd.h>
+
 using namespace Eigen;
 using namespace grid_map;
 
@@ -98,15 +101,21 @@ bool ElevationChangeDetection::readParameters()
   try {
     if (!nodeHandle_.getParam("level_extent_z", levelHeight_) || levelHeight_.size() == 0) {
       ROS_WARN("ElevationChangeDetection: No level height provided. Using only one map level.");
-      loadElevationMap(pathToBag_, bagTopicName_, 0);
+      if (!loadElevationMap(pathToBag_, bagTopicName_)) {
+        ROS_ERROR("ElevationChangeDetection: No ground truth map found. Shutting down.");
+        ros::requestShutdown();
+      }
     } else {
       for (unsigned int i = 0; i < levelHeight_.size(); ++i) {
         std::string path = pathToBag_;
         path.erase(path.size() - 4);
         path += "_level_" + std::to_string(i) + ".bag";
-        if (!loadElevationMap(path, bagTopicName_, i)) {
+        if (!loadElevationMap(path, bagTopicName_)) {
           ROS_WARN_STREAM("ElevationChangeDetection: No ground truth map found for level " << i);
-          loadElevationMap(pathToBag_, bagTopicName_, i);
+          if (!loadElevationMap(pathToBag_, bagTopicName_)) {
+            ROS_ERROR("ElevationChangeDetection: No ground truth map found. Shutting down.");
+            ros::requestShutdown();
+          }
         }
 
       }
@@ -142,10 +151,14 @@ bool ElevationChangeDetection::readParameters()
   return true;
 }
 
-bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag, const std::string& topicName, const unsigned int& level)
+bool ElevationChangeDetection::loadElevationMap(const std::string& pathToBag, const std::string& topicName)
 {
+  // Check if bag file exists.
+  struct stat buffer;
+  bool bagExists = (stat (pathToBag.c_str(), &buffer) == 0);
+  if (!bagExists) return false;
   groundTruthMap_.push_back(grid_map::GridMap());
-  return grid_map::GridMapRosConverter::loadFromBag(pathToBag, topicName, groundTruthMap_.at(level));
+  return grid_map::GridMapRosConverter::loadFromBag(pathToBag, topicName, groundTruthMap_.back());
 }
 
 void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerEvent)

@@ -65,10 +65,9 @@ namespace elevation_change_detection {
     * Loads the ground truth elevation map from a ROS bag file.
     * @param[in] pathToBag string with the path to the Bag file containing the ground truth data
     * @param[in] topicName topic of the grid map.
-    * @param[in] level level of the map (floor).
     * @return true if successful.
     */
-    bool loadElevationMap(const std::string& pathToBag, const std::string& topicName, const unsigned int& level);
+    bool loadElevationMap(const std::string& pathToBag, const std::string& topicName);
 
     /*!
     * Callback function for the update timer. Forces an update of the elevation
