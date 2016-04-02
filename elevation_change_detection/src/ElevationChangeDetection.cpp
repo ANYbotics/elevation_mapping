@@ -699,7 +699,8 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
         break;
       }
     }
-    if (!insideObstacleFreeArea) obstacles.push_back(obstacle);
+    double distance = std::pow(currentPose.pose.position.x - obstaclePosition.x(), 2) + std::pow(currentPose.pose.position.y - obstaclePosition.y(), 2);
+    if (!insideObstacleFreeArea && distance > minDistanceToUnknownCell_) obstacles.push_back(obstacle);
   }
   return true;
 }
