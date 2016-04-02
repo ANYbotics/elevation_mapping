@@ -20,5 +20,4 @@
   <depend>tf</depend>
   <depend>tf_conversions</depend>
   <depend>sensor_msgs</depend>
-  <depend>nav_msgs</depend>
 </package>

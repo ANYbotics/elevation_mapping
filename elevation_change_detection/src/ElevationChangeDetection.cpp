@@ -38,6 +38,7 @@ ElevationChangeDetection::ElevationChangeDetection(ros::NodeHandle& nodeHandle)
   elevationChangePublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_change_map", 1, true);
   groundTruthPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("ground_truth_map", 1, true);
   obstacleDetectionService_ = nodeHandle_.advertiseService("detect_obstacle", &ElevationChangeDetection::detectObstacle, this);
+  toggleCheckingUnknownAreasService_ = nodeHandle_.advertiseService("toggle_checking_unknown_areas", &ElevationChangeDetection::toggleCheckingUnknownAreas, this);
 
   if (!updateDuration_.isZero()) {
     updateTimer_ = nodeHandle_.createTimer(updateDuration_, &ElevationChangeDetection::updateTimerCallback, this);
@@ -231,6 +232,17 @@ void ElevationChangeDetection::computeElevationChange(grid_map::GridMap& elevati
   // Publish elevation change map.
   if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
   if (!publishGroundTruthMap(groundTruthMap_.at(currentLevel))) ROS_DEBUG("Ground truth map has not been broadcasted.");
+}
+
+bool ElevationChangeDetection::toggleCheckingUnknownAreas(elevation_change_msgs::Toggle::Request& request, elevation_change_msgs::Toggle::Response& response)
+{
+  if (request.enable == checkForUnkownAreas_)
+  {
+    ROS_INFO_STREAM("ElevationChangeDetection: toggleCheckingUnknownAreas: Checking is already " << (checkForUnkownAreas_ ? "enabled." : "disabled."));
+  }
+  checkForUnkownAreas_ = request.enable;
+  response.success = true;
+  return true;
 }
 
 bool ElevationChangeDetection::detectObstacle(elevation_change_msgs::DetectObstacle::Request& request, elevation_change_msgs::DetectObstacle::Response& response)
