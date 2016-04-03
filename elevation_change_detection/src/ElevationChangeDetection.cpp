@@ -84,18 +84,21 @@ void ElevationChangeDetection::updateTimerCallback(const ros::TimerEvent& timerE
 {
   grid_map_msgs::GridMap mapMessage;
   ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
-  submapClient_.waitForExistence();
-  ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
-  if (getGridMap(mapMessage)) {
-    grid_map::GridMap elevationMap;
-    grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
-    computeElevationChange(elevationMap);
+  if(submapClient_.waitForExistence(ros::Duration(2))) {
+    ROS_DEBUG("Sending request to %s.", submapServiceName_.c_str());
+    if (getGridMap(mapMessage)) {
+      grid_map::GridMap elevationMap;
+      grid_map::GridMapRosConverter::fromMessage(mapMessage, elevationMap);
+      computeElevationChange(elevationMap);
 
-    // Publish elevation change map.
-    if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
-    if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
+      // Publish elevation change map.
+      if (!publishElevationChangeMap(elevationMap)) ROS_DEBUG("Elevation change map has not been broadcasted.");
+      if (!publishGroundTruthMap(groundTruthMap_)) ROS_DEBUG("Ground truth map has not been broadcasted.");
+    } else {
+      ROS_WARN("Failed to retrieve elevation grid map.");
+    }
   } else {
-    ROS_WARN("Failed to retrieve elevation grid map.");
+    ROS_WARN("Service %s has not been advertised.", submapServiceName_.c_str());
   }
 }
 
