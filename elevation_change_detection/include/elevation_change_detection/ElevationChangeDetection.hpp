@@ -250,6 +250,7 @@ class ElevationChangeDetection
   double unknownCellsHorizon_;
   double minDistanceToUnknownCell_;
   bool checkForUnkownAreas_;
+  std::vector<geometry_msgs::Point32> checkingArea_;
 
   //! Defined obstacle free areas.
   std::vector<grid_map::Polygon> obstacleFreeAreas_;

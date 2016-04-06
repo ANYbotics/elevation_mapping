@@ -149,6 +149,31 @@ bool ElevationChangeDetection::readParameters()
     }
   }
 
+  // Get checking area.
+  XmlRpc::XmlRpcValue checkingArea;
+  try {
+    if (!nodeHandle_.getParam("check_area", checkingArea) || checkingArea.size() == 0) {
+      ROS_WARN("ElevationChangeDetection: No checking area provided");
+    } else {
+      for (unsigned int i = 0; i < checkingArea.size(); ++i) {
+        if (checkingArea[i].size() < 3) {
+          ROS_WARN("Polygon consist of at least 3 points. Only %i points found.", checkingArea[i].size());
+          continue;
+        } else {
+          geometry_msgs::Point32 pt;
+          pt.z = 0.0;
+          for (int i = 0; i < checkingArea.size(); i++) {
+            pt.x = (double) checkingArea[i][0];
+            pt.y = (double) checkingArea[i][1];
+            checkingArea_.push_back(pt);
+          }
+        }
+      }
+    }
+  } catch (const XmlRpc::XmlRpcException& exception) {
+    ROS_ERROR_STREAM("ElevationChangeDetection: Caught an XmlRpc exception: " << exception.getMessage() << ".");
+  }
+
   return true;
 }
 
@@ -599,6 +624,37 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
   ROS_DEBUG_STREAM("ElevationChangeDetection: checkPolygonForUnknownAreas");
   // Get current level.
   unsigned int currentLevel = getCurrentLevel();
+
+  // Define polyogn around robot where we expect obstacles.
+//  polygon1 = polygon2;
+//  start = end;
+//  polygon2.removeVertices();
+//  grid_map::Position3 positionToVertex, positionToVertexTransformed;
+//  Eigen::Translation<double, 3> toPosition;
+//  Eigen::Quaterniond orientation;
+//
+//  toPosition.x() = path.poses.poses[i].position.x;
+//  toPosition.y() = path.poses.poses[i].position.y;
+//  toPosition.z() = path.poses.poses[i].position.z;
+//  orientation.x() = path.poses.poses[i].orientation.x;
+//  orientation.y() = path.poses.poses[i].orientation.y;
+//  orientation.z() = path.poses.poses[i].orientation.z;
+//  orientation.w() = path.poses.poses[i].orientation.w;
+//  end.x() = toPosition.x();
+//  end.y() = toPosition.y();
+//
+//  for (const auto& point : checkingArea_) {
+//    positionToVertex.x() = point.x;
+//    positionToVertex.y() = point.y;
+//    positionToVertex.z() = point.z;
+//    positionToVertexTransformed = toPosition * orientation
+//        * positionToVertex;
+//
+//    grid_map::Position vertex;
+//    vertex.x() = positionToVertexTransformed.x();
+//    vertex.y() = positionToVertexTransformed.y();
+//    polygon2.addVertex(vertex);
+//  }
 
   for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
       ++iterator) {
