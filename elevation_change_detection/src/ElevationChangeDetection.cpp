@@ -467,8 +467,8 @@ bool ElevationChangeDetection::checkPolygonForObstacles(
     }
     obstacle.header.stamp = ros::Time::now();
     obstacle.header.frame_id = groundTruthMap_.at(currentLevel).getFrameId();
-    obstacle.length = maxX - minX;
-    obstacle.width = maxY - minY;
+    obstacle.length = maxX - minX + groundTruthMap_.at(currentLevel).getResolution();
+    obstacle.width = maxY - minY + groundTruthMap_.at(currentLevel).getResolution();
     obstacle.height = maxHeight;
     obstacle.pose.position.x = obstaclePosition.x();
     obstacle.pose.position.y = obstaclePosition.y();
@@ -697,9 +697,9 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     obstacle.type = "negative";
     obstacle.header.stamp = ros::Time::now();
     obstacle.header.frame_id = groundTruthMap_.at(currentLevel).getFrameId();
-    obstacle.length = maxX - minX;
-    obstacle.width = maxY - minY;
-    obstacle.height = 0.10; //TODO
+    obstacle.length = maxX - minX + groundTruthMap_.at(currentLevel).getResolution();
+    obstacle.width = maxY - minY + groundTruthMap_.at(currentLevel).getResolution();
+    obstacle.height = -0.10; //TODO
     obstacle.pose.position.x = obstaclePosition.x();
     obstacle.pose.position.y = obstaclePosition.y();
     obstacle.pose.position.z = obstaclePositionZ;
