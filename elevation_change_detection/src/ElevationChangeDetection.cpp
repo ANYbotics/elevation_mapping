@@ -520,17 +520,7 @@ bool ElevationChangeDetection::checkPathForUnknownAreas(
 {
   // Get current pose.
   geometry_msgs::PoseStamped currentPose = getCurrentPose();
-  // Get poses to verify.
-//  traversability_msgs::FootprintPath localPath;
-//  localPath.poses.header = path.poses.header;
-//  for (unsigned int i = 1; i < path.poses.poses.size(); ++i) {
-//    double distance = std::pow((currentPose.pose.position.x - path.poses.poses[i].position.x), 2) + std::pow((currentPose.pose.position.y - path.poses.poses[i].position.y), 2);
-//    distance = std::sqrt(distance);
-//    if (distance > unknownCellsHorizon_) break;
-//    localPath.poses.poses.push_back(path.poses.poses[i]);
-//  }
 
-//  unsigned int nPoses = localPath.poses.poses.size();
   unsigned int nPoses = path.poses.poses.size();
   if (nPoses == 0) {
     ROS_WARN("ElevationChangeDetection: No poses available on the path to check for obstacles!");
@@ -626,35 +616,30 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
   unsigned int currentLevel = getCurrentLevel();
 
   // Define polyogn around robot where we expect obstacles.
-//  polygon1 = polygon2;
-//  start = end;
-//  polygon2.removeVertices();
-//  grid_map::Position3 positionToVertex, positionToVertexTransformed;
-//  Eigen::Translation<double, 3> toPosition;
-//  Eigen::Quaterniond orientation;
-//
-//  toPosition.x() = path.poses.poses[i].position.x;
-//  toPosition.y() = path.poses.poses[i].position.y;
-//  toPosition.z() = path.poses.poses[i].position.z;
-//  orientation.x() = path.poses.poses[i].orientation.x;
-//  orientation.y() = path.poses.poses[i].orientation.y;
-//  orientation.z() = path.poses.poses[i].orientation.z;
-//  orientation.w() = path.poses.poses[i].orientation.w;
-//  end.x() = toPosition.x();
-//  end.y() = toPosition.y();
-//
-//  for (const auto& point : checkingArea_) {
-//    positionToVertex.x() = point.x;
-//    positionToVertex.y() = point.y;
-//    positionToVertex.z() = point.z;
-//    positionToVertexTransformed = toPosition * orientation
-//        * positionToVertex;
-//
-//    grid_map::Position vertex;
-//    vertex.x() = positionToVertexTransformed.x();
-//    vertex.y() = positionToVertexTransformed.y();
-//    polygon2.addVertex(vertex);
-//  }
+  grid_map::Polygon checkingArea;
+  grid_map::Position3 positionToVertex, positionToVertexTransformed;
+  Eigen::Translation<double, 3> toPosition;
+  Eigen::Quaterniond orientation;
+
+  toPosition.x() = currentPose.pose.position.x;
+  toPosition.y() = currentPose.pose.position.y;
+  toPosition.z() = currentPose.pose.position.z;
+  orientation.x() = currentPose.pose.orientation.x;
+  orientation.y() = currentPose.pose.orientation.y;
+  orientation.z() = currentPose.pose.orientation.z;
+  orientation.w() = currentPose.pose.orientation.w;
+
+  for (const auto& point : checkingArea_) {
+    positionToVertex.x() = point.x;
+    positionToVertex.y() = point.y;
+    positionToVertex.z() = point.z;
+    positionToVertexTransformed = toPosition * orientation * positionToVertex;
+
+    grid_map::Position vertex;
+    vertex.x() = positionToVertexTransformed.x();
+    vertex.y() = positionToVertexTransformed.y();
+    checkingArea.addVertex(vertex);
+  }
 
   for (grid_map::PolygonIterator iterator(map, polygon); !iterator.isPastEnd();
       ++iterator) {
@@ -670,6 +655,7 @@ bool ElevationChangeDetection::checkPolygonForUnknownAreas(const grid_map::Polyg
     elevation_change_msgs::Obstacle obstacle;
     grid_map::Position obstaclePosition;
     map.getPosition(*iterator, obstaclePosition);
+    if (!checkingArea.isInside(obstaclePosition)) continue;
     // Get size of obstacle by inquiring neighbor cells.
     map.at("inquired_cells", *iterator) = 1.0;
     std::vector<grid_map::Index> indexList;
