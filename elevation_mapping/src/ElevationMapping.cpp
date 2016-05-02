@@ -55,7 +55,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
-      isContinouslyFusing_(false),
+      isContinuouslyFusing_(false),
       ignoreRobotMotionUpdates_(false)
 {
   ROS_INFO("Elevation mapping node started.");
@@ -133,48 +133,10 @@ bool ElevationMapping::readParameters()
     fusedMapPublishTimerDuration_.fromSec(0.0);
     ROS_WARN("Rate for publishing the fused map is zero. The fused elevation map will not be published unless the service `triggerFusion` is called.");
   } else if (std::isinf(fusedMapPublishingRate)){
-    isContinouslyFusing_ = true;
+    isContinuouslyFusing_ = true;
     fusedMapPublishTimerDuration_.fromSec(0.0);
   } else {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
-  }
-
-  nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag")); // TODO Add this as parameter in the service call.
-
-  // ElevationMap parameters. TODO Move this to the elevation map class.
-  string frameId;
-  nodeHandle_.param("map_frame_id", frameId, string("/map"));
-  map_.setFrameId(frameId);
-
-  grid_map::Length length;
-  grid_map::Position position;
-  double resolution;
-  nodeHandle_.param("length_in_x", length(0), 1.5);
-  nodeHandle_.param("length_in_y", length(1), 1.5);
-  nodeHandle_.param("position_x", position.x(), 0.0);
-  nodeHandle_.param("position_y", position.y(), 0.0);
-  nodeHandle_.param("resolution", resolution, 0.01);
-  map_.setGeometry(length, resolution, position);
-
-  nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
-  nodeHandle_.param("max_variance", map_.maxVariance_, pow(0.03, 2));
-  nodeHandle_.param("mahalanobis_distance_threshold", map_.mahalanobisDistanceThreshold_, 2.5);
-  nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
-  nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
-  nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
-  nodeHandle_.param("surface_normal_estimation_radius", map_.surfaceNormalEstimationRadius_, 0.05);
-  nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
-
-  string surfaceNormalPositiveAxis;
-  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
-  if (surfaceNormalPositiveAxis == "z") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
-  } else if (surfaceNormalPositiveAxis == "y") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
-  } else if (surfaceNormalPositiveAxis == "x") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
-  } else {
-    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
   }
 
   // SensorProcessor parameters.
@@ -275,8 +237,8 @@ void ElevationMapping::pointCloudCallback(
 
   // Publish elevation map.
   map_.publishRawElevationMap();
-  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
+  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+    map_.fuseAll(false);
     map_.publishFusedElevationMap();
   }
 
@@ -301,8 +263,8 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
 
   // Publish elevation map.
   map_.publishRawElevationMap();
-  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
+  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+    map_.fuseAll(false);
     map_.publishFusedElevationMap();
   }
 
@@ -321,7 +283,7 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
+  map_.fuseAll(false);
   map_.publishFusedElevationMap();
   return true;
 }
@@ -430,7 +392,7 @@ bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Em
 {
   ROS_INFO("Save to bag.");
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
+  map_.fuseAll(false);
   grid_map::GridMap gridMap = map_.getFusedGridMap();
   std::string topic = "grid_map";
   return GridMapRosConverter::saveToBag(gridMap, pathToBag_, topic);
@@ -440,7 +402,7 @@ void ElevationMapping::resetMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
   Duration periodSinceLastUpdate = ros::Time::now() - map_.getTimeOfLastUpdate();
-  if (periodSinceLastUpdate > maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
+  if (periodSinceLastUpdate >= maxNoUpdateDuration_) periodSinceLastUpdate.fromSec(0.0);
   mapUpdateTimer_.setPeriod(maxNoUpdateDuration_ - periodSinceLastUpdate);
   mapUpdateTimer_.start();
 }

@@ -11,7 +11,9 @@
   <author email="pfankhauser@ethz.ch">Peter Fankhauser</author>
   <buildtool_depend>catkin</buildtool_depend>
   <depend>cmake_modules</depend>
+  <depend>elevation_change_msgs</depend>
   <depend>roscpp</depend>
+  <depend>geometry_msgs</depend>
   <depend>grid_map_core</depend>
   <depend>grid_map_ros</depend>
   <depend>grid_map_msgs</depend>

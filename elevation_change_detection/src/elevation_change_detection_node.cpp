@@ -15,8 +15,6 @@ int main(int argc, char** argv) {
   elevation_change_detection::ElevationChangeDetection ElevationChangeDetection(nodeHandle);
 
   // Spin
-  ros::AsyncSpinner spinner(1); // Use n threads
-  spinner.start();
-  ros::waitForShutdown();
+  ros::spin();
   return 0;
 }

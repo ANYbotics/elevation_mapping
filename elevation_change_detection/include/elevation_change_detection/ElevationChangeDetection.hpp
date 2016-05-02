@@ -15,7 +15,15 @@
 #include <ros/ros.h>
 #include <tf/transform_listener.h>
 
+#include <elevation_change_msgs/DetectObstacle.h>
+#include <elevation_change_msgs/ObstacleResult.h>
+#include <traversability_msgs/FootprintPath.h>
+
+// STL
+#include <vector>
 #include <string>
+#include <algorithm>
+#include <math.h>
 
 namespace elevation_change_detection {
 
@@ -67,11 +75,59 @@ namespace elevation_change_detection {
     void updateTimerCallback(const ros::TimerEvent& timerEvent);
 
     /*!
-     * Gets the grid map for the desired submap center point.
+     * ROS service callback function to detect obstacles on a footprint path.
+     * @param request the ROS service request defining footprint paths.
+     * @param response the ROS service response containing arrays with obstacles on the paths.
+     * @return true if successful.
+     */
+    bool detectObstacle(
+      elevation_change_msgs::DetectObstacle::Request& request,
+      elevation_change_msgs::DetectObstacle::Response& response);
+
+    /*!
+     * ROS service callback function to detect obstacles on a footprint path.
+     * @param request the ROS service request defining footprint path.
+     * @param elevationMap elevation map used to check for obstacles.
+     * @param response the ROS service response containing an array with obstacles on the path.
+     * @return true if successful.
+     */
+    bool checkPathForObstacles(const traversability_msgs::FootprintPath& path, grid_map::GridMap elevationMap, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+
+    /*!
+     * Checks the polygon for obstacles.
+     * @param[in] polygon the polygon to verify.
+     * @param[in] map the current elevation change map.
+     * @param[out] obstacles vector of found obstacles.
+     * @return true if successful.
+     */
+    bool checkPolygonForObstacles(const grid_map::Polygon& polygon, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+
+    /*!
+     * Checks the path for unknown areas (negative obstacles).
+     * @param[in] path the path to verify.
+     * @param[in] map the current elevation change map.
+     * @param[out] obstacles vector of found obstacles.
+     * @return true if successful.
+     */
+    bool checkPathForUnknownAreas(const traversability_msgs::FootprintPath& path, grid_map::GridMap map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+
+    /*!
+     * Checks the polygon for unknown areas (negative obstacles).
+     * @param[in] polygon the polygon to verify.
+     * @param[in] map the current elevation change map.
+     * @param[out] obstacles vector of found obstacles.
+     * @return true if successful.
+     */
+    bool checkPolygonForUnknownAreas(const grid_map::Polygon& polygon, const geometry_msgs::PoseStamped& currentPose, grid_map::GridMap& map, std::vector<elevation_change_msgs::Obstacle>& obstacles);
+
+    /*!
+     * Gets the grid map for the desired submap defined by position and length.
+     * @param[in] position position of the submap.
+     * @param[in] length length of the submap.
      * @param[out] map the map that is received.
      * @return true if successful, false if ROS service call failed.
      */
-    bool getGridMap(grid_map_msgs::GridMap& map);
+    bool getGridMap(const grid_map::Position& position, const grid_map::Length& length, grid_map_msgs::GridMap& map);
 
     /*!
      * Compute the elevation change map and add it to the elevation map.
@@ -79,11 +135,29 @@ namespace elevation_change_detection {
      */
     void computeElevationChange(grid_map::GridMap& elevationMap);
 
+    /*!
+     * Callback function set the current map.
+     * @param[in] map current elevation map.
+     */
+    void mapCallback(const grid_map_msgs::GridMap& map);
+
+    /*!
+     * Get the current robot pose.
+     * @return current robot pose.
+     */
+    geometry_msgs::PoseStamped getCurrentPose() const;
+
     //! ROS node handle.
     ros::NodeHandle& nodeHandle_;
 
+    //! Elevation map subscriber.
+    ros::Subscriber mapSubscriber_;
+
     //! Elevation map service client.
     ros::ServiceClient submapClient_;
+
+    //! Obstacle detection service server.
+    ros::ServiceServer obstacleDetectionService_;
 
     //! Name of the elevation submap service.
     std::string submapServiceName_;
@@ -100,6 +174,9 @@ namespace elevation_change_detection {
     //! Id of the frame of the elevation map.
     std::string mapFrameId_;
 
+    //! Robot frame Id.
+    std::string robotFrameId_;
+
     //! TF listener.
     tf::TransformListener transformListener_;
 
@@ -109,8 +186,11 @@ namespace elevation_change_detection {
     //! Requested map length in [m].
     grid_map::Length mapLength_;
 
-    //! Elevation map type
+    //! Elevation map type.
     const std::string layer_;
+
+    //! Elevation change map type.
+    const std::string elevationChangeLayer_;
 
     //! Publisher of elevation change map.
     ros::Publisher elevationChangePublisher_;
@@ -121,8 +201,24 @@ namespace elevation_change_detection {
     //! Publisher of the ground truth map.
     ros::Publisher groundTruthPublisher_;
 
+    //! Current elevation map.
+    grid_map::GridMap currentElevationMap_;
+    std::string mapTopic_;
+
     //! Threshold for minimal elevation difference
     double threshold_;
+
+    //! Minimal number of adjacent cells to indicate obstacle
+    int minNumberAdjacentCells_;
+    int minNumberAdjacentCellsUnknownArea_;
+
+    //! Horizon to check for unknown cells.
+    double unknownCellsHorizon_;
+    double minDistanceToUnknownCell_;
+    bool checkForUnkownAreas_;
+
+    //! Defined obstacle free areas.
+    std::vector<grid_map::Polygon> obstacleFreeAreas_;
 
   };
 
