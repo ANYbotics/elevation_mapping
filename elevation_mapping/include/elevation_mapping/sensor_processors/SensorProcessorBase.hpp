@@ -20,8 +20,7 @@
 #include <Eigen/Core>
 
 // Kindr
-#include <kindr/rotations/RotationEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
+#include <kindr/Core>
 
 // STL
 #include <unordered_map>
@@ -135,16 +134,16 @@ public:
   ros::Duration transformListenerTimeout_;
 
   //! Rotation from Base to Sensor frame (C_SB)
-  kindr::rotations::eigen_impl::RotationMatrixPD rotationBaseToSensor_;
+  kindr::RotationMatrixD rotationBaseToSensor_;
 
   //! Translation from Base to Sensor in Base frame (B_r_BS)
-  kindr::phys_quant::eigen_impl::Position3D translationBaseToSensorInBaseFrame_;
+  kindr::Position3D translationBaseToSensorInBaseFrame_;
 
   //! Rotation from (elevation) Map to Base frame (C_BM)
-  kindr::rotations::eigen_impl::RotationMatrixPD rotationMapToBase_;
+  kindr::RotationMatrixD rotationMapToBase_;
 
   //! Translation from Map to Base in Map frame (M_r_MB)
-  kindr::phys_quant::eigen_impl::Position3D translationMapToBaseInMapFrame_;
+  kindr::Position3D translationMapToBaseInMapFrame_;
 
   //! Transformation from Sensor to Map frame
   Eigen::Affine3d transformationSensorToMap_;

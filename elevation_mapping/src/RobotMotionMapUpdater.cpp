@@ -8,13 +8,11 @@
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 
 // Kindr
-#include <kindr/rotations/RotationEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
-#include <kindr/linear_algebra/LinearAlgebra.hpp>
+#include <kindr/Core>
 
 using namespace std;
 using namespace grid_map;
-using namespace kindr::rotations::eigen_impl;
+using namespace kindr;
 
 namespace elevation_mapping {
 
@@ -42,7 +40,7 @@ bool RobotMotionMapUpdater::readParameters()
 }
 
 bool RobotMotionMapUpdater::update(
-    ElevationMap& map, const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
+    ElevationMap& map, const HomTransformQuatD& robotPose,
     const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, const ros::Time& time)
 {
   Eigen::Matrix<double, 6, 6> robotPoseCovarianceScaled = (covarianceScale_ * robotPoseCovariance.array()).matrix();
@@ -74,20 +72,20 @@ bool RobotMotionMapUpdater::update(
                                         translationJacobian.transpose()).diagonal().cast<float>();
 
   // Robot/sensor position (I_r_IS, for all points the same).
-  kindr::phys_quant::eigen_impl::Position3D robotPosition = robotPose.getPosition();
+  Position3D robotPosition = robotPose.getPosition();
 
   // For each cell in map. // TODO Change to new iterator.
   for (unsigned int i = 0; i < size(0); ++i)
   {
     for (unsigned int j = 0; j < size(1); ++j)
     {
-      kindr::phys_quant::eigen_impl::Position3D cellPosition; // I_r_IP
+      Position3D cellPosition; // I_r_IP
 
       if (map.getPosition3dInRobotParentFrame(Index(i, j), cellPosition))
       {
         // Rotation Jacobian (J_q)
         Eigen::Matrix3d rotationJacobian = parentToMapRotation
-            * kindr::linear_algebra::getSkewMatrixFromVector((cellPosition - robotPosition).vector());
+            * kindr::getSkewMatrixFromVector((cellPosition - robotPosition).vector());
 
         // Rotation variance update.
         Eigen::Vector3f rotationVarianceUpdate = (rotationJacobian *

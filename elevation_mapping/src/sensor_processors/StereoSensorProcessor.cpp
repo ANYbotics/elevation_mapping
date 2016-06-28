@@ -75,7 +75,7 @@ bool StereoSensorProcessor::computeVariances(
   const Eigen::Matrix3f C_BM_transpose = rotationMapToBase_.transposed().toImplementation().cast<float>();
   const Eigen::RowVector3f P_mul_C_BM_transpose = projectionVector * C_BM_transpose;
   const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
-  const Eigen::Matrix3f B_r_BS_skew = kindr::linear_algebra::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
+  const Eigen::Matrix3f B_r_BS_skew = kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i)
   {
@@ -100,7 +100,7 @@ bool StereoSensorProcessor::computeVariances(
     sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
     // Robot rotation Jacobian (J_q).
-    const Eigen::Matrix3f C_SB_transpose_times_S_r_SP_skew = kindr::linear_algebra::getSkewMatrixFromVector(Eigen::Vector3f(C_SB_transpose * pointVector));
+    const Eigen::Matrix3f C_SB_transpose_times_S_r_SP_skew = kindr::getSkewMatrixFromVector(Eigen::Vector3f(C_SB_transpose * pointVector));
     Eigen::RowVector3f rotationJacobian = P_mul_C_BM_transpose * (C_SB_transpose_times_S_r_SP_skew + B_r_BS_skew);
 
     // Measurement variance for map (error propagation law).

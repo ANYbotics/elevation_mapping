@@ -15,7 +15,7 @@
 #include <Eigen/Core>
 
 // Kindr
-#include <kindr/poses/eigen/HomogeneousTransformation.hpp>
+#include <kindr/Core>
 
 // ROS (time)
 #include <ros/ros.h>
@@ -55,7 +55,7 @@ class RobotMotionMapUpdater
    * @return true if successful.
    */
   bool update(ElevationMap& map,
-              const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& robotPose,
+              const kindr::HomTransformQuatD& robotPose,
               const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
               const ros::Time& time);
 

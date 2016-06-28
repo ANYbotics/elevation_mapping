@@ -23,4 +23,6 @@
   <depend>eigen_conversions</depend>
   <depend>sm_common</depend>
   <depend>sm_timing</depend>
+  <depend>kindr</depend>
+  <depend>kindr_ros</depend>
 </package>
