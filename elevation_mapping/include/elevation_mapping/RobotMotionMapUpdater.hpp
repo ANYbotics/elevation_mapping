@@ -15,9 +15,9 @@
 #include <Eigen/Core>
 
 // Kindr
-#include <kindr/poses/eigen/HomogeneousTransformation.hpp>
+#include <kindr/Core>
 
-// ROS (time)
+// ROS
 #include <ros/ros.h>
 
 namespace elevation_mapping {
@@ -29,7 +29,7 @@ class RobotMotionMapUpdater
 {
  public:
 
-  typedef kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD Pose;
+  typedef kindr::HomogeneousTransformationPosition3RotationQuaternionD Pose;
   typedef Eigen::Matrix<double, 6, 6> PoseCovariance;
   typedef Eigen::Matrix<double, 4, 4> ReducedCovariance;
   typedef Eigen::Matrix<double, 4, 4> Jacobian;

@@ -9,7 +9,7 @@
 #pragma once
 
 // Grid Map
-#include <grid_map/grid_map.hpp>
+#include <grid_map_ros/grid_map_ros.hpp>
 
 // Eigen
 #include <Eigen/Core>
@@ -20,8 +20,7 @@
 #include <pcl/point_types.h>
 
 // Kindr
-#include <kindr/poses/PoseEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
+#include <kindr/Core>
 
 // Boost
 #include <boost/thread/recursive_mutex.hpp>
@@ -148,7 +147,7 @@ class ElevationMap
    * Get the pose of the elevation map frame w.r.t. the inertial parent frame of the robot (e.g. world, map etc.).
    * @return pose of the elevation map frame w.r.t. the parent frame of the robot.
    */
-  const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& getPose();
+  const kindr::HomTransformQuatD& getPose();
 
   /*!
    * Gets the position of a raw data point (x, y of cell position & height of cell value) in
@@ -157,7 +156,7 @@ class ElevationMap
    * @param position the position of the data point in the parent frame of the robot.
    * @return true if successful, false if no valid data available.
    */
-  bool getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& position);
+  bool getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::Position3D& position);
 
   /*!
    * Gets the fused data mutex.
@@ -266,7 +265,7 @@ class ElevationMap
   bool hasUnderlyingMap_;
 
   //! Pose of the elevation map frame w.r.t. the inertial parent frame of the robot (e.g. world, map etc.).
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
+  kindr::HomTransformQuatD pose_;
 
   //! ROS publishers.
   ros::Publisher elevationMapRawPublisher_;

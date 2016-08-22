@@ -8,14 +8,11 @@
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 
 // Kindr
-#include <kindr/rotations/RotationEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
-#include <kindr/linear_algebra/LinearAlgebra.hpp>
+#include <kindr/Core>
 
 using namespace std;
 using namespace grid_map;
-using namespace kindr::rotations::eigen_impl;
-using namespace kindr::phys_quant::eigen_impl;
+using namespace kindr;
 
 namespace elevation_mapping {
 

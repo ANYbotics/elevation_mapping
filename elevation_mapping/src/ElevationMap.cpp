@@ -544,14 +544,14 @@ ros::Time ElevationMap::getTimeOfLastFusion()
   return ros::Time().fromNSec(fusedMap_.getTimestamp());
 }
 
-const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& ElevationMap::getPose()
+const kindr::HomTransformQuatD& ElevationMap::getPose()
 {
   return pose_;
 }
 
-bool ElevationMap::getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& position)
+bool ElevationMap::getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::Position3D& position)
 {
-  kindr::phys_quant::eigen_impl::Position3D positionInGridFrame;
+  kindr::Position3D positionInGridFrame;
   if (!rawMap_.getPosition3("elevation", index, positionInGridFrame.vector())) return false;
   position = pose_.transform(positionInGridFrame);
   return true;

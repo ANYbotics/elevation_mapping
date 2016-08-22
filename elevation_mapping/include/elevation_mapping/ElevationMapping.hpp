@@ -192,7 +192,7 @@ class ElevationMapping
   tf::TransformListener transformListener_;
 
   //! Point which the elevation map follows.
-  kindr::phys_quant::eigen_impl::Position3D trackPoint_;
+  kindr::Position3D trackPoint_;
   std::string trackPointFrameId_;
 
   //! ROS topics for subscriptions.

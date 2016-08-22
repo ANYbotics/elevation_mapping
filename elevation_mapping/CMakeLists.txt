@@ -3,18 +3,10 @@ project(elevation_mapping)
 
 set(CMAKE_CXX_FLAGS "-std=c++11 ${CMAKE_CXX_FLAGS}")
 
-# Set the build type.  Options are:
-#  Coverage       : w/ debug symbols, w/o optimization, w/ code-coverage
-#  Debug          : w/ debug symbols, w/o optimization
-#  Release        : w/o debug symbols, w/ optimization
-#  RelWithDebInfo : w/ debug symbols, w/ optimization
-#  MinSizeRel     : w/o debug symbols, w/ optimization, stripped binaries
-#set(CMAKE_BUILD_TYPE RelWithDebInfo)
-
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  grid_map
   grid_map_core
+  grid_map_ros
   grid_map_msgs
   pcl_ros
   roscpp
@@ -24,19 +16,13 @@ find_package(catkin REQUIRED COMPONENTS
   tf
   tf_conversions
   eigen_conversions
+  kindr
+  kindr_ros
 )
 
 ## System dependencies are found with CMake's conventions
 find_package(Boost REQUIRED COMPONENTS system)
-find_package(Eigen REQUIRED)
-find_package(PkgConfig REQUIRED)
-
-# Attempt to find catkinized kindr
-find_package(kindr QUIET)
-if(NOT kindr_FOUND)
-  # Attempt to find package-based kindr
-  pkg_check_modules(kindr kindr REQUIRED)
-endif()
+find_package(Eigen3 REQUIRED)
 
 ###################################
 ## catkin specific configuration ##
@@ -53,8 +39,8 @@ catkin_package(
     LIBRARIES
       ${PROJECT_NAME}_library
     CATKIN_DEPENDS  
-	  grid_map  
 	  grid_map_core
+	  grid_map_ros
 	  grid_map_msgs
 	  pcl_ros
 	  roscpp
@@ -64,6 +50,8 @@ catkin_package(
 	  tf
 	  tf_conversions
 	  eigen_conversions
+	  kindr
+	  kindr_ros
 #  DEPENDS system_lib
 )
 
@@ -77,11 +65,7 @@ include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
-  ${Kindr_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}
-  ${kindr_INCLUDE_DIRS}
-  ${SM_COMMON_INCLUDE_DIRS}
-  ${SM_TIMING_INCLUDE_DIRS}
 )
 
 ## Declare a cpp library
@@ -98,8 +82,6 @@ add_library(${PROJECT_NAME}_library
 
 target_link_libraries(${PROJECT_NAME}_library
   ${catkin_LIBRARIES}
-  ${SM_COMMON_LIBRARIES}
-  ${SM_TIMING_LIBRARIES}
 )
 
 ## Declare a cpp executable

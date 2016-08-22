@@ -15,10 +15,10 @@
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
 
 // Grid Map
-#include <grid_map/grid_map.hpp>
+#include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
 
-//PCL
+// PCL
 #include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -26,10 +26,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 // Kindr
-#include <kindr/poses/PoseEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
-#include <kindr/rotations/RotationEigen.hpp>
-#include <kindr/thirdparty/ros/RosEigen.hpp>
+#include <kindr/Core>
+#include <kindr_ros/kindr_ros.hpp>
 
 // Boost
 #include <boost/bind.hpp>
@@ -45,9 +43,8 @@ using namespace grid_map;
 using namespace ros;
 using namespace tf;
 using namespace pcl;
-using namespace kindr::poses::eigen_impl;
-using namespace kindr::phys_quant::eigen_impl;
-using namespace kindr::rotations::eigen_impl;
+using namespace kindr;
+using namespace kindr_ros;
 
 namespace elevation_mapping {
 
@@ -340,8 +337,8 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose;
-  kindr::poses::eigen_impl::convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
+  HomTransformQuatD robotPose;
+  convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
   // Covariance is stored in row-major in ROS: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovariance.html
   Eigen::Matrix<double, 6, 6> robotPoseCovariance = Eigen::Map<
       const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
