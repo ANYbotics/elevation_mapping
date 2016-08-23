@@ -276,23 +276,13 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     const double ellipseRotation(atan2(solver.eigenvectors().col(maxEigenvalueIndex).real()(1), solver.eigenvectors().col(maxEigenvalueIndex).real()(0)));
 
     // Requested length and position (center) of submap in map.
-    const Length requestedSubmapLength = 2.0 * uncertaintyFactor * Length(sqrt(sigmaXsquare), sqrt(sigmaYsquare)) + ellipseExtension;
     Position requestedSubmapPosition;
     rawMapCopy.getPosition(*areaIterator, requestedSubmapPosition);
-
-    Length submapLength;
-    Position submapPosition;
-    Index submapTopLeftIndex, submapBufferSize, requestedIndexInSubmap;
-
-    getSubmapInformation(submapTopLeftIndex, submapBufferSize, submapPosition, submapLength,
-                         requestedIndexInSubmap, requestedSubmapPosition, requestedSubmapLength,
-                         rawMapCopy.getLength(), rawMapCopy.getPosition(),
-                         rawMapCopy.getResolution(), rawMapCopy.getSize(),
-                         rawMapCopy.getStartIndex());
+    EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation);
 
     // Prepare data fusion.
     Eigen::ArrayXf means, weights;
-    int maxNumberOfCellsToFuse = submapBufferSize.prod();
+    const unsigned int maxNumberOfCellsToFuse = ellipseIterator.getSubmapSize().prod();
     means.resize(maxNumberOfCellsToFuse);
     weights.resize(maxNumberOfCellsToFuse);
     WeightedEmpiricalCumulativeDistributionFunction<float> lowerBoundDistribution;
@@ -312,7 +302,7 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
 
     // For each cell in error ellipse.
     size_t i = 0;
-    for (EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation); !ellipseIterator.isPastEnd(); ++ellipseIterator) {
+    for (; !ellipseIterator.isPastEnd(); ++ellipseIterator) {
       if (!rawMapCopy.isValid(*ellipseIterator)) {
         // Empty cell in submap (cannot be center cell because we checked above).
         continue;

@@ -30,6 +30,7 @@ class RobotMotionMapUpdater
  public:
 
   typedef kindr::HomogeneousTransformationPosition3RotationQuaternionD Pose;
+  typedef Eigen::Matrix<double, 3, 3> Covariance;
   typedef Eigen::Matrix<double, 6, 6> PoseCovariance;
   typedef Eigen::Matrix<double, 4, 4> ReducedCovariance;
   typedef Eigen::Matrix<double, 4, 4> Jacobian;
@@ -76,15 +77,13 @@ class RobotMotionMapUpdater
 
   /*!
    * Computes the covariance between the new and the previous pose.
-   * @param[in] time the current time.
    * @param[in] robotPose the current robot pose.
    * @param[in] reducedCovariance the current robot pose covariance matrix (reduced).
    * @param[out] relativeRobotPoseCovariance the relative covariance between the current and the previous robot pose (reduced form).
    * @return true if successful.
    */
-  bool computeRelativeCovariance(const ros::Time& time, const Pose& robotPose,
-                                 const ReducedCovariance& reducedCovariance,
-                                 ReducedCovariance& relativeRobotPoseCovariance);
+  bool computeRelativeCovariance(const Pose& robotPose, const ReducedCovariance& reducedCovariance,
+                                 ReducedCovariance& relativeCovariance);
 
   //! ROS nodehandle.
   ros::NodeHandle nodeHandle_;
@@ -100,9 +99,6 @@ class RobotMotionMapUpdater
 
   //! Scaling factor for the covariance matrix (default all ones).
   Eigen::Array<double, 6, 6> covarianceScale_;
-
-  //! Robot velocity in robot base frame.
-  Eigen::Vector3d velocity_;
 };
 
 } /* namespace */
