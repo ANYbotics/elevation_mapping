@@ -18,7 +18,7 @@
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
 
-//PCL
+// PCL
 #include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
@@ -26,10 +26,8 @@
 #include <pcl_conversions/pcl_conversions.h>
 
 // Kindr
-#include <kindr/poses/PoseEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
-#include <kindr/rotations/RotationEigen.hpp>
-#include <kindr/thirdparty/ros/RosEigen.hpp>
+#include <kindr/Core>
+#include <kindr_ros/kindr_ros.hpp>
 
 // Boost
 #include <boost/bind.hpp>
@@ -45,9 +43,8 @@ using namespace grid_map;
 using namespace ros;
 using namespace tf;
 using namespace pcl;
-using namespace kindr::poses::eigen_impl;
-using namespace kindr::phys_quant::eigen_impl;
-using namespace kindr::rotations::eigen_impl;
+using namespace kindr;
+using namespace kindr_ros;
 
 namespace elevation_mapping {
 
@@ -92,7 +89,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
-  saveToBagService_ = nodeHandle_.advertiseService("save_to_bag", &ElevationMapping::saveToBag, this);
+  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
 
   initialize();
 }
@@ -138,8 +135,6 @@ bool ElevationMapping::readParameters()
   } else {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
   }
-
-  nodeHandle_.param("path_to_bag", pathToBag_, string("elevationMap.bag")); // TODO Add this as parameter in the service call.
 
   // ElevationMap parameters. TODO Move this to the elevation map class.
   string frameId;
@@ -347,8 +342,8 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
     return false;
   }
 
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD robotPose;
-  kindr::poses::eigen_impl::convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
+  HomTransformQuatD robotPose;
+  convertFromRosGeometryMsg(poseMessage->pose.pose, robotPose);
   // Covariance is stored in row-major in ROS: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovariance.html
   Eigen::Matrix<double, 6, 6> robotPoseCovariance = Eigen::Map<
       const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
@@ -426,14 +421,15 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
   return map_.clear();
 }
 
-bool ElevationMapping::saveToBag(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
+bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)
 {
-  ROS_INFO("Save to bag.");
+  ROS_INFO("Saving map to file.");
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll(true);
-  grid_map::GridMap gridMap = map_.getFusedGridMap();
-  std::string topic = "grid_map";
-  return GridMapRosConverter::saveToBag(gridMap, pathToBag_, topic);
+  std::string topic = nodeHandle_.getNamespace() + "/elevation_map";
+  response.success = GridMapRosConverter::saveToBag(map_.getFusedGridMap(), request.file_path, topic);
+  response.success = GridMapRosConverter::saveToBag(map_.getRawGridMap(), request.file_path + "_raw", topic + "_raw");
+  return response.success;
 }
 
 void ElevationMapping::resetMapUpdateTimer()

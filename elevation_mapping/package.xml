@@ -1,15 +1,14 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>elevation_mapping</name>
-  <version>0.2.0</version>
+  <version>0.3.0</version>
   <description>Generates an elevation map from distance measurements and robot pose information.</description>
-  <maintainer email="pfankhauser@ethz.ch">Peter Fankhauser</maintainer>
-  <license>MIT</license>
+  <maintainer email="pfankhauser@ethz.ch">Péter Fankhauser</maintainer>
+  <license>BSD</license>
   <url type="website">http://github.com/ethz-asl/elevation_mapping</url>
   <url type="bugtracker">http://github.com/ethz-asl/elevation_mapping/issues</url>
-  <author email="pfankhauser@ethz.ch">Peter Fankhauser</author>
+  <author email="pfankhauser@ethz.ch">Péter Fankhauser</author>
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>cmake_modules</depend>
   <depend>roscpp</depend>
   <depend>message_filters</depend>
   <depend>pcl_ros</depend>
@@ -18,9 +17,9 @@
   <depend>grid_map_core</depend>
   <depend>grid_map_ros</depend>
   <depend>grid_map_msgs</depend>
+  <depend>kindr</depend>
+  <depend>kindr_ros</depend>
   <depend>tf</depend>
   <depend>tf_conversions</depend>
   <depend>eigen_conversions</depend>
-  <depend>sm_common</depend>
-  <depend>sm_timing</depend>
 </package>

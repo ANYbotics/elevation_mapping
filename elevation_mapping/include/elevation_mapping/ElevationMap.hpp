@@ -20,16 +20,12 @@
 #include <pcl/point_types.h>
 
 // Kindr
-#include <kindr/poses/PoseEigen.hpp>
-#include <kindr/phys_quant/PhysicalQuantitiesEigen.hpp>
-
-// Schweizer-Messer
-#include <sm/timing/Timer.hpp>
+#include <kindr/Core>
 
 // Boost
 #include <boost/thread/recursive_mutex.hpp>
 
-// ROS (time)
+// ROS
 #include <ros/ros.h>
 
 namespace elevation_mapping {
@@ -58,7 +54,7 @@ class ElevationMap
    * @param position the 2d position of the elevation map in the elevation map frame [m].
    * @return true if successful.
    */
-  void setGeometry(const Eigen::Array2d& length, const double& resolution, const Eigen::Vector2d& position);
+  void setGeometry(const grid_map::Length& length, const double& resolution, const grid_map::Position& position);
 
   /*!
    * Add new measurements to the elevation map.
@@ -73,11 +69,14 @@ class ElevationMap
    * @param varianceUpdate the variance update in vertical direction.
    * @param horizontalVarianceUpdateX the variance update in horizontal x-direction.
    * @param horizontalVarianceUpdateY the variance update in horizontal y-direction.
+   * @param horizontalVarianceUpdateXY the correlated variance update in horizontal xy-direction.
    * @param time the time of the update.
    * @return true if successful.
    */
-  bool update(Eigen::MatrixXf varianceUpdate, Eigen::MatrixXf horizontalVarianceUpdateX,
-              Eigen::MatrixXf horizontalVarianceUpdateY, const ros::Time& time);
+  bool update(const grid_map::Matrix& varianceUpdate,
+              const grid_map::Matrix& horizontalVarianceUpdateX,
+              const grid_map::Matrix& horizontalVarianceUpdateY,
+              const grid_map::Matrix& horizontalVarianceUpdateXY, const ros::Time& time);
 
   /*!
    * Triggers the fusion of the entire elevation map.
@@ -148,7 +147,7 @@ class ElevationMap
    * Get the pose of the elevation map frame w.r.t. the inertial parent frame of the robot (e.g. world, map etc.).
    * @return pose of the elevation map frame w.r.t. the parent frame of the robot.
    */
-  const kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD& getPose();
+  const kindr::HomTransformQuatD& getPose();
 
   /*!
    * Gets the position of a raw data point (x, y of cell position & height of cell value) in
@@ -157,7 +156,7 @@ class ElevationMap
    * @param position the position of the data point in the parent frame of the robot.
    * @return true if successful, false if no valid data available.
    */
-  bool getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::phys_quant::eigen_impl::Position3D& position);
+  bool getPosition3dInRobotParentFrame(const Eigen::Array2i& index, kindr::Position3D& position);
 
   /*!
    * Gets the fused data mutex.
@@ -219,7 +218,7 @@ class ElevationMap
    * @param computeSurfaceNormals if the surface normals should be computed after the fusion step.
    * @return true if successful.
    */
-  bool fuse(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size, const bool computeSurfaceNormals);
+  bool fuse(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const bool computeSurfaceNormals);
 
   /*!
    * Computes the surface normals of the fused elevation map for a region of the map.
@@ -266,7 +265,7 @@ class ElevationMap
   bool hasUnderlyingMap_;
 
   //! Pose of the elevation map frame w.r.t. the inertial parent frame of the robot (e.g. world, map etc.).
-  kindr::poses::eigen_impl::HomogeneousTransformationPosition3RotationQuaternionD pose_;
+  kindr::HomTransformQuatD pose_;
 
   //! ROS publishers.
   ros::Publisher elevationMapRawPublisher_;

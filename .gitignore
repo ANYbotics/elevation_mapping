@@ -24,3 +24,6 @@
 .cproject
 .project
 .settings
+
+# Sublime
+*.sublime*
