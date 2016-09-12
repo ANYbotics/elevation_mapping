@@ -38,20 +38,20 @@ catkin_package(
       include
     LIBRARIES
       ${PROJECT_NAME}_library
-    CATKIN_DEPENDS  
-	  grid_map_core
-	  grid_map_ros
-	  grid_map_msgs
-	  pcl_ros
-	  roscpp
-	  message_filters
-	  sensor_msgs
-	  std_msgs
-	  tf
-	  tf_conversions
-	  eigen_conversions
-	  kindr
-	  kindr_ros
+    CATKIN_DEPENDS
+	    grid_map_core
+	    grid_map_ros
+	    grid_map_msgs
+	    pcl_ros
+	    roscpp
+	    message_filters
+	    sensor_msgs
+	    std_msgs
+	    tf
+	    tf_conversions
+	    eigen_conversions
+	    kindr
+	    kindr_ros
 #  DEPENDS system_lib
 )
 

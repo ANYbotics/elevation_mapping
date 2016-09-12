@@ -1,10 +1,10 @@
 <launch>
   <node pkg="grid_map_visualization" type="grid_map_visualization" name="elevation_map_fused_visualization" output="screen">
    	<param name="grid_map_topic" value="/elevation_mapping/elevation_map" />
-    <rosparam command="load" file="$(find elevation_mapping)/config/visualization/fused.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/visualization/fused.yaml" />
   </node>
   <node pkg="grid_map_visualization" type="grid_map_visualization" name="elevation_map_raw_visualization" output="screen">
     <param name="grid_map_topic" value="/elevation_mapping/elevation_map_raw" />
-    <rosparam command="load" file="$(find elevation_mapping)/config/visualization/raw.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/visualization/raw.yaml" />
   </node>
 </launch>

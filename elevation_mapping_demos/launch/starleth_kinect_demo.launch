@@ -2,8 +2,8 @@
 
   <!-- Elevation mapping node -->
   <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
-    <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/simple_demo_robot.yaml" />
-    <rosparam command="load" file="$(find elevation_mapping_demos)/config/elevation_maps/simple_demo_map.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/starleth.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/elevation_maps/starleth_map.yaml" />
     <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/kinect_nguyen_et_al.yaml" />
   </node>
 

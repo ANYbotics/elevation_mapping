@@ -1,8 +1,0 @@
-grid_map_visualizations:
-
-  - name: elevation_change
-    type: grid_cells
-    params:
-     layer: elevation_change
-     lower_threshold: 0.1
-
