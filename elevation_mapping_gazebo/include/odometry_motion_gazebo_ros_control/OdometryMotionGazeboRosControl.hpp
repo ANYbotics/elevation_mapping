@@ -71,20 +71,19 @@ class OdometryMotionGazeboRosControl : public ModelPlugin
   void Update();
   /// Reads parameters from the parameter server
   void readParameters();
-  /// Publishes pose over ROS
-  void publishPoses();
   /// Reads simulation state
   void readSimulation();
-  /// Callback for the joint control
-  void twistCommandCallback(const geometry_msgs::TwistStamped& twist);
+  void simulateMotionInOdom();
+  /// Writes simulation state
+  void writeSimulation();
   void computeTwistInInertial(const math::Pose& robotPose, const math::Vector3& linearVelocityInBase,
                               const math::Vector3& angularVelocityInBase,
                               math::Vector3& linearVelocityInWorld,
                               math::Vector3& angularVelocityInWorld);
-
-  void simulateMotionInOdom();
-  /// Writes simulation state
-  void writeSimulation();
+  /// Callback for the joint control
+  void twistCommandCallback(const geometry_msgs::TwistStamped& twist);
+  /// Publishes pose over ROS
+  void publishPoses();
   /// Create ROS pose message
   void convertPoseToPoseMsg(const math::Pose& pose, geometry_msgs::Pose& poseMsg);
   void convertPoseToTransformMsg(const math::Pose& pose, geometry_msgs::Transform& transformMsg);

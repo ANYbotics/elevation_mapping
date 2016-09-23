@@ -122,6 +122,64 @@ void OdometryMotionGazeboRosControl::readSimulation()
   robotPoseInMap_ = baseLink->GetWorldPose();
 }
 
+void OdometryMotionGazeboRosControl::simulateMotionInOdom()
+{
+  // Update current noise density.
+  MotionUncertainty standardDeviation;
+  for (auto& noiseDensity : currentTwistNoiseDensity_) {
+    noiseDensity.second = twistNoiseDenistyParameter_[noiseDensity.first];
+    standardDeviation[noiseDensity.first] = sqrt(noiseDensity.second / currentUpdateDuration_);
+  }
+
+  // Compute noise.
+  math::Vector3 linearVelocityNoise, angularVelocityNoise;
+  linearVelocityNoise.x = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::X])(randomNumberGenerator_);
+  linearVelocityNoise.y = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Y])(randomNumberGenerator_);
+  linearVelocityNoise.z = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Z])(randomNumberGenerator_);
+  angularVelocityNoise.z = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Yaw])(randomNumberGenerator_);
+
+  // Add noise and compute velocity in odom frame.
+  math::Vector3 linearVelocityInBase = robotLinearVelocity_ + linearVelocityNoise;
+  math::Vector3 linearVelocityInWorld, angularVelocityInWorld;
+  computeTwistInInertial(robotPoseInOdom_, linearVelocityInBase, robotAngularVelocity_,
+                         linearVelocityInWorld, angularVelocityInWorld);
+  angularVelocityInWorld += angularVelocityNoise;
+
+  // Integrate.
+  robotPoseInOdom_.pos += currentUpdateDuration_ * linearVelocityInBase;
+}
+
+void OdometryMotionGazeboRosControl::writeSimulation()
+{
+  math::Vector3 linearVelocityInWorld, angularVelocityInWorld;
+  computeTwistInInertial(robotPoseInMap_, robotLinearVelocity_, robotAngularVelocity_,
+                         linearVelocityInWorld, angularVelocityInWorld);
+  model_->SetWorldTwist(linearVelocityInWorld, angularVelocityInWorld);
+}
+
+void OdometryMotionGazeboRosControl::computeTwistInInertial(
+    const math::Pose& robotPose, const math::Vector3& linearVelocityInBase,
+    const math::Vector3& angularVelocityInBase, math::Vector3& linearVelocityInWorld,
+    math::Vector3& angularVelocityInWorld)
+{
+  linearVelocityInWorld = robotPose.rot.RotateVector(linearVelocityInBase);
+  angularVelocityInWorld = robotPose.rot.RotateVector(angularVelocityInBase);
+}
+
+void OdometryMotionGazeboRosControl::twistCommandCallback(const geometry_msgs::TwistStamped& twist)
+{
+  if (baseFrameId_ != twist.header.frame_id) {
+    ROS_WARN_STREAM("Twist message must be defined in the robot base frame (" << baseFrameId_ << ")!");
+    return;
+  }
+  robotLinearVelocity_.x = twist.twist.linear.x;
+  robotLinearVelocity_.y = twist.twist.linear.y;
+  robotLinearVelocity_.z = twist.twist.linear.z;
+  robotAngularVelocity_.x = twist.twist.angular.x;
+  robotAngularVelocity_.y = twist.twist.angular.y;
+  robotAngularVelocity_.z = twist.twist.angular.z;
+}
+
 void OdometryMotionGazeboRosControl::publishPoses()
 {
   ros::Time timeStamp(lastUpdateTime_.sec, lastUpdateTime_.nsec);
@@ -156,64 +214,6 @@ void OdometryMotionGazeboRosControl::publishPoses()
   transformOdomToBase.child_frame_id = baseFrameId_;
   convertPoseToTransformMsg(robotPoseInOdom_, transformOdomToBase.transform);
   tfBroadcaster_.sendTransform(transformOdomToBase);
-}
-
-void OdometryMotionGazeboRosControl::twistCommandCallback(const geometry_msgs::TwistStamped& twist)
-{
-  if (baseFrameId_ != twist.header.frame_id) {
-    ROS_WARN_STREAM("Twist message must be defined in the robot base frame (" << baseFrameId_ << ")!");
-    return;
-  }
-  robotLinearVelocity_.x = twist.twist.linear.x;
-  robotLinearVelocity_.y = twist.twist.linear.y;
-  robotLinearVelocity_.z = twist.twist.linear.z;
-  robotAngularVelocity_.x = twist.twist.angular.x;
-  robotAngularVelocity_.y = twist.twist.angular.y;
-  robotAngularVelocity_.z = twist.twist.angular.z;
-}
-
-void OdometryMotionGazeboRosControl::computeTwistInInertial(
-    const math::Pose& robotPose, const math::Vector3& linearVelocityInBase,
-    const math::Vector3& angularVelocityInBase, math::Vector3& linearVelocityInWorld,
-    math::Vector3& angularVelocityInWorld)
-{
-  linearVelocityInWorld = robotPose.rot.RotateVector(linearVelocityInBase);
-  angularVelocityInWorld = robotPose.rot.RotateVector(angularVelocityInBase);
-}
-
-void OdometryMotionGazeboRosControl::simulateMotionInOdom()
-{
-  // Update current noise density.
-  MotionUncertainty standardDeviation;
-  for (auto& noiseDensity : currentTwistNoiseDensity_) {
-    noiseDensity.second = twistNoiseDenistyParameter_[noiseDensity.first];
-    standardDeviation[noiseDensity.first] = sqrt(noiseDensity.second / currentUpdateDuration_);
-  }
-
-  // Compute noise.
-  math::Vector3 linearVelocityNoise, angularVelocityNoise;
-  linearVelocityNoise.x = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::X])(randomNumberGenerator_);
-  linearVelocityNoise.y = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Y])(randomNumberGenerator_);
-  linearVelocityNoise.z = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Z])(randomNumberGenerator_);
-  angularVelocityNoise.z = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Yaw])(randomNumberGenerator_);
-
-  // Add noise and compute velocity in odom frame.
-  math::Vector3 linearVelocityInBase = robotLinearVelocity_ + linearVelocityNoise;
-  math::Vector3 linearVelocityInWorld, angularVelocityInWorld;
-  computeTwistInInertial(robotPoseInOdom_, linearVelocityInBase, robotAngularVelocity_,
-                         linearVelocityInWorld, angularVelocityInWorld);
-  angularVelocityInWorld += angularVelocityNoise;
-
-  // Integrate.
-  robotPoseInOdom_.pos += currentUpdateDuration_ * linearVelocityInBase;
-}
-
-void OdometryMotionGazeboRosControl::writeSimulation()
-{
-  math::Vector3 linearVelocityInWorld, angularVelocityInWorld;
-  computeTwistInInertial(robotPoseInMap_, robotLinearVelocity_, robotAngularVelocity_,
-                         linearVelocityInWorld, angularVelocityInWorld);
-  model_->SetWorldTwist(linearVelocityInWorld, angularVelocityInWorld);
 }
 
 void OdometryMotionGazeboRosControl::convertPoseToPoseMsg(const math::Pose& pose, geometry_msgs::Pose& poseMsg)
