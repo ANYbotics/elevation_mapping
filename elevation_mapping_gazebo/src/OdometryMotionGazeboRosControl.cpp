@@ -107,7 +107,7 @@ void OdometryMotionGazeboRosControl::readParameters()
   nodeHandle_->param<std::string>("topics/twist_command", twistCommandTopic_, "/twist");
   nodeHandle_->param("twist_noise_density/linear/x", twistNoiseDenistyParameter_[MotionDirection::X], 0.0); // [m^2/s^2 * s]
   nodeHandle_->param("twist_noise_density/linear/y", twistNoiseDenistyParameter_[MotionDirection::Y], 0.0);
-  nodeHandle_->param("twist_noise_density/linear/x", twistNoiseDenistyParameter_[MotionDirection::X], 0.0);
+  nodeHandle_->param("twist_noise_density/linear/z", twistNoiseDenistyParameter_[MotionDirection::Z], 0.0);
   nodeHandle_->param("twist_noise_density/angular/z", twistNoiseDenistyParameter_[MotionDirection::Yaw], 0.0); // [rad^2/s^2 * s]
 }
 
@@ -134,7 +134,7 @@ void OdometryMotionGazeboRosControl::publishPoses()
     poseInMapPublisher_.publish(pose);
   }
 
-  if (poseInMapPublisher_.getNumSubscribers() > 0) {
+  if (poseInOdomPublisher_.getNumSubscribers() > 0) {
     geometry_msgs::PoseWithCovarianceStamped pose;
     convertPoseToPoseMsg(robotPoseInOdom_, pose.pose.pose);
     pose.header.stamp = timeStamp;

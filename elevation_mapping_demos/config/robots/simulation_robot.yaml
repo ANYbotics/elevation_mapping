@@ -1,7 +1,7 @@
 point_cloud_topic: "/camera/depth/points"
-map_frame_id: "map"
+map_frame_id: "odom"
 robot_base_frame_id: "base_link"
-robot_pose_with_covariance_topic: "/pose_in_map"
+robot_pose_with_covariance_topic: "/pose_in_odom"
 robot_pose_cache_size: 200
 track_point_frame_id: "base_link"
 track_point_x: 0.0
