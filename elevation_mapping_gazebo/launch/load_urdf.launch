@@ -1,0 +1,13 @@
+<launch>
+
+  <!-- Name of the robot setup -->
+  <arg name="sensor_setup" default="depth_camera_robot"/>
+  <!-- Set true to simulate sensors without noise and bias -->
+  <arg name="perfect_sensors" default="true"/>
+
+  <!-- Run xacro script to description -->
+  <param name="robot_description" command="$(find xacro)/xacro.py
+    '$(find elevation_mapping_gazebo)/urdf/$(arg sensor_setup).urdf.xacro'
+    perfect_sensors:=$(arg perfect_sensors)"/>
+
+</launch>

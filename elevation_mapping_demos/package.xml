@@ -10,6 +10,8 @@
   <author email="pfankhauser@ethz.ch">Péter Fankhauser</author>
   <buildtool_depend>catkin</buildtool_depend>
   <depend>elevation_mapping</depend>
+  <depend>elevation_mapping_gazebo</depend>
   <depend>grid_map_rviz_plugin</depend>
+  <depend>grid_map_visualization</depend>
   <depend>rviz</depend>
 </package>

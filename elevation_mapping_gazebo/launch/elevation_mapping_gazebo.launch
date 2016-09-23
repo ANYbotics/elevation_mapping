@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+
+  <!-- Name of the sensor setup -->
+  <arg name="sensor_setup" default="depth_camera_robot"/>
+  <!-- Name of the world -->
+  <arg name="world" default="empty"/>
+  <!-- Path to the world file -->
+  <arg name="world_path" default="$(find elevation_mapping_gazebo)/worlds/$(arg world).world"/>
+  <!-- Gazebo world model path -->
+  <arg name="model_path" default="$(find elevation_mapping_gazebo)/.."/>
+  <!-- Set true to simulate sensors without noise and bias -->
+  <arg name="perfect_sensors" default="true"/>
+  <!-- Name of the parameter file to load -->
+  <arg name="config_file" default="default"/>
+  <!-- Set the initial pose of the robot -->
+  <arg name="x"     default="0.0"/>
+  <arg name="y"     default="0.0"/>
+  <arg name="z"     default="1.0"/>
+  <arg name="roll"  default="0.0"/>
+  <arg name="pitch" default="0.0"/>
+  <arg name="yaw"   default="0.0"/>
+
+  <!-- Gazebo arguments -->
+  <arg name="paused"       default="false"/>
+  <arg name="use_sim_time" default="true"/>
+  <arg name="gui"          default="true"/>
+  <arg name="headless"     default="false"/>
+  <arg name="debug"        default="false"/>
+  <arg name="verbose"      default="false"/>
+
+  <!-- Load parameters -->
+  <rosparam command="load" file="$(find elevation_mapping_gazebo)/config/$(arg config_file).yaml"/>
+
+  <!-- Load Gazebo world -->
+  <include file="$(find gazebo_ros)/launch/empty_world.launch">
+    <env name="GAZEBO_MODEL_PATH" value="$(arg model_path)"/>
+    <arg name="world_name"        value="$(arg world_path)"/>
+    <arg name="paused"            value="$(arg paused)"/>
+    <arg name="use_sim_time"      value="$(arg use_sim_time)"/>
+    <arg name="gui"               value="$(arg gui)"/>
+    <arg name="headless"          value="$(arg headless)"/>
+    <arg name="debug"             value="$(arg debug)"/>
+    <arg name="verbose"           value="$(arg verbose)"/>
+  </include>
+
+  <!-- Load robot description -->
+  <include file="$(find elevation_mapping_gazebo)/launch/load_urdf.launch">
+    <arg name="sensor_setup"  value="$(arg sensor_setup)"/>
+    <arg name="perfect_sensors"  value="$(arg perfect_sensors)"/>
+  </include>
+
+  <!-- Spawn robot in Gazebo -->
+  <node name="spawn_urdf" pkg="gazebo_ros" type="spawn_model"
+    args="-param robot_description -urdf -model depth_camera_robot
+    -x $(arg x) -y $(arg y) -z $(arg z) -R $(arg roll) -P $(arg pitch) -Y $(arg yaw)"
+    output="screen"/>
+
+  <!-- Publish robot state as TF -->
+  <node pkg="robot_state_publisher" type="robot_state_publisher"  name="robot_state_publisher">
+    <param name="publish_frequency" type="double" value="30.0" />
+  </node>
+
+</launch>

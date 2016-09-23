@@ -1,0 +1,89 @@
+<?xml version="1.0"?>
+<robot name="depth_camera_robot" xmlns:xacro="http://ros.org/wiki/xacro">
+
+  <xacro:property name="pi" value="3.1415" />
+
+  <link name="base_link">
+    <visual>
+      <geometry>
+        <box size="0.5 0.25 0.2"/>
+      </geometry>
+    </visual>
+    <inertial>
+      <mass value="1.0"/>
+      <origin xyz="0.0 0.0 0.0"/>
+      <inertia ixx="1.0" ixy="0.0" ixz="0.0" iyy="1.0" iyz="0.0" izz="1.0"/>
+    </inertial>
+  </link>
+
+  <link name="sensor_link">
+    <visual>
+      <origin xyz="0.0 0.0 0.0" rpy="0.0 ${pi/2} 0.0"/>
+      <geometry>
+        <cylinder radius="0.02" length="0.03"/>
+      </geometry>
+    </visual>
+  </link>
+
+  <link name="sensor_optical_link">
+  </link>
+
+  <joint name="sensor_joint" type="fixed">
+    <parent link="base_link"/>
+    <child link="sensor_link"/>
+    <origin xyz="0.25 0.0 0.0" rpy="0 ${pi/2} 0" />
+  </joint>
+
+  <joint name="sensor_optical_joint" type="fixed">
+    <parent link="sensor_link"/>
+    <child link="sensor_optical_link"/>
+    <origin xyz="0.0 0.0 0.0" rpy="-${pi/2} 0.0 -${pi/2}" />
+  </joint>
+
+  <!-- Gazebo plugin for depth camera -->
+  <gazebo reference="sensor_link">
+    <sensor type="depth" name="camera">
+      <always_on>true</always_on>
+      <update_rate>10.0</update_rate>
+      <camera>
+        <horizontal_fov>${60.0*pi/180.0}</horizontal_fov>
+        <image>
+          <format>R8G8B8</format>
+          <width>640</width>
+          <height>480</height>
+        </image>
+        <clip>
+          <near>0.05</near>
+          <far>8.0</far>
+        </clip>
+      </camera>
+      <plugin name="depth_camera_controller" filename="libgazebo_ros_openni_kinect.so">
+        <cameraName>camera</cameraName>
+        <alwaysOn>true</alwaysOn>
+        <updateRate>0.0</updateRate>
+        <imageTopicName>rgb/image_raw</imageTopicName>
+        <depthImageTopicName>depth/image_raw</depthImageTopicName>
+        <pointCloudTopicName>depth/points</pointCloudTopicName>
+        <cameraInfoTopicName>rgb/camera_info</cameraInfoTopicName>
+        <depthImageCameraInfoTopicName>depth/camera_info</depthImageCameraInfoTopicName>
+        <frameName>sensor_optical_link</frameName>
+        <baseline>0.1</baseline>
+        <distortion_k1>0.0</distortion_k1>
+        <distortion_k2>0.0</distortion_k2>
+        <distortion_k3>0.0</distortion_k3>
+        <distortion_t1>0.0</distortion_t1>
+        <distortion_t2>0.0</distortion_t2>
+        <pointCloudCutoff>0.05</pointCloudCutoff>
+        <pointCloudCutoffMax>5</pointCloudCutoffMax>
+        <rangeMax>4.0</rangeMax>
+      </plugin>
+    </sensor>
+  </gazebo>
+
+  <!-- Gazebo plugin for odometry base motion (Gaussian random walk) -->
+  <gazebo>
+    <plugin name="odometry_motion_gazebo_ros_control" filename="libodometry_motion_gazebo_ros_control.so">
+    </plugin>
+  </gazebo>
+
+</robot>

@@ -123,7 +123,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     if (!rawMap_.isValid(index)) {
       // No prior information in elevation map, use measurement.
       elevation = point.z;
-      variance = pointVariance;
+      variance = pointVariance > minVariance_ ? pointVariance : minVariance_;
       horizontalVarianceX = minHorizontalVariance_;
       horizontalVarianceY = minHorizontalVariance_;
       horizontalVarianceXY = 0.0;
@@ -143,6 +143,12 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     // Fuse measurement with elevation map data.
     elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
     variance = (pointVariance * variance) / (pointVariance + variance);
+    if (!isfinite(variance)) {
+      // Handling numerical issues with small variances.
+      elevation = point.z;
+      variance = minVariance_;
+    }
+
     // TODO Add color fusion.
     colorVectorToValue(point.getRGBVector3i(), color);
 

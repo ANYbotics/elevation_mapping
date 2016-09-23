@@ -1,0 +1,26 @@
+<?xml version="1.0" ?>
+<sdf version="1.4">
+  <world name="default">
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+    <include>
+      <uri>model://sun</uri>
+    </include>
+
+    <model name="box">
+      <static>true</static>
+      <link name='box'>
+        <pose>0.7 0 0.125 0 0 0</pose>
+        <visual name='visual'>
+          <geometry>
+            <box>
+              <size>1.0 1.0 0.4</size>
+            </box>
+          </geometry>
+        </visual>
+      </link>
+    </model>
+
+  </world>
+</sdf>

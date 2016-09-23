@@ -1,0 +1,21 @@
+gazebo:
+
+  topics:
+    pose_in_odom: /pose_in_odom
+    pose_in_map: /pose_in_map
+    twist_command: /twist
+
+  frame_ids:
+    base: base_link
+    odometry: odom
+    map: map
+
+  twist_noise_density:
+    linear: # [m^2/s^2 * s]
+      x: 0.00004
+      y: 0.00004
+      z: 0.00004
+    angular: # [rad^2/s^2 * s]
+      x: 0.0
+      y: 0.0
+      z: 0.0

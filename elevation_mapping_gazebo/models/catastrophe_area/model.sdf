@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<sdf version="1.4">
+  <model name="catastrophe_area">
+    <pose>0 0 0 0 0 0</pose>
+    <static>true</static>
+    <link name="catastrophe_area_link">
+
+      <collision name="catastrophe_area_collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://elevation_mapping_gazebo/meshes/catastrophe_area.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+
+      <visual name="catastrophe_area_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://elevation_mapping_gazebo/meshes/catastrophe_area.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+
+    </link>
+  </model>
+</sdf>
