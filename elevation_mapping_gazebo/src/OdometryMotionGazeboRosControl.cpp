@@ -28,8 +28,6 @@ void OdometryMotionGazeboRosControl::Init()
 
 void OdometryMotionGazeboRosControl::Reset()
 {
-  robotLinearVelocity_.Set(0.0, 0.0, 0.0);
-  robotAngularVelocity_.Set(0.0, 0.0, 0.0);
   lastUpdateTime_ = common::Time();
   currentUpdateDuration_ = 0.0;
   readSimulation();
@@ -119,7 +117,13 @@ void OdometryMotionGazeboRosControl::readSimulation()
                            "Base link " << robotBaseLink_ << " does not exist in Gazebo.");
     return;
   }
-  robotPoseInMap_ = baseLink->GetWorldPose();
+  robotPoseInMap_.getPosition().x() = baseLink->GetWorldPose().pos.x;
+  robotPoseInMap_.getPosition().y() = baseLink->GetWorldPose().pos.y;
+  robotPoseInMap_.getPosition().z() = baseLink->GetWorldPose().pos.z;
+  robotPoseInMap_.getRotation().x() = baseLink->GetWorldPose().rot.x;
+  robotPoseInMap_.getRotation().y() = baseLink->GetWorldPose().rot.y;
+  robotPoseInMap_.getRotation().z() = baseLink->GetWorldPose().rot.z;
+  robotPoseInMap_.getRotation().w() = baseLink->GetWorldPose().rot.w;
 }
 
 void OdometryMotionGazeboRosControl::simulateMotionInOdom()
@@ -132,38 +136,58 @@ void OdometryMotionGazeboRosControl::simulateMotionInOdom()
   }
 
   // Compute noise.
-  math::Vector3 linearVelocityNoise, angularVelocityNoise;
-  linearVelocityNoise.x = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::X])(randomNumberGenerator_);
-  linearVelocityNoise.y = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Y])(randomNumberGenerator_);
-  linearVelocityNoise.z = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Z])(randomNumberGenerator_);
-  angularVelocityNoise.z = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Yaw])(randomNumberGenerator_);
+  Twist twistNoise;
+  twistNoise.getTranslationalVelocity().x() = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::X])(randomNumberGenerator_);
+  twistNoise.getTranslationalVelocity().y() = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Y])(randomNumberGenerator_);
+  twistNoise.getTranslationalVelocity().z() = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Z])(randomNumberGenerator_);
+  twistNoise.getRotationalVelocity().z() = std::normal_distribution<double>(0.0, standardDeviation[MotionDirection::Yaw])(randomNumberGenerator_);
 
   // Add noise and compute velocity in odom frame.
-  math::Vector3 linearVelocityInBase = robotLinearVelocity_ + linearVelocityNoise;
-  math::Vector3 linearVelocityInWorld, angularVelocityInWorld;
-  computeTwistInInertial(robotPoseInOdom_, linearVelocityInBase, robotAngularVelocity_,
-                         linearVelocityInWorld, angularVelocityInWorld);
-  angularVelocityInWorld += angularVelocityNoise;
+  Twist twistInBase;
+  twistInBase.getTranslationalVelocity() = robotTwist_.getTranslationalVelocity() + twistNoise.getTranslationalVelocity();
+  Twist twistInWorld;
+  computeTwistInInertial(robotPoseInOdom_, twistInBase, twistInWorld);
+  twistInWorld.getRotationalVelocity() += twistNoise.getRotationalVelocity();
 
-  // Integrate.
-  robotPoseInOdom_.pos += currentUpdateDuration_ * linearVelocityInBase;
+  // Compute pose through integration.
+  robotPoseInOdom_.getPosition() += Position(currentUpdateDuration_ * twistInWorld.getTranslationalVelocity());
+
+  // Compute pose covariance.
+  // Density to covariance is computer at later step.
+  const Eigen::Vector3d velocityCovarianceInBaseDiagonal(
+      currentTwistNoiseDensity_[MotionDirection::X],
+      currentTwistNoiseDensity_[MotionDirection::Y],
+      currentTwistNoiseDensity_[MotionDirection::Z]);
+  const Covariance velocityCovarianceInBase(velocityCovarianceInBaseDiagonal.asDiagonal());
+//  const double yawRotationAngle = kindr::RotationVectorPD(robotPoseInOdom_.getRotation()).z();
+//  kindr::RotationMatrixPD yawRotation(kindr::RotationVectorPD(Eigen::Vector3d::UnitZ() * yawRotationAngle)); // TODO transpose?
+  const kindr::RotationMatrixPD transformBaseToOdom(robotPoseInOdom_.getRotation());
+  const Covariance positionCovarianceUpdate(
+      currentUpdateDuration_ * transformBaseToOdom.matrix() * velocityCovarianceInBase
+          * transformBaseToOdom.matrix().transpose());
+  robotPoseCovariance_.topLeftCorner(3, 3) +=  positionCovarianceUpdate; // TODO Not wokring?
 }
 
 void OdometryMotionGazeboRosControl::writeSimulation()
 {
+  Twist twistInWorld;
+  computeTwistInInertial(robotPoseInMap_, robotTwist_, twistInWorld);
   math::Vector3 linearVelocityInWorld, angularVelocityInWorld;
-  computeTwistInInertial(robotPoseInMap_, robotLinearVelocity_, robotAngularVelocity_,
-                         linearVelocityInWorld, angularVelocityInWorld);
+  linearVelocityInWorld.x = twistInWorld.getTranslationalVelocity().x();
+  linearVelocityInWorld.y = twistInWorld.getTranslationalVelocity().y();
+  linearVelocityInWorld.z = twistInWorld.getTranslationalVelocity().z();
+  angularVelocityInWorld.x = twistInWorld.getRotationalVelocity().x();
+  angularVelocityInWorld.y = twistInWorld.getRotationalVelocity().y();
+  angularVelocityInWorld.z = twistInWorld.getRotationalVelocity().z();
   model_->SetWorldTwist(linearVelocityInWorld, angularVelocityInWorld);
 }
 
-void OdometryMotionGazeboRosControl::computeTwistInInertial(
-    const math::Pose& robotPose, const math::Vector3& linearVelocityInBase,
-    const math::Vector3& angularVelocityInBase, math::Vector3& linearVelocityInWorld,
-    math::Vector3& angularVelocityInWorld)
+void OdometryMotionGazeboRosControl::computeTwistInInertial(const Pose& robotPose,
+                                                            const Twist& twistInBase,
+                                                            Twist & twistInWorld)
 {
-  linearVelocityInWorld = robotPose.rot.RotateVector(linearVelocityInBase);
-  angularVelocityInWorld = robotPose.rot.RotateVector(angularVelocityInBase);
+  twistInWorld.getTranslationalVelocity() = robotPose.getRotation().rotate(twistInBase.getTranslationalVelocity());
+  twistInWorld.getRotationalVelocity() = robotPose.getRotation().rotate(twistInBase.getRotationalVelocity());
 }
 
 void OdometryMotionGazeboRosControl::twistCommandCallback(const geometry_msgs::TwistStamped& twist)
@@ -172,12 +196,7 @@ void OdometryMotionGazeboRosControl::twistCommandCallback(const geometry_msgs::T
     ROS_WARN_STREAM("Twist message must be defined in the robot base frame (" << baseFrameId_ << ")!");
     return;
   }
-  robotLinearVelocity_.x = twist.twist.linear.x;
-  robotLinearVelocity_.y = twist.twist.linear.y;
-  robotLinearVelocity_.z = twist.twist.linear.z;
-  robotAngularVelocity_.x = twist.twist.angular.x;
-  robotAngularVelocity_.y = twist.twist.angular.y;
-  robotAngularVelocity_.z = twist.twist.angular.z;
+  kindr_ros::convertFromRosGeometryMsg(twist.twist, robotTwist_);
 }
 
 void OdometryMotionGazeboRosControl::publishPoses()
@@ -186,7 +205,7 @@ void OdometryMotionGazeboRosControl::publishPoses()
 
   if (poseInMapPublisher_.getNumSubscribers() > 0) {
     geometry_msgs::PoseWithCovarianceStamped pose;
-    convertPoseToPoseMsg(robotPoseInMap_, pose.pose.pose);
+    kindr_ros::convertToRosGeometryMsg(robotPoseInMap_, pose.pose.pose);
     pose.header.stamp = timeStamp;
     pose.header.frame_id = mapFrameId_;
     poseInMapPublisher_.publish(pose);
@@ -194,9 +213,10 @@ void OdometryMotionGazeboRosControl::publishPoses()
 
   if (poseInOdomPublisher_.getNumSubscribers() > 0) {
     geometry_msgs::PoseWithCovarianceStamped pose;
-    convertPoseToPoseMsg(robotPoseInOdom_, pose.pose.pose);
+    kindr_ros::convertToRosGeometryMsg(robotPoseInOdom_, pose.pose.pose);
     pose.header.stamp = timeStamp;
     pose.header.frame_id = odomFrameId_;
+    std::copy(pose.pose.covariance.begin(),pose.pose.covariance.end(), robotPoseCovariance_.data());
     poseInOdomPublisher_.publish(pose);
   }
 
@@ -204,38 +224,17 @@ void OdometryMotionGazeboRosControl::publishPoses()
   transformMapToOdom.header.stamp = timeStamp;
   transformMapToOdom.header.frame_id = mapFrameId_;
   transformMapToOdom.child_frame_id = odomFrameId_;
-  math::Pose odomPoseInMap = robotPoseInMap_ - robotPoseInOdom_;
-  convertPoseToTransformMsg(odomPoseInMap, transformMapToOdom.transform);
+  const Pose robotPoseInOdomInverse(-robotPoseInOdom_.getPosition(), robotPoseInOdom_.getRotation().inverted());
+  Pose odomPoseInMap = robotPoseInMap_ * robotPoseInOdomInverse;
+  kindr_ros::convertToRosGeometryMsg(odomPoseInMap, transformMapToOdom.transform);
   tfBroadcaster_.sendTransform(transformMapToOdom);
 
   geometry_msgs::TransformStamped transformOdomToBase;
   transformOdomToBase.header.stamp = timeStamp;
   transformOdomToBase.header.frame_id = odomFrameId_;
   transformOdomToBase.child_frame_id = baseFrameId_;
-  convertPoseToTransformMsg(robotPoseInOdom_, transformOdomToBase.transform);
+  kindr_ros::convertToRosGeometryMsg(robotPoseInOdom_, transformOdomToBase.transform);
   tfBroadcaster_.sendTransform(transformOdomToBase);
-}
-
-void OdometryMotionGazeboRosControl::convertPoseToPoseMsg(const math::Pose& pose, geometry_msgs::Pose& poseMsg)
-{
-  poseMsg.position.x = pose.pos[0];
-  poseMsg.position.y = pose.pos[1];
-  poseMsg.position.z = pose.pos[2];
-  poseMsg.orientation.x = pose.rot.x;
-  poseMsg.orientation.y = pose.rot.y;
-  poseMsg.orientation.z = pose.rot.z;
-  poseMsg.orientation.w = pose.rot.w;
-}
-
-void OdometryMotionGazeboRosControl::convertPoseToTransformMsg(const math::Pose& pose, geometry_msgs::Transform& transformMsg)
-{
-  transformMsg.translation.x = pose.pos[0];
-  transformMsg.translation.y = pose.pos[1];
-  transformMsg.translation.z = pose.pos[2];
-  transformMsg.rotation.x = pose.rot.x;
-  transformMsg.rotation.y = pose.rot.y;
-  transformMsg.rotation.z = pose.rot.z;
-  transformMsg.rotation.w = pose.rot.w;
 }
 
 GZ_REGISTER_MODEL_PLUGIN(OdometryMotionGazeboRosControl)

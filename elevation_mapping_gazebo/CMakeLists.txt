@@ -10,14 +10,18 @@ find_package(catkin REQUIRED
     roscpp
     urdf
     xacro
+    kindr
+    kindr_ros
 )
 
 find_package(gazebo REQUIRED)
+find_package(Eigen3 REQUIRED)
 
 include_directories(
   include
   ${catkin_INCLUDE_DIRS}
   ${GAZEBO_INCLUDE_DIRS}
+  ${Eigen_INCLUDE_DIRS}
 )
 link_directories(
   ${GAZEBO_LIBRARY_DIRS}
@@ -33,6 +37,8 @@ catkin_package(
     roscpp
     urdf
     xacro
+    kindr
+    kindr_ros
   DEPENDS
     gazebo
 )

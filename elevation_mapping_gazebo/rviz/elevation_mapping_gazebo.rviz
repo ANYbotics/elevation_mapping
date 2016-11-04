@@ -57,6 +57,8 @@ Visualization Manager:
           Value: true
         map:
           Value: true
+        odom:
+          Value: true
         sensor_link:
           Value: true
         sensor_optical_link:
@@ -68,10 +70,11 @@ Visualization Manager:
       Show Names: true
       Tree:
         map:
-          base_link:
-            sensor_link:
-              sensor_optical_link:
-                {}
+          odom:
+            base_link:
+              sensor_link:
+                sensor_optical_link:
+                  {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -155,6 +158,48 @@ Visualization Manager:
       Unreliable: false
       Use Rainbow: true
       Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
+      Color Layer: uncertainty_range
+      Color Transformer: FlatColor
+      Enabled: true
+      Height Layer: upper_bound
+      Height Transformer: GridMapLayer
+      History Length: 1
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 10
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: GridMap
+      Show Grid Lines: true
+      Topic: /elevation_mapping/elevation_map
+      Unreliable: false
+      Use Rainbow: true
+      Value: true
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
+      Color Layer: elevation
+      Color Transformer: FlatColor
+      Enabled: true
+      Height Layer: lower_bound
+      Height Transformer: Layer
+      History Length: 1
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 10
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: GridMap
+      Show Grid Lines: true
+      Topic: /elevation_mapping/elevation_map
+      Unreliable: false
+      Use Rainbow: true
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -179,22 +224,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.05223
+      Distance: 2.95924
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.298013
-        Y: 0.00348486
-        Z: -0.278589
+        X: 0.181369
+        Y: 0.0869747
+        Z: 0.183254
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.8754
+      Pitch: 0.2904
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 2.1554
+      Yaw: 5.08041
     Saved: ~
 Window Geometry:
   Displays:
@@ -212,5 +257,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1200
-  X: 3215
-  Y: 128
+  X: 3195
+  Y: 226

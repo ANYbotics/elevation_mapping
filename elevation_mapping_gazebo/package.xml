@@ -12,6 +12,8 @@
   <depend>gazebo_ros</depend>
   <depend>urdf</depend>
   <depend>xacro</depend>
+  <depend>kindr</depend>
+  <depend>kindr_ros</depend>
 
   <export>
     <gazebo plugin_path="${prefix}/lib" gazebo_media_path="${prefix}"/>

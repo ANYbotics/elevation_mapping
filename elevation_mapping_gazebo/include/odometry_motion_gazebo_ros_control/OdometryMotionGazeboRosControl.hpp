@@ -25,6 +25,13 @@
 #include <random>
 #include <unordered_map>
 
+// Eigen
+#include <Eigen/Core>
+
+// Kindr
+#include <kindr/Core>
+#include <kindr_ros/kindr_ros.hpp>
+
 namespace gazebo {
 
 struct EnumClassHash
@@ -45,6 +52,15 @@ enum class MotionDirection
   Yaw
 };
 
+typedef kindr::Position3D Position;
+typedef kindr::HomogeneousTransformationPosition3RotationQuaternionD Pose;
+typedef kindr::TwistLocalD Twist;
+typedef kindr::Velocity3D LinearVelocity;
+typedef kindr::LocalAngularVelocityPD AngularVelocity;
+typedef Eigen::Matrix<double, 3, 3> Covariance;
+typedef Eigen::Matrix<double, 6, 6> PoseCovariance;
+typedef Eigen::Matrix<double, 4, 4> ReducedCovariance;
+typedef Eigen::Matrix<double, 4, 4> Jacobian;
 typedef std::unordered_map<MotionDirection, double, EnumClassHash> MotionUncertainty;
 
 /** The GazeboRosControl class interfaces StarlETH locomotion controller with
@@ -76,17 +92,12 @@ class OdometryMotionGazeboRosControl : public ModelPlugin
   void simulateMotionInOdom();
   /// Writes simulation state
   void writeSimulation();
-  void computeTwistInInertial(const math::Pose& robotPose, const math::Vector3& linearVelocityInBase,
-                              const math::Vector3& angularVelocityInBase,
-                              math::Vector3& linearVelocityInWorld,
-                              math::Vector3& angularVelocityInWorld);
+  void computeTwistInInertial(const Pose& robotPose, const Twist& twistInBase,
+                              Twist & twistInWorld);
   /// Callback for the joint control
   void twistCommandCallback(const geometry_msgs::TwistStamped& twist);
   /// Publishes pose over ROS
   void publishPoses();
-  /// Create ROS pose message
-  void convertPoseToPoseMsg(const math::Pose& pose, geometry_msgs::Pose& poseMsg);
-  void convertPoseToTransformMsg(const math::Pose& pose, geometry_msgs::Transform& transformMsg);
 
   /// ROS node handle.
   std::shared_ptr<ros::NodeHandle> nodeHandle_;
@@ -102,7 +113,6 @@ class OdometryMotionGazeboRosControl : public ModelPlugin
   /// ROS pose publishers
   ros::Publisher poseInOdomPublisher_;
   ros::Publisher poseInMapPublisher_;
-  /// ROS pose publisher topic names
   std::string poseInOdomPublisherTopic_;
   std::string poseInMapPublisherTopic_;
   /// ROS pose frames
@@ -115,12 +125,11 @@ class OdometryMotionGazeboRosControl : public ModelPlugin
   /// World update event
   event::ConnectionPtr updateConnection_;
   /// Robot base link pose (transforms vectors from base to world).
-  math::Pose robotPoseInOdom_;
-  math::Pose robotPoseInMap_;
-  /// Robot base link linear velocity in base frame
-  math::Vector3 robotLinearVelocity_;
-  /// Robot base link angular velocity in base frame
-  math::Vector3 robotAngularVelocity_;
+  Pose robotPoseInOdom_;
+  Pose robotPoseInMap_;
+  PoseCovariance robotPoseCovariance_;
+  /// Robot base link twist in base frame.
+  Twist robotTwist_;
   /// ROS twist command subscriber.
   ros::Subscriber twistCommandSubscriber_;
   /// ROS twist subscriber topic name.
@@ -139,7 +148,12 @@ class OdometryMotionGazeboRosControl : public ModelPlugin
   common::Time lastUpdateTime_;
 
   std::default_random_engine randomNumberGenerator_;
-
 };
+
+// This is sovled in newer versions of Gazebo.
+namespace math {
+  extern const Matrix3 ZERO;
+  extern const Matrix3 IDENTITY;
+}
 
 }
