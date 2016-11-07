@@ -30,6 +30,7 @@ void OdometryMotionGazeboRosControl::Reset()
 {
   lastUpdateTime_ = common::Time();
   currentUpdateDuration_ = 0.0;
+  robotPoseCovariance_.setZero();
   readSimulation();
   robotPoseInOdom_ = robotPoseInMap_;
 }
@@ -145,27 +146,36 @@ void OdometryMotionGazeboRosControl::simulateMotionInOdom()
   // Add noise and compute velocity in odom frame.
   Twist twistInBase;
   twistInBase.getTranslationalVelocity() = robotTwist_.getTranslationalVelocity() + twistNoise.getTranslationalVelocity();
+  twistInBase.getRotationalVelocity() = robotTwist_.getRotationalVelocity();
   Twist twistInWorld;
   computeTwistInInertial(robotPoseInOdom_, twistInBase, twistInWorld);
   twistInWorld.getRotationalVelocity() += twistNoise.getRotationalVelocity();
 
   // Compute pose through integration.
   robotPoseInOdom_.getPosition() += Position(currentUpdateDuration_ * twistInWorld.getTranslationalVelocity());
+  robotPoseInOdom_.getRotation() = robotPoseInOdom_.getRotation().boxPlus(currentUpdateDuration_ * twistInWorld.getRotationalVelocity().vector());
 
-  // Compute pose covariance.
-  // Density to covariance is computer at later step.
-  const Eigen::Vector3d velocityCovarianceInBaseDiagonal(
+  // Rotation matrix of z-align frame R_I_tilde_B.
+  const double yawRotationAngle = kindr::RotationVectorPD(robotPoseInOdom_.getRotation()).z();
+  const kindr::RotationMatrixPD transformBaseToOdom(kindr::RotationVectorPD(Eigen::Vector3d::UnitZ() * yawRotationAngle));
+
+  // Compute reduced pose covariance.
+  // Density to covariance is computer at later step below.
+  const Eigen::Vector4d reducedPoseCovarianceDiagonal(
       currentTwistNoiseDensity_[MotionDirection::X],
       currentTwistNoiseDensity_[MotionDirection::Y],
-      currentTwistNoiseDensity_[MotionDirection::Z]);
-  const Covariance velocityCovarianceInBase(velocityCovarianceInBaseDiagonal.asDiagonal());
-//  const double yawRotationAngle = kindr::RotationVectorPD(robotPoseInOdom_.getRotation()).z();
-//  kindr::RotationMatrixPD yawRotation(kindr::RotationVectorPD(Eigen::Vector3d::UnitZ() * yawRotationAngle)); // TODO transpose?
-  const kindr::RotationMatrixPD transformBaseToOdom(robotPoseInOdom_.getRotation());
-  const Covariance positionCovarianceUpdate(
-      currentUpdateDuration_ * transformBaseToOdom.matrix() * velocityCovarianceInBase
-          * transformBaseToOdom.matrix().transpose());
-  robotPoseCovariance_.topLeftCorner(3, 3) +=  positionCovarianceUpdate; // TODO Not wokring?
+      currentTwistNoiseDensity_[MotionDirection::Z],
+      currentTwistNoiseDensity_[MotionDirection::Yaw]);
+  const ReducedCovariance reducedPoseCovariance(reducedPoseCovarianceDiagonal.asDiagonal());
+  Jacobian jacobian = Jacobian::Zero();
+  jacobian.topLeftCorner(3, 3) = transformBaseToOdom.matrix();
+  jacobian(3, 3) = 1.0;
+  const ReducedCovariance reducedPoseCovarianceUpdate(
+      currentUpdateDuration_ * jacobian * reducedPoseCovariance * jacobian.transpose());
+
+  // Full pose covariance.
+  robotPoseCovariance_.topLeftCorner(3, 3) += reducedPoseCovarianceUpdate.topLeftCorner(3, 3);
+  robotPoseCovariance_(5, 5) += reducedPoseCovarianceUpdate(3, 3);
 }
 
 void OdometryMotionGazeboRosControl::writeSimulation()
@@ -216,7 +226,7 @@ void OdometryMotionGazeboRosControl::publishPoses()
     kindr_ros::convertToRosGeometryMsg(robotPoseInOdom_, pose.pose.pose);
     pose.header.stamp = timeStamp;
     pose.header.frame_id = odomFrameId_;
-    std::copy(pose.pose.covariance.begin(),pose.pose.covariance.end(), robotPoseCovariance_.data());
+    std::copy(robotPoseCovariance_.data(), robotPoseCovariance_.data() + 36, pose.pose.covariance.begin());
     poseInOdomPublisher_.publish(pose);
   }
 
