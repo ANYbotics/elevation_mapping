@@ -119,6 +119,8 @@ class OdometryMotionGazeboRosControl : public ModelPlugin
   std::string baseFrameId_;
   std::string odomFrameId_;
   std::string mapFrameId_;
+  /// Ignore additive noise for simulated motion.
+  bool ignoreNoiseForMotion_;
 
   /// Model
   physics::ModelPtr model_;

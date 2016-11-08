@@ -108,6 +108,7 @@ void OdometryMotionGazeboRosControl::readParameters()
   nodeHandle_->param("twist_noise_density/linear/y", twistNoiseDenistyParameter_[MotionDirection::Y], 0.0);
   nodeHandle_->param("twist_noise_density/linear/z", twistNoiseDenistyParameter_[MotionDirection::Z], 0.0);
   nodeHandle_->param("twist_noise_density/angular/z", twistNoiseDenistyParameter_[MotionDirection::Yaw], 0.0); // [rad^2/s^2 * s]
+  nodeHandle_->param("ignore_noise_for_motion", ignoreNoiseForMotion_, false);
 }
 
 void OdometryMotionGazeboRosControl::readSimulation()
@@ -145,11 +146,12 @@ void OdometryMotionGazeboRosControl::simulateMotionInOdom()
 
   // Add noise and compute velocity in odom frame.
   Twist twistInBase;
-  twistInBase.getTranslationalVelocity() = robotTwist_.getTranslationalVelocity() + twistNoise.getTranslationalVelocity();
+  twistInBase.getTranslationalVelocity() = robotTwist_.getTranslationalVelocity();
+  if (!ignoreNoiseForMotion_) twistInBase.getTranslationalVelocity() += twistNoise.getTranslationalVelocity();
   twistInBase.getRotationalVelocity() = robotTwist_.getRotationalVelocity();
   Twist twistInWorld;
   computeTwistInInertial(robotPoseInOdom_, twistInBase, twistInWorld);
-  twistInWorld.getRotationalVelocity() += twistNoise.getRotationalVelocity();
+  if (!ignoreNoiseForMotion_) twistInWorld.getRotationalVelocity() += twistNoise.getRotationalVelocity();
 
   // Compute pose through integration.
   robotPoseInOdom_.getPosition() += Position(currentUpdateDuration_ * twistInWorld.getTranslationalVelocity());
@@ -234,7 +236,9 @@ void OdometryMotionGazeboRosControl::publishPoses()
   transformMapToOdom.header.stamp = timeStamp;
   transformMapToOdom.header.frame_id = mapFrameId_;
   transformMapToOdom.child_frame_id = odomFrameId_;
-  const Pose robotPoseInOdomInverse(-robotPoseInOdom_.getPosition(), robotPoseInOdom_.getRotation().inverted());
+  const Pose robotPoseInOdomInverse(
+      robotPoseInOdom_.getRotation().inverseRotate(-robotPoseInOdom_.getPosition()),
+      robotPoseInOdom_.getRotation().inverted());
   Pose odomPoseInMap = robotPoseInMap_ * robotPoseInOdomInverse;
   kindr_ros::convertToRosGeometryMsg(odomPoseInMap, transformMapToOdom.transform);
   tfBroadcaster_.sendTransform(transformMapToOdom);

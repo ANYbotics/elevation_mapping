@@ -63,6 +63,13 @@ bool RobotMotionMapUpdater::update(
   ReducedCovariance relativeCovariance;
   computeRelativeCovariance(robotPose, reducedCovariance, relativeCovariance);
 
+  // For debugging.
+//  ReducedCovariance velocityCovarianceDensity;
+//  ros::Duration updateDuration(time - previousUpdateTime_);
+//  velocityCovarianceDensity = relativeCovariance / updateDuration.toSec(); // (A.11) & transformation to noise density.
+//  std::cout << std::endl << "Relative covariance density (dt = " << updateDuration.toSec() << "):" << std::endl;
+//  std::cout << velocityCovarianceDensity << std::endl;
+
   // Retrieve covariances for (24).
   Covariance positionCovariance = relativeCovariance.topLeftCorner<3, 3>();
   Covariance rotationCovariance(Covariance::Zero());
@@ -116,6 +123,7 @@ bool RobotMotionMapUpdater::update(
   }
 
   map.update(varianceUpdate, horizontalVarianceUpdateX, horizontalVarianceUpdateY, horizontalVarianceUpdateXY, time);
+  previousUpdateTime_ = time;
   previousReducedCovariance_ = reducedCovariance;
   previousRobotPose_ = robotPose;
   return true;

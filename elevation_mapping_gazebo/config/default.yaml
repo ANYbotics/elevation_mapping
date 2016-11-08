@@ -12,10 +12,12 @@ gazebo:
 
   twist_noise_density:
     linear: # [m^2/s^2 * s]
-      x: 0.00004
-      y: 0.00004
-      z: 0.00001
+      x: 0.002
+      y: 0.002
+      z: 0.001
     angular: # [rad^2/s^2 * s]
       x: 0.0
       y: 0.0
-      z: 0.0
+      z: 0.02
+
+  ignore_noise_for_motion: false

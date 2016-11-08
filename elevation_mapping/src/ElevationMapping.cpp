@@ -349,7 +349,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
       const Eigen::Matrix<double, 6, 6, Eigen::RowMajor>>(poseMessage->pose.covariance.data(), 6, 6);
 
   // Compute map variance update from motion prediction.
-  robotMotionMapUpdater_.update(map_, robotPose, robotPoseCovariance, time);
+  robotMotionMapUpdater_.update(map_, robotPose, robotPoseCovariance, poseMessage->header.stamp);
 
   return true;
 }

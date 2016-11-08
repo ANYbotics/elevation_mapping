@@ -141,6 +141,27 @@ Visualization Manager:
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
       Color: 200; 200; 200
+      Color Layer: horizontal_standard_deviation
+      Color Transformer: GridMapLayer
+      Enabled: false
+      Height Layer: elevation
+      Height Transformer: GridMapLayer
+      History Length: 1
+      Invert Rainbow: false
+      Max Color: 255; 255; 255
+      Max Intensity: 10
+      Min Color: 0; 0; 0
+      Min Intensity: 0
+      Name: Raw
+      Show Grid Lines: true
+      Topic: /elevation_mapping/elevation_map_raw
+      Unreliable: false
+      Use Rainbow: true
+      Value: false
+    - Alpha: 1
+      Autocompute Intensity Bounds: true
+      Class: grid_map_rviz_plugin/GridMap
+      Color: 200; 200; 200
       Color Layer: uncertainty_range
       Color Transformer: GridMapLayer
       Enabled: true
@@ -152,7 +173,7 @@ Visualization Manager:
       Max Intensity: 10
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: GridMap
+      Name: Map Fused
       Show Grid Lines: true
       Topic: /elevation_mapping/elevation_map
       Unreliable: false
@@ -164,7 +185,7 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: uncertainty_range
       Color Transformer: FlatColor
-      Enabled: true
+      Enabled: false
       Height Layer: upper_bound
       Height Transformer: GridMapLayer
       History Length: 1
@@ -173,19 +194,19 @@ Visualization Manager:
       Max Intensity: 10
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: GridMap
+      Name: Upper Bound
       Show Grid Lines: true
       Topic: /elevation_mapping/elevation_map
       Unreliable: false
       Use Rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Class: grid_map_rviz_plugin/GridMap
       Color: 200; 200; 200
       Color Layer: elevation
       Color Transformer: FlatColor
-      Enabled: true
+      Enabled: false
       Height Layer: lower_bound
       Height Transformer: Layer
       History Length: 1
@@ -194,12 +215,12 @@ Visualization Manager:
       Max Intensity: 10
       Min Color: 0; 0; 0
       Min Intensity: 0
-      Name: GridMap
+      Name: Lower Bound
       Show Grid Lines: true
       Topic: /elevation_mapping/elevation_map
       Unreliable: false
       Use Rainbow: true
-      Value: true
+      Value: false
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -224,22 +245,22 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz/Orbit
-      Distance: 2.95924
+      Distance: 3.72717
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.06
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 0.181369
-        Y: 0.0869747
-        Z: 0.183254
+        X: 0.258824
+        Y: -0.079624
+        Z: 0.0463206
       Name: Current View
       Near Clip Distance: 0.01
-      Pitch: 0.2904
+      Pitch: 1.0898
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 5.08041
+      Yaw: 5.12727
     Saved: ~
 Window Geometry:
   Displays:
@@ -257,5 +278,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1200
-  X: 3195
-  Y: 226
+  X: 3481
+  Y: 246
