@@ -7,7 +7,6 @@
     <include>
       <uri>model://sun</uri>
     </include>
-
     <model name="box">
       <static>true</static>
       <link name='box'>
@@ -21,6 +20,8 @@
         </visual>
       </link>
     </model>
-
+    <physics type="ode">
+      <gravity>0.0 0.0 0.0</gravity>
+    </physics>
   </world>
 </sdf>

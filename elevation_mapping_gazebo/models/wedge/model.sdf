@@ -1,0 +1,28 @@
+<?xml version="1.0"?>
+<sdf version="1.4">
+  <model name="wedge">
+    <pose>0 0 0 0 0 0</pose>
+    <static>true</static>
+    <link name="wedge_link">
+
+      <collision name="wedge_collision">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://elevation_mapping_gazebo/meshes/wedge.dae</uri>
+          </mesh>
+        </geometry>
+      </collision>
+
+      <visual name="wedge_visual">
+        <pose>0 0 0 0 0 0</pose>
+        <geometry>
+          <mesh>
+            <uri>model://elevation_mapping_gazebo/meshes/wedge.dae</uri>
+          </mesh>
+        </geometry>
+      </visual>
+
+    </link>
+  </model>
+</sdf>

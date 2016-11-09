@@ -6,6 +6,6 @@ resolution: 0.02
 min_variance: 0.000001
 max_variance: .inf
 mahalanobis_distance_threshold: 2.5
-multi_height_noise: 0.0000009
-surface_normal_estimation_radius: 0.015
+multi_height_noise: 0.00000009
+surface_normal_estimation_radius: 0.04
 surface_normal_positive_axis: z
