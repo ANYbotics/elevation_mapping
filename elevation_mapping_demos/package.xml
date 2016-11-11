@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>elevation_mapping_demos</name>
+  <version>0.3.0</version>
+  <description>Demonstrations for the elevation mapping framework.</description>
+  <maintainer email="pfankhauser@ethz.ch">Péter Fankhauser</maintainer>
+  <license>BSD</license>
+  <url type="website">http://github.com/ethz-asl/elevation_mapping</url>
+  <url type="bugtracker">http://github.com/ethz-asl/elevation_mapping/issues</url>
+  <author email="pfankhauser@ethz.ch">Péter Fankhauser</author>
+  <buildtool_depend>catkin</buildtool_depend>
+  <depend>elevation_mapping</depend>
+  <depend>grid_map_rviz_plugin</depend>
+  <depend>rviz</depend>
+</package>
