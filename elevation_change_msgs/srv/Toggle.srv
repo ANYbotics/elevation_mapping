@@ -1,5 +1,0 @@
-# Request
-bool enable    # True to enable the functionality, false to disable it.
----
-# Response
-bool success   # True if the functionality was successfully toggled or if it was already in desired state.
