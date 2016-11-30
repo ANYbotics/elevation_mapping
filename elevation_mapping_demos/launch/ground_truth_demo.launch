@@ -1,7 +1,7 @@
 <launch>
  	<node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
-    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/robots/ground_truth.yaml" />
-    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/elevation_maps/long_range.yaml" />
-    	 <rosparam command="load" file="$(find elevation_mapping)/parameters/sensor_processors/perfect.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/ground_truth_demo.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping_demos)/config/elevation_maps/long_range.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/perfect.yaml" />
     </node>
 </launch>
