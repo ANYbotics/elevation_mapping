@@ -19,7 +19,7 @@ P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
 in International Conference on Climbing and Walking Robots (CLAWAR), 2014.
 
     @inproceedings{Fankhauser2014RobotCentricElevationMapping,
-      author = {Fankhauser, Péter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
+      author = {Fankhauser, P\'{e}ter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
       title = {Robot-Centric Elevation Mapping with Uncertainty Estimates},
       booktitle = {International Conference on Climbing and Walking Robots (CLAWAR)},
       year = {2014}
