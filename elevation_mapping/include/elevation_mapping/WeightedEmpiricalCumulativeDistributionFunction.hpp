@@ -93,8 +93,9 @@ class WeightedEmpiricalCumulativeDistributionFunction
           "WeightedEmpiricalCumulativeDistributionFunction::quantile(...): The distribution functions needs to be computed (compute()) first.");
     if (probability <= 0.0) return inverseDistribution_.begin()->second;
     if (probability >= 1.0) return inverseDistribution_.rbegin()->second;
-    const auto& up = inverseDistribution_.lower_bound(probability);
-    const auto& low = --(inverseDistribution_.lower_bound(probability));
+    const auto& up = inverseDistribution_.lower_bound(probability); // First element that is not less than key.
+    auto low = up; // Copy.
+    --low;
     return low->second + (probability - low->first) * (up->second - low->second) / (up->first - low->first);
   }
 
