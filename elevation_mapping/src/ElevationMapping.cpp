@@ -66,6 +66,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   } else {
     ignoreRobotMotionUpdates_ = true;
   }
+  invalidPointCloudSubscriber_ = nodeHandle_.subscribe("invalid_points", 1, &ElevationMapping::invalidPointCloudCallback, this);
 
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
@@ -276,6 +277,18 @@ void ElevationMapping::pointCloudCallback(
   }
 
   resetMapUpdateTimer();
+}
+
+void ElevationMapping::invalidPointCloudCallback(
+    const sensor_msgs::PointCloud2& invalidPointCloud)
+{
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
+
+  pcl::PCLPointCloud2 pcl_pc;
+  pcl_conversions::toPCL(invalidPointCloud, pcl_pc);
+  PointCloud<PointXYZ>::Ptr pointCloud(new PointCloud<PointXYZ>);
+  pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
+  map_.remove(pointCloud);
 }
 
 void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)

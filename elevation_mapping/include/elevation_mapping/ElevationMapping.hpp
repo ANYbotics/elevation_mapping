@@ -67,6 +67,12 @@ class ElevationMapping
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
   /*!
+   * Callback function for new data to be removed from the elevation map.
+   * @param pointCloud the point cloud to be removed from existing data.
+   */
+  void invalidPointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
+
+  /*!
    * Callback function for the update timer. Forces an update of the map from
    * the robot's motion if no new measurements are received for a certain time
    * period.
@@ -168,6 +174,7 @@ class ElevationMapping
 
   //! ROS subscribers.
   ros::Subscriber pointCloudSubscriber_;
+  ros::Subscriber invalidPointCloudSubscriber_;
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
 
   //! ROS service servers.

@@ -74,6 +74,7 @@ bool ElevationMap::readParameters()
   nodeHandle_.param("max_horizontal_variance", maxHorizontalVariance_, 0.5);
   nodeHandle_.param("surface_normal_estimation_radius", surfaceNormalEstimationRadius_, 0.05);
   nodeHandle_.param("underlying_map_topic", underlyingMapTopic_, string());
+  nodeHandle_.param("removed_point_padding", removedPointPadding_, 0.3);
 
   string surfaceNormalPositiveAxis;
   nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
@@ -155,6 +156,23 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   clean();
   rawMap_.setTimestamp(1000 * pointCloud->header.stamp); // Point cloud stores time in microseconds.
   return true;
+}
+
+bool ElevationMap::remove(const pcl::PointCloud<pcl::PointXYZ>::Ptr pointCloud)
+{
+  for (unsigned int k = 0; k < pointCloud->size(); ++k) {
+    auto& point = pointCloud->points[k];
+    Index bottomLeftCornerIndex;
+    const Position bottomLeftCornerPosition(point.x - removedPointPadding_, point.y - removedPointPadding_);
+    rawMap_.getIndex(bottomLeftCornerPosition, bottomLeftCornerIndex);
+    Index topRightCornerIndex;
+    const Position topRightCornerPosition(point.x + removedPointPadding_, point.y + removedPointPadding_);
+    rawMap_.getIndex(topRightCornerPosition, topRightCornerIndex);
+    for (grid_map::SubmapIterator iterator(rawMap_, bottomLeftCornerIndex, topRightCornerIndex - bottomLeftCornerIndex);
+        !iterator.isPastEnd(); ++iterator) {
+        rawMap_.at("elevation", *iterator) = NAN;
+    }
+  }
 }
 
 bool ElevationMap::update(const grid_map::Matrix& varianceUpdate, const grid_map::Matrix& horizontalVarianceUpdateX,
