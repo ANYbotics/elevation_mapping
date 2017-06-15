@@ -1,5 +1,5 @@
 /*
- * KinectSensorProcessor.hpp
+ * StructuredLightSensorProcessor.hpp
  *
  *  Created on: Feb 5, 2014
  *      Author: Péter Fankhauser
@@ -13,9 +13,9 @@
 namespace elevation_mapping {
 
 /*!
- * Sensor processor for Kinect-type (PrimeSense) structured light sensors.
+ * Sensor processor for StructuredLight-type (PrimeSense) structured light sensors.
  */
-class KinectSensorProcessor : public SensorProcessorBase
+class StructuredLightSensorProcessor : public SensorProcessorBase
 {
 
 public:
@@ -25,12 +25,12 @@ public:
    * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-  KinectSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  StructuredLightSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
 
   /*!
    * Destructor.
    */
-	virtual ~KinectSensorProcessor();
+	virtual ~StructuredLightSensorProcessor();
 
 private:
 

@@ -9,7 +9,7 @@
 
 // Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
-#include "elevation_mapping/sensor_processors/KinectSensorProcessor.hpp"
+#include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
@@ -174,9 +174,9 @@ bool ElevationMapping::readParameters()
 
   // SensorProcessor parameters.
   string sensorType;
-  nodeHandle_.param("sensor_processor/type", sensorType, string("Kinect"));
-  if (sensorType == "Kinect") {
-    sensorProcessor_.reset(new KinectSensorProcessor(nodeHandle_, transformListener_));
+  nodeHandle_.param("sensor_processor/type", sensorType, string("StructuredLight"));
+  if (sensorType == "StructuredLight") {
+    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, transformListener_));
   } else if (sensorType == "Stereo") {
     sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
   } else if (sensorType == "Laser") {
