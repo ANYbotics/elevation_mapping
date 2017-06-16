@@ -103,7 +103,7 @@ bool StructuredLightSensorProcessor::computeVariances(
 		float heightVariance = 0.0; // sigma_p
 
 		// Measurement distance.
-		float measurementDistance = pointVector.norm();
+		float measurementDistance = pointVector.z();
 
 		// Compute sensor covariance matrix (Sigma_S) with sensor model.
                 float deviationNormal = sensorParameters_.at("normal_factor_a")

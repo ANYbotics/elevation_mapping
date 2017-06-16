@@ -106,7 +106,7 @@ bool ElevationMapping::readParameters()
 {
   // ElevationMapping parameters.
   nodeHandle_.param("point_cloud_topic", pointCloudTopic_, string("/points"));
-  nodeHandle_.param("robot_pose_with_covariance_topic", robotPoseTopic_, string(""));
+  nodeHandle_.param("robot_pose_with_covariance_topic", robotPoseTopic_, string("/pose"));
   nodeHandle_.param("track_point_frame_id", trackPointFrameId_, string("/robot"));
   nodeHandle_.param("track_point_x", trackPoint_.x(), 0.0);
   nodeHandle_.param("track_point_y", trackPoint_.y(), 0.0);
