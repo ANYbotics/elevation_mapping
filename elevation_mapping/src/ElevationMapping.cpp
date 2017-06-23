@@ -24,6 +24,7 @@
 #include <pcl/point_types.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
+#include <pcl/filters/voxel_grid.h>
 
 // Kindr
 #include <kindr/Core>
@@ -222,12 +223,18 @@ void ElevationMapping::pointCloudCallback(
   // TODO Double check with http://wiki.ros.org/hydro/Migration
   pcl::PCLPointCloud2 pcl_pc;
   pcl_conversions::toPCL(rawPointCloud, pcl_pc);
+
+  // pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
+  // sor.setInputCloud (pcl_pc);
+  // sor.setLeafSize (0.01f, 0.01f, 0.01f);
+  // sor.filter (pcl_pc);
+
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   ros::Time time;
   time.fromNSec(1000 * pointCloud->header.stamp);
 
-  ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
+  ROS_INFO("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
   // Update map location.
   updateMapLocation();
@@ -262,7 +269,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances)) {
+  if (!map_.add(pointCloudProcessed, measurementVariances, time)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;

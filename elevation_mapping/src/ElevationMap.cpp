@@ -31,7 +31,7 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color"}),
+      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false)
 {
@@ -97,7 +97,7 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and "  << rawMap_.getSize()(1) << " columns.");
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update )
 {
   if (pointCloud->size() != pointCloudVariances.size()) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
@@ -105,7 +105,8 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     return false;
   }
 
-  for (unsigned int i = 0; i < pointCloud->size(); ++i) {
+  // for (unsigned int i = 0; i < pointCloud->size(); ++i) {
+  for (unsigned int i = 0; i < pointCloud->size(); i=i+10) {
     auto& point = pointCloud->points[i];
 
     Index index;
@@ -118,6 +119,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& horizontalVarianceY = rawMap_.at("horizontal_variance_y", index);
     auto& horizontalVarianceXY = rawMap_.at("horizontal_variance_xy", index);
     auto& color = rawMap_.at("color", index);
+    auto& time = rawMap_.at("time", index);
     const float& pointVariance = pointCloudVariances(i);
 
     if (!rawMap_.isValid(index)) {
@@ -130,8 +132,10 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       colorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
+    if (time_update.toSec() == time && elevation > point.z)
+        continue;
 
-    double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
+    double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance); //sqrt((point.z - elevation) * (point.z - elevation) / variance);
 
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
       // Add noise to cells which have ignored lower values,
@@ -145,6 +149,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     variance = (pointVariance * variance) / (pointVariance + variance);
     // TODO Add color fusion.
     colorVectorToValue(point.getRGBVector3i(), color);
+    time = time_update.toSec();
 
     // Horizontal variances are reset.
     horizontalVarianceX = minHorizontalVariance_;

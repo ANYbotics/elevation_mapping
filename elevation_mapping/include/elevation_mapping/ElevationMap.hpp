@@ -62,7 +62,7 @@ class ElevationMap
    * @param pointCloudVariances the corresponding variances of the point cloud data.
    * @return true if successful.
    */
-  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances);
+  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update);
 
   /*!
    * Update the elevation map with variance update data.

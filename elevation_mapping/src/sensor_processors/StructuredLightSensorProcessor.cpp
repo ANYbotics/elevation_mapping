@@ -9,6 +9,7 @@
 #include <elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp>
 
 #include <pcl/filters/passthrough.h>
+#include <pcl/filters/voxel_grid.h>
 #include <vector>
 #include <limits>
 #include <string>
