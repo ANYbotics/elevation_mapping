@@ -293,6 +293,9 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
   double surfaceNormalEstimationRadius_;
   Eigen::Vector3d surfaceNormalPositiveAxis_;
   std::string underlyingMapTopic_;
+  bool enableRemovePenetratedPoints_;
+  bool enableSkipLowerPoints_;
+  double skipLowerPointsThreshold_;
 };
 
 } /* namespace */

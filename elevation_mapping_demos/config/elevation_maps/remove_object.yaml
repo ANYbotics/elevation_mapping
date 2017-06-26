@@ -29,3 +29,6 @@ multi_height_noise: 0.02
 surface_normal_estimation_radius: 0.1
 surface_normal_positive_axis: z
 fused_map_publishing_rate: 2.0
+enable_remove_penetrated_points: true
+enable_skip_lower_points: true
+skip_lower_points_threshold: 0.01
