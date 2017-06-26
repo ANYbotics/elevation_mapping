@@ -62,7 +62,8 @@ class ElevationMap
    * @param pointCloudVariances the corresponding variances of the point cloud data.
    * @return true if successful.
    */
-  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update);
+  // bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update);
+bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update, const Eigen::Affine3d transformationSensorToMap);
 
   /*!
    * Update the elevation map with variance update data.
@@ -99,6 +100,8 @@ class ElevationMap
    * @return true if successful.
    */
   bool clear();
+
+  void removePenetratedPoints(const grid_map::Index& topLeftIndex, const grid_map::Index& size, ros::Time time);
 
   /*!
    * Move the grid map w.r.t. to the grid map frame.

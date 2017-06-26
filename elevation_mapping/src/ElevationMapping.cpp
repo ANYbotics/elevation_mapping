@@ -269,7 +269,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances, time)) {
+  if (!map_.add(pointCloudProcessed, measurementVariances, time, sensorProcessor_->transformationSensorToMap_)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;

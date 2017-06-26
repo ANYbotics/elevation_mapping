@@ -31,7 +31,7 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time"}),
+      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "max_height"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false)
 {
@@ -97,16 +97,20 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and "  << rawMap_.getSize()(1) << " columns.");
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update )
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update, const Eigen::Affine3d transformationSensorToMap)
 {
   if (pointCloud->size() != pointCloudVariances.size()) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
               (int) pointCloud->size(), (int) pointCloudVariances.size());
     return false;
   }
+  Index index_sensor;
+  Eigen::Vector3d sensorTranslation = -transformationSensorToMap.translation();
+  rawMap_.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), index_sensor);
+  // ROS_INFO_STREAM("Index is " << index_sensor);
+  // ROS_INFO_STREAM("transformation is " << transformationSensorToMap.translation());
 
-  // for (unsigned int i = 0; i < pointCloud->size(); ++i) {
-  for (unsigned int i = 0; i < pointCloud->size(); i=i+10) {
+  for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
 
     Index index;
@@ -120,7 +124,9 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& horizontalVarianceXY = rawMap_.at("horizontal_variance_xy", index);
     auto& color = rawMap_.at("color", index);
     auto& time = rawMap_.at("time", index);
+    auto& maxHeight = rawMap_.at("max_height", index);
     const float& pointVariance = pointCloudVariances(i);
+    time = time_update.toSec();
 
     if (!rawMap_.isValid(index)) {
       // No prior information in elevation map, use measurement.
@@ -132,10 +138,12 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       colorVectorToValue(point.getRGBVector3i(), color);
       continue;
     }
+
     if (time_update.toSec() == time && elevation > point.z)
         continue;
 
     double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance); //sqrt((point.z - elevation) * (point.z - elevation) / variance);
+    // double mahalanobisDistance = sqrt(pow(point.z - elevation, 2) / variance);
 
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
       // Add noise to cells which have ignored lower values,
@@ -149,15 +157,40 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     variance = (pointVariance * variance) / (pointVariance + variance);
     // TODO Add color fusion.
     colorVectorToValue(point.getRGBVector3i(), color);
-    time = time_update.toSec();
 
     // Horizontal variances are reset.
     horizontalVarianceX = minHorizontalVariance_;
     horizontalVarianceY = minHorizontalVariance_;
     horizontalVarianceXY = 0.0;
+
+    float pointDiffX = point.x - sensorTranslation.x();
+    float pointDiffY = point.y - sensorTranslation.y();
+    float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
+    if (distanceToPoint > 0){
+        for (grid_map::LineIterator iterator(rawMap_, index_sensor, index);
+          !iterator.isPastEnd(); ++iterator) {
+            Position cellposition;
+            rawMap_.getPosition(*iterator, cellposition);
+            // ROS_INFO_STREAM("position is " << cellposition);
+            float cellDiffX = cellposition.x() - sensorTranslation.x();
+            float cellDiffY = cellposition.y() - sensorTranslation.y();
+            float distanceToCell = sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
+            // ROS_INFO_STREAM("distanceToCell is " << cellposition);
+            float max_height = point.z + (sensorTranslation.z() - point.z) / distanceToPoint * (distanceToPoint - distanceToCell);
+            // ROS_INFO_STREAM("max_height is " << max_height);
+            // auto& cellelevation = rawMap_.at("elevation", *iterator);
+            auto& cellmaxHeight = rawMap_.at("max_height", *iterator);
+            // ROS_INFO_STREAM("max_height is " << cellmaxHeight);
+            if (std::isnan(cellmaxHeight) || cellmaxHeight > max_height){
+                cellmaxHeight = max_height;
+                // ROS_INFO_STREAM("max_height is " << cellmaxHeight);
+            }
+        }
+    }
   }
 
   clean();
+  removePenetratedPoints(Index(0, 0), rawMap_.getSize(), time_update);
   rawMap_.setTimestamp(1000 * pointCloud->header.stamp); // Point cloud stores time in microseconds.
   return true;
 }
@@ -476,6 +509,28 @@ bool ElevationMap::clear()
   fusedMap_.resetTimestamp();
   return true;
 }
+
+void ElevationMap::removePenetratedPoints(const grid_map::Index& topLeftIndex, const grid_map::Index& size, ros::Time time_update){
+  for (SubmapIterator areaIterator(rawMap_, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
+
+    // Check if fusion for this cell has already been done earlier.
+    if (!rawMap_.isValid(*areaIterator)) continue;
+    auto& elevation = rawMap_.at("elevation", *areaIterator);
+    auto& maxHeight = rawMap_.at("max_height", *areaIterator);
+    auto& time = rawMap_.at("time", *areaIterator);
+
+    // ROS_INFO_STREAM("time difference= " << time_update.toSec() - time);
+    // ROS_INFO_STREAM("elevation = " << elevation << "maxHeight " << maxHeight);
+    if(time_update.toSec() - time > 5){
+        if(elevation > maxHeight + 0.01 && !std::isnan(maxHeight)){
+            elevation = NAN;
+            // ROS_INFO("remove point");
+        }
+    }
+    maxHeight = NAN;
+  }
+}
+
 
 void ElevationMap::move(const Eigen::Vector2d& position)
 {
