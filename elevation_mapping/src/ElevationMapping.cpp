@@ -224,11 +224,6 @@ void ElevationMapping::pointCloudCallback(
   pcl::PCLPointCloud2 pcl_pc;
   pcl_conversions::toPCL(rawPointCloud, pcl_pc);
 
-  // pcl::VoxelGrid<pcl::PCLPointCloud2> sor;
-  // sor.setInputCloud (pcl_pc);
-  // sor.setLeafSize (0.01f, 0.01f, 0.01f);
-  // sor.filter (pcl_pc);
-
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   ros::Time time;
