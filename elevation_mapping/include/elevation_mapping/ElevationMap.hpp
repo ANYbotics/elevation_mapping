@@ -295,7 +295,9 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
   std::string underlyingMapTopic_;
   bool enableRemovePenetratedPoints_;
   bool enableSkipLowerPoints_;
-  double skipLowerPointsThreshold_;
+  double skipLowerPointsHeightThreshold_;
+  double skipLowerPointsTimeThreshold_;
+  double removePenetratedPointsTimeThreshold_;
 };
 
 } /* namespace */

@@ -79,7 +79,9 @@ bool ElevationMap::readParameters()
   nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
   nodeHandle_.param("enable_remove_penetrated_points", enableRemovePenetratedPoints_, false);
   nodeHandle_.param("enable_skip_lower_points", enableSkipLowerPoints_, false);
-  nodeHandle_.param("skip_lower_points_threshold", skipLowerPointsThreshold_, 0.01);
+  nodeHandle_.param("skip_lower_points_height_threshold", skipLowerPointsHeightThreshold_, 0.01);
+  nodeHandle_.param("skip_lower_points_time_threshold", skipLowerPointsTimeThreshold_, 0.1);
+  nodeHandle_.param("remove_penetrated_points_time_threshold", removePenetratedPointsTimeThreshold_, 1.0);
   if (surfaceNormalPositiveAxis == "z") {
     surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
   } else if (surfaceNormalPositiveAxis == "y") {
@@ -153,7 +155,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     
     // Skip points that are lower than the already measured elevation
     if(enableSkipLowerPoints_){
-      if (fabs(time_now - time) < 0.1 && elevation > point.z + skipLowerPointsThreshold_)
+      if (fabs(time_now - time) < skipLowerPointsTimeThreshold_ && elevation > point.z + skipLowerPointsHeightThreshold_)
           continue;
     }
 
@@ -525,7 +527,7 @@ void ElevationMap::removePenetratedPoints(const grid_map::Index& topLeftIndex, c
 
     double time_now = time_update.toSec() - ((int)time_update.toSec() / 100000) * 100000;
 
-    if(time_now - time > 1){
+    if(time_now - time > removePenetratedPointsTimeThreshold_){
         if(elevation > maxHeight && !std::isnan(maxHeight)){
             elevation = NAN;
         }
