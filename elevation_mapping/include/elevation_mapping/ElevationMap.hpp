@@ -63,7 +63,7 @@ class ElevationMap
    * @return true if successful.
    */
   // bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update);
-bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update, const Eigen::Affine3d transformationSensorToMap);
+bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime, const Eigen::Affine3d transformationSensorToMap);
 
   /*!
    * Update the elevation map with variance update data.
@@ -283,6 +283,9 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
   //! Underlying map subscriber.
   ros::Subscriber underlyingMapSubscriber_;
 
+  //! Initial ros time
+  ros::Time initialTime_;
+
   //! Parameters. Are set through the ElevationMapping class.
   double minVariance_;
   double maxVariance_;
@@ -295,9 +298,7 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
   std::string underlyingMapTopic_;
   bool enableRemovePenetratedPoints_;
   bool enableSkipLowerPoints_;
-  double skipLowerPointsHeightThreshold_;
-  double skipLowerPointsTimeThreshold_;
-  double removePenetratedPointsTimeThreshold_;
+  double scanningTime_;
 };
 
 } /* namespace */
