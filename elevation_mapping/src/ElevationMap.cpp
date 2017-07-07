@@ -113,8 +113,13 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     initialTime_ = updatedTime;
   }
   Index index_sensor;
-  Eigen::Vector3d sensorTranslation = -transformationSensorToMap.translation();
+  Eigen::Vector3d sensorTranslation = transformationSensorToMap.translation();
   rawMap_.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), index_sensor);
+  int minX, minY, maxX, maxY;
+  minX = rawMap_.getSize().x();
+  minY = rawMap_.getSize().y();
+  maxX = 0;
+  maxY = 0;
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
@@ -144,7 +149,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       continue;
     }
 
-
     double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);
     double timeDuration = (updatedTime - initialTime_).toSec();
 
@@ -172,7 +176,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     horizontalVarianceY = minHorizontalVariance_;
     horizontalVarianceXY = 0.0;
 
-    // remove penetrated points
+    // // remove penetrated points
     if(enableRemovePenetratedPoints_){
       float pointDiffX = point.x - sensorTranslation.x();
       float pointDiffY = point.y - sensorTranslation.y();
@@ -180,16 +184,27 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       if (distanceToPoint > 0){
         for (grid_map::LineIterator iterator(rawMap_, index_sensor, index);
           !iterator.isPastEnd(); ++iterator) {
-            Position cellposition;
-            rawMap_.getPosition(*iterator, cellposition);
-            float cellDiffX = cellposition.x() - sensorTranslation.x();
-            float cellDiffY = cellposition.y() - sensorTranslation.y();
+            Position cellPosition;
+            rawMap_.getPosition(*iterator, cellPosition);
+            float cellDiffX = cellPosition.x() - sensorTranslation.x();
+            float cellDiffY = cellPosition.y() - sensorTranslation.y();
             float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
             float maxHeightPoint = point.z + (sensorTranslation.z() - point.z) / distanceToPoint * distanceToCell;
             auto& cellMaxHeight = rawMap_.at("max_height", *iterator);
             if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint){
                 cellMaxHeight = maxHeightPoint;
             }
+            // save top left and bottom right index
+            Index cellIndex;
+            rawMap_.getIndex(cellPosition, cellIndex);
+            if(minX > cellIndex.x())
+              minX = cellIndex.x();
+            if(minY > cellIndex.y())
+              minY = cellIndex.y();
+            if(maxX < cellIndex.x())
+              maxX = cellIndex.x();
+            if(maxY < cellIndex.y())
+              maxY = cellIndex.y();
         }
       }
     }
@@ -197,7 +212,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
   clean();
   if(enableRemovePenetratedPoints_)
-    removePenetratedPoints(Index(0, 0), rawMap_.getSize(), updatedTime);
+    removePenetratedPoints(Index(minX, minY), Index(maxX, maxY), updatedTime);
   rawMap_.setTimestamp(1000 * pointCloud->header.stamp); // Point cloud stores time in microseconds.
   return true;
 }
