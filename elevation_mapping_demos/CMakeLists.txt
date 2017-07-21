@@ -19,11 +19,23 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 
 catkin_package(
-    #INCLUDE_DIRS include
-    #LIBRARIES
-    CATKIN_DEPENDS
-      elevation_mapping
-      grid_map_rviz_plugin
-      rviz
-    #DEPENDS
+  #INCLUDE_DIRS include
+  #LIBRARIES
+  CATKIN_DEPENDS
+    elevation_mapping
+    grid_map_rviz_plugin
+    rviz
+  #DEPENDS
+)
+
+#############
+## Install ##
+#############
+
+install(DIRECTORY config doc launch rviz
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
+
+install(PROGRAMS scripts/ground_truth_pose_publisher.py
+  DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
