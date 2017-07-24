@@ -101,7 +101,7 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
    */
   bool clear();
 
-  void removePenetratedPoints(const grid_map::Index& topLeftIndex, const grid_map::Index& size, ros::Time time);
+  void removePenetratedPoints(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const Eigen::Affine3d transformationSensorToMap, ros::Time time);
 
   /*!
    * Move the grid map w.r.t. to the grid map frame.
