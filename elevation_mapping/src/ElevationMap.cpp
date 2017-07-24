@@ -115,9 +115,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   if (initialTime_.toSec() == 0){
     initialTime_ = updatedTime;
   }
-  Index index_sensor;
-  Eigen::Vector3d sensorTranslation = transformationSensorToMap.translation();
-  rawMap_.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), index_sensor);
   int minX, minY, maxX, maxY;
   minX = rawMap_.getSize().x();
   minY = rawMap_.getSize().y();
@@ -191,7 +188,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     horizontalVarianceX = minHorizontalVariance_;
     horizontalVarianceY = minHorizontalVariance_;
     horizontalVarianceXY = 0.0;
-
   }
 
   clean();
