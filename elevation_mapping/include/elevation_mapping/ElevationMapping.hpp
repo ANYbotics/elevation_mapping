@@ -81,6 +81,14 @@ class ElevationMapping
    */
   void publishFusedMapCallback(const ros::TimerEvent& timerEvent);
 
+
+  /*!
+   * Callback function for the penetrated point removal timer
+   * Calculates ray tracing with new measurement and remove penetrated points.
+   * @param timerEvent the timer event.
+   */
+  void removePenetratedPointsCallback(const ros::TimerEvent& timerEvent);
+
   /*!
    * ROS service callback function to trigger the fusion of the entire
    * elevation map.
@@ -134,6 +142,11 @@ class ElevationMapping
   void runFusionServiceThread();
 
   /*!
+   * Separate thread for penetrated points removal.
+   */
+  void runRemovePenetratedPointsThread();
+
+  /*!
    * Update the elevation map from the robot motion up to a certain time.
    * @param time to which the map is updated to.
    * @return true if successful.
@@ -182,6 +195,9 @@ class ElevationMapping
   //! Callback queue for fusion service thread.
   ros::CallbackQueue fusionServiceQueue_;
 
+  //! Callback queue for removing penetrated points thread.
+  ros::CallbackQueue removePenetratedPointsQueue_;
+
   //! Cache for the robot pose messages.
   message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
 
@@ -226,6 +242,18 @@ class ElevationMapping
 
   //! Duration for the publishing the fusing map.
   ros::Duration fusedMapPublishTimerDuration_;
+
+  //! Timer for the penetrated points removal.
+  ros::Timer removePenetratedPointsTimer_;
+
+  //! Duration for the penetrated points removal.
+  ros::Duration removePenetratedPointsTimerDuration_;
+
+  //! Time of the newest point cloud.
+  ros::Time newestTime_;
+
+  //! Callback thread for the remove penetrated points.
+  boost::thread removePenetratedPointsThread_;
 
   //! If map is fused after every change for debugging/analysis purposes.
   bool isContinouslyFusing_;

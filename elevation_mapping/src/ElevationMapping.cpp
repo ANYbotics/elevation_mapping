@@ -88,6 +88,13 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
         false, false);
     fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
   }
+  if (!removePenetratedPointsTimerDuration_.isZero()){
+    TimerOptions timerOptions = TimerOptions(
+        removePenetratedPointsTimerDuration_,
+        boost::bind(&ElevationMapping::removePenetratedPointsCallback, this, _1), &removePenetratedPointsQueue_,
+        false, false);
+    removePenetratedPointsTimer_ = nodeHandle_.createTimer(timerOptions);
+  }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
@@ -136,6 +143,17 @@ bool ElevationMapping::readParameters()
   } else {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
   }
+
+  double removePenetratedPointsRate;
+  nodeHandle_.param("remove_penetrated_points_rate", removePenetratedPointsRate, 0.0);
+  if (removePenetratedPointsRate == 0.0) {
+    removePenetratedPointsTimerDuration_.fromSec(0.0);
+    ROS_WARN("Rate for removing the penetrated points is zero.");
+  } 
+  else {
+    removePenetratedPointsTimerDuration_.fromSec(1.0 / removePenetratedPointsRate);
+  }
+
 
   // ElevationMap parameters. TODO Move this to the elevation map class.
   string frameId;
@@ -199,6 +217,8 @@ bool ElevationMapping::initialize()
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
   fusedMapPublishTimer_.start();
+  removePenetratedPointsThread_ = boost::thread(boost::bind(&ElevationMapping::runRemovePenetratedPointsThread, this));
+  removePenetratedPointsTimer_.start();
   ROS_INFO("Done.");
   return true;
 }
@@ -211,6 +231,16 @@ void ElevationMapping::runFusionServiceThread()
     fusionServiceQueue_.callAvailable(ros::WallDuration(timeout));
   }
 }
+
+void ElevationMapping::runRemovePenetratedPointsThread()
+{
+  static const double timeout = 0.01;
+
+  while (nodeHandle_.ok()) {
+    removePenetratedPointsQueue_.callAvailable(ros::WallDuration(timeout));
+  }
+}
+
 
 void ElevationMapping::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
@@ -228,6 +258,7 @@ void ElevationMapping::pointCloudCallback(
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   ros::Time time;
   time.fromNSec(1000 * pointCloud->header.stamp);
+  newestTime_ = time;
 
   ROS_INFO("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
@@ -264,7 +295,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances, time, sensorProcessor_->transformationSensorToMap_)) {
+  if (!map_.add(pointCloudProcessed, measurementVariances, time)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;
@@ -313,6 +344,12 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll(false);
   map_.publishFusedElevationMap();
+}
+
+void ElevationMapping::removePenetratedPointsCallback(const ros::TimerEvent&)
+{
+  ROS_INFO("removePenetratedPointsCallback");
+  map_.removePenetratedPoints(sensorProcessor_->transformationSensorToMap_, newestTime_);
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)

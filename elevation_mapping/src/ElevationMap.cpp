@@ -33,7 +33,10 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "max_height", "new_height"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
-      hasUnderlyingMap_(false)
+      hasUnderlyingMap_(false),
+      removePenetratedPointsDuration_(0),
+      topLeftIndexForRemoval_(Index(rawMap_.getSize().x(), rawMap_.getSize().y())),
+      bottomRightIndexForRemoval_(Index(0, 0))
 {
   readParameters();
   rawMap_.setBasicLayers({"elevation", "variance"});
@@ -44,6 +47,7 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map", 1);
   if (!underlyingMapTopic_.empty()) underlyingMapSubscriber_ =
       nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
+
   initialTime_ = ros::Time::now();
 }
 
@@ -78,9 +82,14 @@ bool ElevationMap::readParameters()
 
   string surfaceNormalPositiveAxis;
   nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
-  nodeHandle_.param("enable_remove_penetrated_points", enableRemovePenetratedPoints_, false);
   nodeHandle_.param("enable_skip_lower_points", enableSkipLowerPoints_, false);
   nodeHandle_.param("scanning_time", scanningTime_, 0.01);
+
+  double removePenetratedPointsRate;
+  nodeHandle_.param("remove_penetrated_points_rate", removePenetratedPointsRate, 0.0);
+  if(removePenetratedPointsRate != 0)
+    removePenetratedPointsDuration_ = 1.0 / removePenetratedPointsRate;
+
   if (surfaceNormalPositiveAxis == "z") {
     surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
   } else if (surfaceNormalPositiveAxis == "y") {
@@ -101,7 +110,7 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and "  << rawMap_.getSize()(1) << " columns.");
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime, const Eigen::Affine3d transformationSensorToMap)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime)
 {
   if (pointCloud->size() != pointCloudVariances.size()) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
@@ -115,11 +124,8 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   if (initialTime_.toSec() == 0){
     initialTime_ = updatedTime;
   }
-  int minX, minY, maxX, maxY;
-  minX = rawMap_.getSize().x();
-  minY = rawMap_.getSize().y();
-  maxX = 0;
-  maxY = 0;
+
+  rawMap_.clear("new_height");
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
@@ -166,14 +172,14 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
 
     if (point.z < newHeight || std::isnan(newHeight)){
       newHeight = point.z;
-      if(minX > index.x())
-        minX = index.x();
-      if(minY > index.y())
-        minY = index.y();
-      if(maxX < index.x())
-        maxX = index.x();
-      if(maxY < index.y())
-        maxY = index.y();
+      if(topLeftIndexForRemoval_.x() > index.x())
+        topLeftIndexForRemoval_.x() = index.x();
+      if(topLeftIndexForRemoval_.y() > index.y())
+        topLeftIndexForRemoval_.y() = index.y();
+      if(bottomRightIndexForRemoval_.x() < index.x())
+        bottomRightIndexForRemoval_.x() = index.x();
+      if(bottomRightIndexForRemoval_.y() < index.y())
+        bottomRightIndexForRemoval_.y() = index.y();
     }
 
     time = timeDuration;
@@ -191,9 +197,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   }
 
   clean();
-  if(enableRemovePenetratedPoints_){
-    removePenetratedPoints(Index(minX, minY), Index(maxX, maxY), transformationSensorToMap, updatedTime);
-  }
   rawMap_.setTimestamp(1000 * pointCloud->header.stamp); // Point cloud stores time in microseconds.
 
   ros::WallDuration duration = ros::WallTime::now() - wallTime;
@@ -516,58 +519,89 @@ bool ElevationMap::clear()
   return true;
 }
 
-void ElevationMap::removePenetratedPoints(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const Eigen::Affine3d transformationSensorToMap, const ros::Time updatedTime){
+void ElevationMap::removePenetratedPoints(const Eigen::Affine3d transformationSensorToMap, const ros::Time updatedTime){
+  // Get current time to show calculation time
   ros::WallTime time = ros::WallTime::now();
+
+  // Copy raw elevation map data for safe multi-threading.
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+  auto rawMapCopy = rawMap_;
+  auto topLeftIndexCopy = topLeftIndexForRemoval_;
+  auto bottomRightIndexCopy = bottomRightIndexForRemoval_;
+  rawMap_.clear("new_height");
+  rawMap_.clear("max_height");
+  topLeftIndexForRemoval_ = Index(rawMap_.getSize().x(), rawMap_.getSize().y());
+  bottomRightIndexForRemoval_ = Index(0, 0);
+  scopedLockForRawData.unlock();
+
+  // Get sensor position in gridmap
   Index index_sensor;
   Eigen::Vector3d sensorTranslation = transformationSensorToMap.translation();
-  rawMap_.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), index_sensor);
+  rawMapCopy.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), index_sensor);
 
-  for (SubmapIterator areaIterator(rawMap_, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
-      auto& newHeight = rawMap_.at("new_height", *areaIterator);
+  if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y())
+    return;
+
+  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
+      if(!rawMapCopy.isValid(*areaIterator))
+        continue;
+      auto& newHeight = rawMapCopy.at("new_height", *areaIterator);
       if(std::isnan(newHeight))
         continue;
       Position point;
-      rawMap_.getPosition(*areaIterator, point);
+      rawMapCopy.getPosition(*areaIterator, point);
       float pointDiffX = point.x() - sensorTranslation.x();
       float pointDiffY = point.y() - sensorTranslation.y();
       float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
       if (distanceToPoint > 0){
-        for (grid_map::LineIterator iterator(rawMap_, index_sensor, *areaIterator);
+        for (grid_map::LineIterator iterator(rawMapCopy, index_sensor, *areaIterator);
           !iterator.isPastEnd(); ++iterator) {
             Position cellPosition;
-            rawMap_.getPosition(*iterator, cellPosition);
+            rawMapCopy.getPosition(*iterator, cellPosition);
             float cellDiffX = cellPosition.x() - sensorTranslation.x();
             float cellDiffY = cellPosition.y() - sensorTranslation.y();
             float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
             float maxHeightPoint = newHeight + (sensorTranslation.z() - newHeight) / distanceToPoint * distanceToCell;
-            auto& cellMaxHeight = rawMap_.at("max_height", *iterator);
+            auto& cellMaxHeight = rawMapCopy.at("max_height", *iterator);
             if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint){
                 cellMaxHeight = maxHeightPoint;
             }
         }
       }
-      newHeight = NAN;
   }
-  for (SubmapIterator areaIterator(rawMap_, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
+  // vector of Index that will be removed
+  std::vector<Index> removeIndices;
+  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
 
-    if (!rawMap_.isValid(*areaIterator)) continue;
-    auto& elevation = rawMap_.at("elevation", *areaIterator);
-    auto& maxHeight = rawMap_.at("max_height", *areaIterator);
-    auto& time = rawMap_.at("time", *areaIterator);
+    if (!rawMapCopy.isValid(*areaIterator)) continue;
+    auto& elevation = rawMapCopy.at("elevation", *areaIterator);
+    auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
+    auto& time = rawMapCopy.at("time", *areaIterator);
 
     double timeDuration = (updatedTime - initialTime_).toSec();
 
     if(timeDuration - time > scanningTime_){
         if(elevation > maxHeight && !std::isnan(maxHeight)){
-            elevation = NAN;
+          removeIndices.push_back(*areaIterator);
         }
     }
-    maxHeight = NAN;
   }
-  ros::WallDuration duration(ros::WallTime::now() - time);
-  ROS_INFO("Penetrated points has been removed in %f s.", duration.toSec());
-}
+  // remove points in current rawMap_
+  scopedLockForRawData.lock();
+  for(Index removeIndex : removeIndices){
+    if(rawMap_.isValid(removeIndex)){
+      auto& elevation = rawMap_.at("elevation", removeIndex);
+      elevation = NAN;
+      // TODO: check if the index is valid in the new map
+    }
+  }
+  scopedLockForRawData.unlock();
 
+  ros::WallDuration duration(ros::WallTime::now() - time);
+  ROS_INFO("Penetrated points has been removed in %f s.(%d points)", duration.toSec(), (int)removeIndices.size());
+  if(duration.toSec() > removePenetratedPointsDuration_)
+    ROS_WARN("remove_penetrated_points_rate is too high (current rate is %f).", 1.0 / duration.toSec());
+}
 
 void ElevationMap::move(const Eigen::Vector2d& position)
 {

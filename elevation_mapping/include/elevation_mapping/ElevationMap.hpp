@@ -63,7 +63,7 @@ class ElevationMap
    * @return true if successful.
    */
   // bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update);
-bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime, const Eigen::Affine3d transformationSensorToMap);
+bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime);
 
   /*!
    * Update the elevation map with variance update data.
@@ -101,7 +101,7 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
    */
   bool clear();
 
-  void removePenetratedPoints(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const Eigen::Affine3d transformationSensorToMap, ros::Time time);
+  void removePenetratedPoints(const Eigen::Affine3d transformationSensorToMap, const ros::Time updatedTime);
 
   /*!
    * Move the grid map w.r.t. to the grid map frame.
@@ -296,9 +296,11 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
   double surfaceNormalEstimationRadius_;
   Eigen::Vector3d surfaceNormalPositiveAxis_;
   std::string underlyingMapTopic_;
-  bool enableRemovePenetratedPoints_;
   bool enableSkipLowerPoints_;
   double scanningTime_;
+  double removePenetratedPointsDuration_;
+  grid_map::Index topLeftIndexForRemoval_;
+  grid_map::Index bottomRightIndexForRemoval_;
 };
 
 } /* namespace */
