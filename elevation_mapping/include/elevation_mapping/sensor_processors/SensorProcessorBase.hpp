@@ -56,7 +56,7 @@ public:
 	/*!
 	 * Processes the point cloud.
 	 * @param[in] pointCloudInput the input point cloud.
-	 * @param[in] targetFrame the frame to which the point cloud should be transformed.
+	 * @param[in] targetFrame the frame to which the point cloud should be transformed. // TODO Update.
 	 * @param[out] pointCloudOutput the processed point cloud.
 	 * @param[out] variances the measurement variances expressed in the target frame.
 	 * @return true if successful.
@@ -98,11 +98,10 @@ public:
 
   /*!
    * Update the transformations for a given time stamp.
-   * @param sensorFrameId the sensor frame id.
    * @param timeStamp the time stamp for the transformation.
    * @return true if successful.
    */
-  bool updateTransformations(const std::string& sensorFrameId, const ros::Time& timeStamp);
+  bool updateTransformations(const ros::Time& timeStamp);
 
   /*!
    * Transforms the point cloud the a target frame.
@@ -111,7 +110,7 @@ public:
    * @param[in] targetFrame the desired target frame.
    * @return true if successful.
    */
-  bool transformPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
+  bool transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
                            pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
                            const std::string& targetFrame);
 
@@ -151,6 +150,9 @@ public:
 
   //! TF frame id of the robot base.
   std::string robotBaseFrameId_;
+
+  //! TF frame id of the range sensor for the point clouds.
+  std::string sensorFrameId_;
 
   //! Ignore points above this height in map frame.
   double ignorePointsUpperThreshold_;

@@ -42,14 +42,6 @@ bool LaserSensorProcessor::readParameters()
   nodeHandle_.param("sensor_processor/min_radius", sensorParameters_["min_radius"], 0.0);
   nodeHandle_.param("sensor_processor/beam_angle", sensorParameters_["beam_angle"], 0.0);
   nodeHandle_.param("sensor_processor/beam_constant", sensorParameters_["beam_constant"], 0.0);
-  nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
-  nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
-
-  double minUpdateRate;
-  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
-  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
-  ROS_ASSERT(!transformListenerTimeout_.isZero());
-
   return true;
 }
 
@@ -86,8 +78,7 @@ bool LaserSensorProcessor::computeVariances(
 	const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
 	const Eigen::Matrix3f B_r_BS_skew = kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
-	for (unsigned int i = 0; i < pointCloud->size(); ++i)
-	{
+  for (size_t i = 0; i < pointCloud->size(); ++i) {
 		// For every point in point cloud.
 
 		// Preparation.

@@ -31,7 +31,7 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "max_height", "new_height"}),
+      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "max_height"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false),
       visibilityCleanupDuration_(0),
@@ -70,22 +70,19 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
               (int) pointCloud->size(), (int) pointCloudVariances.size());
     return false;
   }
+
   // Initialization for time calculation.
   const ros::WallTime methodStartTime(ros::WallTime::now());
-
-  // TODO Ok?
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
 
   // Update initial time if it is not initialized.
   if (initialTime_.toSec() == 0) {
     initialTime_ = timestamp;
   }
-
- const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
+  const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
-
     Index index;
     Position position(point.x, point.y);
     if (!rawMap_.getIndex(position, index)) continue; // Skip this point if it does not lie within the elevation map.
@@ -97,8 +94,23 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& horizontalVarianceXY = rawMap_.at("horizontal_variance_xy", index);
     auto& color = rawMap_.at("color", index);
     auto& time = rawMap_.at("time", index);
-    auto& newHeight = rawMap_.at("new_height", index);
+    auto& lowestScanPoint = rawMap_.at("lowest_scan_point", index);
     const float& pointVariance = pointCloudVariances(i);
+    const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
+
+    // Store lowest points from scan for visibility checking.
+    const float pointHeightPlusUncertainty = point.z + 3.0 * sqrt(pointVariance); // 3 sigma.
+    if (std::isnan(lowestScanPoint) || pointHeightPlusUncertainty < lowestScanPoint){
+      lowestScanPoint = pointHeightPlusUncertainty;
+      if(topLeftIndexForRemoval_.x() > index.x())
+        topLeftIndexForRemoval_.x() = index.x();
+      if(topLeftIndexForRemoval_.y() > index.y())
+        topLeftIndexForRemoval_.y() = index.y();
+      if(bottomRightIndexForRemoval_.x() < index.x())
+        bottomRightIndexForRemoval_.x() = index.x();
+      if(bottomRightIndexForRemoval_.y() < index.y())
+        bottomRightIndexForRemoval_.y() = index.y();
+    }
 
     if (!rawMap_.isValid(index)) {
       // No prior information in elevation map, use measurement.
@@ -111,39 +123,17 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       continue;
     }
 
+    // Deal with multiple heights in one cell.
     const double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);
-
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
-      if (enableVisibilityBasedCleanup_) {
-        if (fabs(scanTimeSinceInitialization - time) <= scanningTime_ && elevation > point.z) {
-          // Ingore point if measurement is from the same point cloud (time comparison) and
-          // if measurement is lower then the elevation in the map.
-        } else { // TODO Keep this?
-          // If point is higher.
-          variance += multiHeightNoise_;
-        }
-      }
-
-      else {
-        // Add noise to cells which have ignored lower values,
-        // such that outliers and moving objects are removed.
+      if (scanTimeSinceInitialization - time <= scanningTime_ && elevation > point.z) {
+        // Ignore point if measurement is from the same point cloud (time comparison) and
+        // if measurement is lower then the elevation in the map.
+      } else {
+        // If point is higher.
         variance += multiHeightNoise_;
       }
-
       continue;
-    }
-
-    // TODO Double check and comment.
-    if (point.z < newHeight || std::isnan(newHeight)){
-      newHeight = point.z;
-      if(topLeftIndexForRemoval_.x() > index.x())
-        topLeftIndexForRemoval_.x() = index.x();
-      if(topLeftIndexForRemoval_.y() > index.y())
-        topLeftIndexForRemoval_.y() = index.y();
-      if(bottomRightIndexForRemoval_.x() < index.x())
-        bottomRightIndexForRemoval_.x() = index.x();
-      if(bottomRightIndexForRemoval_.y() < index.y())
-        bottomRightIndexForRemoval_.y() = index.y();
     }
 
     // Fuse measurement with elevation map data.
@@ -175,13 +165,10 @@ bool ElevationMap::update(const grid_map::Matrix& varianceUpdate, const grid_map
 
   const auto& size = rawMap_.getSize();
 
-  if (!(
-      (Index(varianceUpdate.rows(), varianceUpdate.cols()) == size).all() &&
-      (Index(horizontalVarianceUpdateX.rows(), horizontalVarianceUpdateX.cols()) == size).all() &&
-      (Index(horizontalVarianceUpdateY.rows(), horizontalVarianceUpdateY.cols()) == size).all() &&
-      (Index(horizontalVarianceUpdateXY.rows(), horizontalVarianceUpdateXY.cols()) == size).all()
-      ))
-  {
+  if (!((Index(varianceUpdate.rows(), varianceUpdate.cols()) == size).all()
+      && (Index(horizontalVarianceUpdateX.rows(), horizontalVarianceUpdateX.cols()) == size).all()
+      && (Index(horizontalVarianceUpdateY.rows(), horizontalVarianceUpdateY.cols()) == size).all()
+      && (Index(horizontalVarianceUpdateXY.rows(), horizontalVarianceUpdateXY.cols()) == size).all())) {
     ROS_ERROR("The size of the update matrices does not match.");
     return false;
   }
@@ -487,14 +474,14 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
 {
   // Get current time to compute calculation time.
   const ros::WallTime methodStartTime(ros::WallTime::now());
-  const double timeDuration = (updatedTime - initialTime_).toSec();
+  const double timeSinceInitialization = (updatedTime - initialTime_).toSec();
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   auto rawMapCopy = rawMap_;
   auto topLeftIndexCopy = topLeftIndexForRemoval_;
   auto bottomRightIndexCopy = bottomRightIndexForRemoval_;
-  rawMap_.clear("new_height");
+  rawMap_.clear("lowest_scan_point");
   rawMap_.clear("max_height");
   topLeftIndexForRemoval_ = Index(rawMap_.getSize().x(), rawMap_.getSize().y());
   bottomRightIndexForRemoval_ = Index(0, 0);
@@ -505,14 +492,12 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   const Position3 sensorTranslation(transformationSensorToMap.translation());
   rawMapCopy.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), indexAtSensor);
 
-  if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y())
-    return;
+  if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y()) return;
 
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
     if (!rawMapCopy.isValid(*areaIterator)) continue;
-    const auto& newHeight = rawMapCopy.at("new_height", *areaIterator);
-    const auto& time = rawMapCopy.at("time", *areaIterator);
-    if (std::isnan(newHeight) || timeDuration - time > scanningTime_) continue;
+    const auto& lowestScanPoint = rawMapCopy.at("lowest_scan_point", *areaIterator);
+    if (std::isnan(lowestScanPoint)) continue;
     Position point;
     rawMapCopy.getPosition(*areaIterator, point);
     float pointDiffX = point.x() - sensorTranslation.x(); // TODO Do with Eigen.
@@ -525,7 +510,7 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
         const float cellDiffX = cellPosition.x() - sensorTranslation.x(); // TODO Do with Eigen.
         const float cellDiffY = cellPosition.y() - sensorTranslation.y();
         const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
-        const float maxHeightPoint = newHeight + (sensorTranslation.z() - newHeight) / distanceToPoint * distanceToCell;
+        const float maxHeightPoint = lowestScanPoint + (sensorTranslation.z() - lowestScanPoint) / distanceToPoint * distanceToCell;
         auto& cellMaxHeight = rawMapCopy.at("max_height", *iterator);
         if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint) {
           cellMaxHeight = maxHeightPoint;
@@ -539,10 +524,11 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
     if (!rawMapCopy.isValid(*areaIterator)) continue;
     const auto& elevation = rawMapCopy.at("elevation", *areaIterator);
+    const auto& variance = rawMapCopy.at("variance", *areaIterator);
     const auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
     const auto& time = rawMapCopy.at("time", *areaIterator);
-    if (timeDuration - time > scanningTime_) {
-      if (elevation > maxHeight && !std::isnan(maxHeight)) {
+    if (timeSinceInitialization - time > scanningTime_) { // TODO needed?
+      if (elevation - 3.0 * sqrt(variance) > maxHeight && !std::isnan(maxHeight)) {
         removeIndices.push_back(*areaIterator);
       }
     }
@@ -557,6 +543,7 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
       // TODO: check if the index is valid in the new map
     }
   }
+  rawMap_["max_height"] = rawMapCopy["max_height"];
   scopedLockForRawData.unlock();
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);

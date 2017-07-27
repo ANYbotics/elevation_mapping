@@ -224,7 +224,7 @@ class ElevationMapping
   bool ignoreRobotMotionUpdates_;
 
   //! Time of the last point cloud update.
-   ros::Time lastPointCloudUpdateTime_;
+  ros::Time lastPointCloudUpdateTime_;
 
   //! Timer for the robot motion update.
   ros::Timer mapUpdateTimer_;

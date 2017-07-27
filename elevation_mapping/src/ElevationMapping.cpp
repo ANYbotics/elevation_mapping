@@ -90,7 +90,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   // Multi-threading for visibility cleanup.
-  if (!visibilityCleanupTimerDuration_.isZero()){
+  if (map_.enableVisibilityCleanup_ && !visibilityCleanupTimerDuration_.isZero()){
     TimerOptions timerOptions = TimerOptions(
         visibilityCleanupTimerDuration_,
         boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1), &visibilityCleanupQueue_,
@@ -193,8 +193,7 @@ bool ElevationMapping::readParameters()
     ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
   }
 
-  nodeHandle_.param("enable_noise_based_cleanup", map_.enableNoiseBasedCleanup_, false);
-  nodeHandle_.param("enable_visibility_based_cleanup", map_.enableVisibilityBasedCleanup_, true);
+  nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
   nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 0.0);
   if(visibilityCleanupRate != 0.0) {
     map_.visibilityCleanupDuration_ = 1.0 / visibilityCleanupRate;
@@ -357,7 +356,8 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
 void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent&)
 {
   ROS_DEBUG("Elevation map is running visibility cleanup.");
-  map_.visibilityCleanup(sensorProcessor_->transformationSensorToMap_, lastPointCloudUpdateTime_);
+  // Copy constructors for thread-safety.
+  map_.visibilityCleanup(Eigen::Affine3d(sensorProcessor_->transformationSensorToMap_), ros::Time(lastPointCloudUpdateTime_));
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
