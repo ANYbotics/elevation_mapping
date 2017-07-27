@@ -38,7 +38,6 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
       topLeftIndexForRemoval_(Index(rawMap_.getSize().x(), rawMap_.getSize().y())),
       bottomRightIndexForRemoval_(Index(0, 0))
 {
-  readParameters();
   rawMap_.setBasicLayers({"elevation", "variance"});
   fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
   clear();
@@ -53,52 +52,6 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
 
 ElevationMap::~ElevationMap()
 {
-}
-
-bool ElevationMap::readParameters()
-{
-  string frameId;
-  nodeHandle_.param("map_frame_id", frameId, string("/map"));
-  setFrameId(frameId);
-
-  grid_map::Length length;
-  grid_map::Position position;
-  double resolution;
-  nodeHandle_.param("length_in_x", length(0), 1.5);
-  nodeHandle_.param("length_in_y", length(1), 1.5);
-  nodeHandle_.param("position_x", position.x(), 0.0);
-  nodeHandle_.param("position_y", position.y(), 0.0);
-  nodeHandle_.param("resolution", resolution, 0.01);
-  setGeometry(length, resolution, position);
-
-  nodeHandle_.param("min_variance", minVariance_, pow(0.003, 2));
-  nodeHandle_.param("max_variance", maxVariance_, pow(0.03, 2));
-  nodeHandle_.param("mahalanobis_distance_threshold", mahalanobisDistanceThreshold_, 2.5);
-  nodeHandle_.param("multi_height_noise", multiHeightNoise_, pow(0.003, 2));
-  nodeHandle_.param("min_horizontal_variance", minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
-  nodeHandle_.param("max_horizontal_variance", maxHorizontalVariance_, 0.5);
-  nodeHandle_.param("surface_normal_estimation_radius", surfaceNormalEstimationRadius_, 0.05);
-  nodeHandle_.param("underlying_map_topic", underlyingMapTopic_, string());
-
-  string surfaceNormalPositiveAxis;
-  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
-  nodeHandle_.param("enable_skip_lower_points", enableSkipLowerPoints_, false);
-  nodeHandle_.param("scanning_time", scanningTime_, 0.01);
-
-  double removePenetratedPointsRate;
-  nodeHandle_.param("remove_penetrated_points_rate", removePenetratedPointsRate, 0.0);
-  if(removePenetratedPointsRate != 0)
-    visibilityCleanupDuration_ = 1.0 / removePenetratedPointsRate;
-
-  if (surfaceNormalPositiveAxis == "z") {
-    surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
-  } else if (surfaceNormalPositiveAxis == "y") {
-    surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
-  } else if (surfaceNormalPositiveAxis == "x") {
-    surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
-  } else {
-    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
-  }
 }
 
 void ElevationMap::setGeometry(const grid_map::Length& length, const double& resolution, const grid_map::Position& position)
@@ -145,7 +98,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& horizontalVarianceXY = rawMap_.at("horizontal_variance_xy", index);
     auto& color = rawMap_.at("color", index);
     auto& time = rawMap_.at("time", index);
-    auto& maxHeight = rawMap_.at("max_height", index);
     auto& newHeight = rawMap_.at("new_height", index);
     const float& pointVariance = pointCloudVariances(i);
 
@@ -164,16 +116,22 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
-      // Add noise to cells which have ignored lower values,
-      // such that outliers and moving objects are removed.
-      if (enableSkipLowerPoints_) {
+      if (enableVisibilityBasedCleanup_) {
         if (time - scanTimeSinceInitialization <= scanningTime_ && elevation > point.z) {
-          // Skip adding noise if measurement is from the same point cloud (time comparison) and
+          // Ingore point if measurement is from the same point cloud (time comparison) and
           // if measurement is lower then the elevation in the map.
-          continue;
+        } else { // TODO Keep this?
+          // If point is higher.
+          variance += multiHeightNoise_;
         }
       }
-      variance += multiHeightNoise_;
+
+      if (enableVisibilityBasedCleanup_) {
+        // Add noise to cells which have ignored lower values,
+        // such that outliers and moving objects are removed.
+        variance += multiHeightNoise_;
+      }
+
       continue;
     }
 
@@ -545,7 +503,7 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
 
   // Get sensor position in map.
   Index indexAtSensor;
-  Eigen::Vector3d sensorTranslation = transformationSensorToMap.translation();
+  const Position3 sensorTranslation(transformationSensorToMap.translation());
   rawMapCopy.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), indexAtSensor);
 
   if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y())
@@ -557,14 +515,14 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
     if (std::isnan(newHeight)) continue;
     Position point;
     rawMapCopy.getPosition(*areaIterator, point);
-    float pointDiffX = point.x() - sensorTranslation.x();
+    float pointDiffX = point.x() - sensorTranslation.x(); // TODO Do with Eigen.
     float pointDiffY = point.y() - sensorTranslation.y();
     float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
     if (distanceToPoint > 0.0) {
       for (grid_map::LineIterator iterator(rawMapCopy, indexAtSensor, *areaIterator); !iterator.isPastEnd(); ++iterator) {
         Position cellPosition;
         rawMapCopy.getPosition(*iterator, cellPosition);
-        const float cellDiffX = cellPosition.x() - sensorTranslation.x();
+        const float cellDiffX = cellPosition.x() - sensorTranslation.x(); // TODO Do with Eigen.
         const float cellDiffY = cellPosition.y() - sensorTranslation.y();
         const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
         const float maxHeightPoint = newHeight + (sensorTranslation.z() - newHeight) / distanceToPoint * distanceToCell;
@@ -577,12 +535,12 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   }
 
   // Vector of indices that will be removed.
-  std::vector<const Index> removeIndices;
+  std::vector<Index> removeIndices;
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
     if (!rawMapCopy.isValid(*areaIterator)) continue;
     const auto& elevation = rawMapCopy.at("elevation", *areaIterator);
     const auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
-    const auto& time = rawMapCopy.at("methodStartTime", *areaIterator);
+    const auto& time = rawMapCopy.at("time", *areaIterator);
     const double timeDuration = (updatedTime - initialTime_).toSec();
     if (timeDuration - time > scanningTime_) {
       if (elevation > maxHeight && !std::isnan(maxHeight)) {
@@ -603,7 +561,7 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   scopedLockForRawData.unlock();
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-  ROS_INFO("Visibility cleanup has been performed in %f s.(%d points)", duration.toSec(), (int)removeIndices.size());
+  ROS_INFO("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int)removeIndices.size());
   if(duration.toSec() > visibilityCleanupDuration_)
     ROS_WARN("Visibility cleanup duration is too high (current rate is %f).", 1.0 / duration.toSec());
 }

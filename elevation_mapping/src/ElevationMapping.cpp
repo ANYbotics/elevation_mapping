@@ -89,7 +89,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 
-  // Multi-threading for raytracing cleanup.
+  // Multi-threading for visibility cleanup.
   if (!visibilityCleanupTimerDuration_.isZero()){
     TimerOptions timerOptions = TimerOptions(
         visibilityCleanupTimerDuration_,
@@ -146,14 +146,14 @@ bool ElevationMapping::readParameters()
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
   }
 
-  double removePenetratedPointsRate;
-  nodeHandle_.param("visibility_cleanup_rate", removePenetratedPointsRate, 0.0);
-  if (removePenetratedPointsRate == 0.0) {
+  double visibilityCleanupRate;
+  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 0.0);
+  if (visibilityCleanupRate == 0.0) {
     visibilityCleanupTimerDuration_.fromSec(0.0);
     ROS_WARN("Rate for visibility cleanup is zero and therefore disabled.");
   } 
   else {
-    visibilityCleanupTimerDuration_.fromSec(1.0 / removePenetratedPointsRate);
+    visibilityCleanupTimerDuration_.fromSec(1.0 / visibilityCleanupRate);
   }
 
 
@@ -193,6 +193,14 @@ bool ElevationMapping::readParameters()
     ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
   }
 
+  nodeHandle_.param("enable_noise_based_cleanup", map_.enableNoiseBasedCleanup_, false);
+  nodeHandle_.param("enable_visibility_based_cleanup", map_.enableVisibilityBasedCleanup_, true);
+  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 0.0);
+  if(visibilityCleanupRate != 0.0) {
+    map_.visibilityCleanupDuration_ = 1.0 / visibilityCleanupRate;
+  }
+  nodeHandle_.param("scanning_time", map_.scanningTime_, 0.01); // TODO Needed?
+
   // SensorProcessor parameters.
   string sensorType;
   nodeHandle_.param("sensor_processor/type", sensorType, string("StructuredLight"));
@@ -209,6 +217,7 @@ bool ElevationMapping::readParameters()
   }
   if (!sensorProcessor_->readParameters()) return false;
   if (!robotMotionMapUpdater_.readParameters()) return false;
+
   return true;
 }
 

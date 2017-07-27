@@ -301,9 +301,10 @@ class ElevationMap
   double surfaceNormalEstimationRadius_;
   Eigen::Vector3d surfaceNormalPositiveAxis_;
   std::string underlyingMapTopic_;
-  bool enableSkipLowerPoints_;
-  double scanningTime_;
+  bool enableNoiseBasedCleanup_;
+  bool enableVisibilityBasedCleanup_;
   double visibilityCleanupDuration_;
+  double scanningTime_;
   grid_map::Index topLeftIndexForRemoval_;
   grid_map::Index bottomRightIndexForRemoval_;
 };
