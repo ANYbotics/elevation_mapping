@@ -129,8 +129,11 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       if (scanTimeSinceInitialization - time <= scanningTime_ && elevation > point.z) {
         // Ignore point if measurement is from the same point cloud (time comparison) and
         // if measurement is lower then the elevation in the map.
-      } else {
+      } else if (scanTimeSinceInitialization - time <= scanningTime_) {
         // If point is higher.
+        elevation = point.z;
+        variance = pointVariance;
+      } else {
         variance += multiHeightNoise_;
       }
       continue;
