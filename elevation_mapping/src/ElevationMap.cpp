@@ -82,7 +82,8 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   }
 
   // TODO Is this in the right position?
-//  rawMap_.clear("new_height"); // TODO Rename.
+ rawMap_.clear("new_height"); // TODO Rename.
+ const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
@@ -113,11 +114,10 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     }
 
     const double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);
-    const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
       if (enableVisibilityBasedCleanup_) {
-        if (time - scanTimeSinceInitialization <= scanningTime_ && elevation > point.z) {
+        if (fabs(scanTimeSinceInitialization - time) <= scanningTime_ && elevation > point.z) {
           // Ingore point if measurement is from the same point cloud (time comparison) and
           // if measurement is lower then the elevation in the map.
         } else { // TODO Keep this?
@@ -126,7 +126,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
         }
       }
 
-      if (enableVisibilityBasedCleanup_) {
+      else {
         // Add noise to cells which have ignored lower values,
         // such that outliers and moving objects are removed.
         variance += multiHeightNoise_;
@@ -489,6 +489,7 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
 {
   // Get current time to compute calculation time.
   const ros::WallTime methodStartTime(ros::WallTime::now());
+  const double timeDuration = (updatedTime - initialTime_).toSec();
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
@@ -541,7 +542,6 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
     const auto& elevation = rawMapCopy.at("elevation", *areaIterator);
     const auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
     const auto& time = rawMapCopy.at("time", *areaIterator);
-    const double timeDuration = (updatedTime - initialTime_).toSec();
     if (timeDuration - time > scanningTime_) {
       if (elevation > maxHeight && !std::isnan(maxHeight)) {
         removeIndices.push_back(*areaIterator);
