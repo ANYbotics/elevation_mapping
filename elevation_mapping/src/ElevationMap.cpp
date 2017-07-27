@@ -98,20 +98,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     const float& pointVariance = pointCloudVariances(i);
     const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
-    // Store lowest points from scan for visibility checking.
-    const float pointHeightPlusUncertainty = point.z + 3.0 * sqrt(pointVariance); // 3 sigma.
-    if (std::isnan(lowestScanPoint) || pointHeightPlusUncertainty < lowestScanPoint){
-      lowestScanPoint = pointHeightPlusUncertainty;
-      if(topLeftIndexForRemoval_.x() > index.x())
-        topLeftIndexForRemoval_.x() = index.x();
-      if(topLeftIndexForRemoval_.y() > index.y())
-        topLeftIndexForRemoval_.y() = index.y();
-      if(bottomRightIndexForRemoval_.x() < index.x())
-        bottomRightIndexForRemoval_.x() = index.x();
-      if(bottomRightIndexForRemoval_.y() < index.y())
-        bottomRightIndexForRemoval_.y() = index.y();
-    }
-
     if (!rawMap_.isValid(index)) {
       // No prior information in elevation map, use measurement.
       elevation = point.z;
@@ -137,6 +123,20 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
         variance += multiHeightNoise_;
       }
       continue;
+    }
+
+    // Store lowest points from scan for visibility checking.
+    const float pointHeightPlusUncertainty = point.z + 3.0 * sqrt(pointVariance); // 3 sigma.
+    if (std::isnan(lowestScanPoint) || pointHeightPlusUncertainty < lowestScanPoint){
+      lowestScanPoint = pointHeightPlusUncertainty;
+      if(topLeftIndexForRemoval_.x() > index.x())
+        topLeftIndexForRemoval_.x() = index.x();
+      if(topLeftIndexForRemoval_.y() > index.y())
+        topLeftIndexForRemoval_.y() = index.y();
+      if(bottomRightIndexForRemoval_.x() < index.x())
+        bottomRightIndexForRemoval_.x() = index.x();
+      if(bottomRightIndexForRemoval_.y() < index.y())
+        bottomRightIndexForRemoval_.y() = index.y();
     }
 
     // Fuse measurement with elevation map data.
