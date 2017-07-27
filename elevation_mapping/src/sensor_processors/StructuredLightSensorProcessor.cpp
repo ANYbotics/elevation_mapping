@@ -19,7 +19,7 @@ namespace elevation_mapping {
 /*! StructuredLight-type (structured light) sensor model:
  * standardDeviationInNormalDirection = sensorModelNormalFactorA_ + sensorModelNormalFactorB_ * (measurementDistance - sensorModelNormalFactorC_)^2;
  * standardDeviationInLateralDirection = sensorModelLateralFactor_ * measurementDistance
- * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling StructuredLight Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
+ * Taken from: Nguyen, C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
  */
 
 StructuredLightSensorProcessor::StructuredLightSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
@@ -94,8 +94,7 @@ bool StructuredLightSensorProcessor::computeVariances(
 	const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
 	const Eigen::Matrix3f B_r_BS_skew = kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
-	for (unsigned int i = 0; i < pointCloud->size(); ++i)
-	{
+  for (unsigned int i = 0; i < pointCloud->size(); ++i) {
 		// For every point in point cloud.
 
 		// Preparation.

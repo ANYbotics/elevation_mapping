@@ -34,7 +34,7 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "max_height", "new_height"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false),
-      removePenetratedPointsDuration_(0),
+      visibilityCleanupDuration_(0),
       topLeftIndexForRemoval_(Index(rawMap_.getSize().x(), rawMap_.getSize().y())),
       bottomRightIndexForRemoval_(Index(0, 0))
 {
@@ -88,7 +88,7 @@ bool ElevationMap::readParameters()
   double removePenetratedPointsRate;
   nodeHandle_.param("remove_penetrated_points_rate", removePenetratedPointsRate, 0.0);
   if(removePenetratedPointsRate != 0)
-    removePenetratedPointsDuration_ = 1.0 / removePenetratedPointsRate;
+    visibilityCleanupDuration_ = 1.0 / removePenetratedPointsRate;
 
   if (surfaceNormalPositiveAxis == "z") {
     surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
@@ -110,7 +110,7 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and "  << rawMap_.getSize()(1) << " columns.");
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timestamp)
 {
   if (pointCloud->size() != pointCloudVariances.size()) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
@@ -118,14 +118,18 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     return false;
   }
   // Initialization for time calculation.
-  ros::WallTime wallTime = ros::WallTime::now();
+  const ros::WallTime methodStartTime(ros::WallTime::now());
 
-  // update initial time if it is not initialized
-  if (initialTime_.toSec() == 0){
-    initialTime_ = updatedTime;
+  // TODO Ok?
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+
+  // Update initial time if it is not initialized.
+  if (initialTime_.toSec() == 0) {
+    initialTime_ = timestamp;
   }
 
-  rawMap_.clear("new_height");
+  // TODO Is this in the right position?
+//  rawMap_.clear("new_height"); // TODO Rename.
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
@@ -156,20 +160,24 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       continue;
     }
 
-    double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);
-    double timeDuration = (updatedTime - initialTime_).toSec();
+    const double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);
+    const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
       // Add noise to cells which have ignored lower values,
       // such that outliers and moving objects are removed.
-      if(enableSkipLowerPoints_){
-        if (fabs(timeDuration - time) <= scanningTime_ && elevation > point.z)
-            continue;
+      if (enableSkipLowerPoints_) {
+        if (time - scanTimeSinceInitialization <= scanningTime_ && elevation > point.z) {
+          // Skip adding noise if measurement is from the same point cloud (time comparison) and
+          // if measurement is lower then the elevation in the map.
+          continue;
+        }
       }
       variance += multiHeightNoise_;
       continue;
     }
 
+    // TODO Double check and comment.
     if (point.z < newHeight || std::isnan(newHeight)){
       newHeight = point.z;
       if(topLeftIndexForRemoval_.x() > index.x())
@@ -182,13 +190,12 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
         bottomRightIndexForRemoval_.y() = index.y();
     }
 
-    time = timeDuration;
-
     // Fuse measurement with elevation map data.
     elevation = (variance * point.z + pointVariance * elevation) / (variance + pointVariance);
     variance = (pointVariance * variance) / (pointVariance + variance);
     // TODO Add color fusion.
     colorVectorToValue(point.getRGBVector3i(), color);
+    time = scanTimeSinceInitialization;
 
     // Horizontal variances are reset.
     horizontalVarianceX = minHorizontalVariance_;
@@ -197,15 +204,16 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   }
 
   clean();
-  rawMap_.setTimestamp(1000 * pointCloud->header.stamp); // Point cloud stores time in microseconds.
+  rawMap_.setTimestamp(timestamp.toNSec()); // Point cloud stores time in microseconds.
 
-  ros::WallDuration duration = ros::WallTime::now() - wallTime;
-  ROS_INFO("rawMap has been added in %f s.", duration.toSec());
+  const ros::WallDuration duration = ros::WallTime::now() - methodStartTime;
+  ROS_INFO("Raw map has been updated with a new point cloud in %f s.", duration.toSec());
   return true;
 }
 
 bool ElevationMap::update(const grid_map::Matrix& varianceUpdate, const grid_map::Matrix& horizontalVarianceUpdateX,
-                          const grid_map::Matrix& horizontalVarianceUpdateY, const grid_map::Matrix& horizontalVarianceUpdateXY, const ros::Time& time)
+                          const grid_map::Matrix& horizontalVarianceUpdateY,
+                          const grid_map::Matrix& horizontalVarianceUpdateXY, const ros::Time& time)
 {
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
 
@@ -270,7 +278,7 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
   if ((size == 0).any()) return false;
 
   // Initializations.
-  ros::WallTime time = ros::WallTime::now();
+  const ros::WallTime methodStartTime(ros::WallTime::now());
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   // Copy raw elevation map data for safe multi-threading.
@@ -415,7 +423,7 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
 
   fusedMap_.setTimestamp(rawMapCopy.getTimestamp());
 
-  ros::WallDuration duration(ros::WallTime::now() - time);
+  const ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   ROS_INFO("Elevation map has been fused in %f s.", duration.toSec());
 
   if (computeSurfaceNormals) return ElevationMap::computeSurfaceNormals(topLeftIndex, size);
@@ -428,7 +436,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
   ROS_DEBUG("Computing surface normals...");
 
   // Initializations.
-  ros::WallTime time = ros::WallTime::now();
+  const ros::WallTime methodStartTime(ros::WallTime::now());
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   vector<string> surfaceNormalTypes;
@@ -502,7 +510,7 @@ bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, con
     fusedMap_.at("surface_normal_z", *areaIterator) = eigenvector.z();
   }
 
-  ros::WallDuration duration(ros::WallTime::now() - time);
+  ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   ROS_INFO("Surface normals have been computed in %f s.", duration.toSec());
   return true;
 }
@@ -519,9 +527,10 @@ bool ElevationMap::clear()
   return true;
 }
 
-void ElevationMap::removePenetratedPoints(const Eigen::Affine3d transformationSensorToMap, const ros::Time updatedTime){
-  // Get current time to show calculation time
-  ros::WallTime time = ros::WallTime::now();
+void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensorToMap, const ros::Time& updatedTime)
+{
+  // Get current time to compute calculation time.
+  const ros::WallTime methodStartTime(ros::WallTime::now());
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
@@ -534,61 +543,57 @@ void ElevationMap::removePenetratedPoints(const Eigen::Affine3d transformationSe
   bottomRightIndexForRemoval_ = Index(0, 0);
   scopedLockForRawData.unlock();
 
-  // Get sensor position in gridmap
-  Index index_sensor;
+  // Get sensor position in map.
+  Index indexAtSensor;
   Eigen::Vector3d sensorTranslation = transformationSensorToMap.translation();
-  rawMapCopy.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), index_sensor);
+  rawMapCopy.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), indexAtSensor);
 
   if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y())
     return;
 
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
-      if(!rawMapCopy.isValid(*areaIterator))
-        continue;
-      auto& newHeight = rawMapCopy.at("new_height", *areaIterator);
-      if(std::isnan(newHeight))
-        continue;
-      Position point;
-      rawMapCopy.getPosition(*areaIterator, point);
-      float pointDiffX = point.x() - sensorTranslation.x();
-      float pointDiffY = point.y() - sensorTranslation.y();
-      float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
-      if (distanceToPoint > 0){
-        for (grid_map::LineIterator iterator(rawMapCopy, index_sensor, *areaIterator);
-          !iterator.isPastEnd(); ++iterator) {
-            Position cellPosition;
-            rawMapCopy.getPosition(*iterator, cellPosition);
-            float cellDiffX = cellPosition.x() - sensorTranslation.x();
-            float cellDiffY = cellPosition.y() - sensorTranslation.y();
-            float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
-            float maxHeightPoint = newHeight + (sensorTranslation.z() - newHeight) / distanceToPoint * distanceToCell;
-            auto& cellMaxHeight = rawMapCopy.at("max_height", *iterator);
-            if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint){
-                cellMaxHeight = maxHeightPoint;
-            }
+    if (!rawMapCopy.isValid(*areaIterator)) continue;
+    const auto& newHeight = rawMapCopy.at("new_height", *areaIterator);
+    if (std::isnan(newHeight)) continue;
+    Position point;
+    rawMapCopy.getPosition(*areaIterator, point);
+    float pointDiffX = point.x() - sensorTranslation.x();
+    float pointDiffY = point.y() - sensorTranslation.y();
+    float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
+    if (distanceToPoint > 0.0) {
+      for (grid_map::LineIterator iterator(rawMapCopy, indexAtSensor, *areaIterator); !iterator.isPastEnd(); ++iterator) {
+        Position cellPosition;
+        rawMapCopy.getPosition(*iterator, cellPosition);
+        const float cellDiffX = cellPosition.x() - sensorTranslation.x();
+        const float cellDiffY = cellPosition.y() - sensorTranslation.y();
+        const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
+        const float maxHeightPoint = newHeight + (sensorTranslation.z() - newHeight) / distanceToPoint * distanceToCell;
+        auto& cellMaxHeight = rawMapCopy.at("max_height", *iterator);
+        if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint) {
+          cellMaxHeight = maxHeightPoint;
         }
       }
-  }
-  // vector of Index that will be removed
-  std::vector<Index> removeIndices;
-  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
-
-    if (!rawMapCopy.isValid(*areaIterator)) continue;
-    auto& elevation = rawMapCopy.at("elevation", *areaIterator);
-    auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
-    auto& time = rawMapCopy.at("time", *areaIterator);
-
-    double timeDuration = (updatedTime - initialTime_).toSec();
-
-    if(timeDuration - time > scanningTime_){
-        if(elevation > maxHeight && !std::isnan(maxHeight)){
-          removeIndices.push_back(*areaIterator);
-        }
     }
   }
-  // remove points in current rawMap_
+
+  // Vector of indices that will be removed.
+  std::vector<const Index> removeIndices;
+  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
+    if (!rawMapCopy.isValid(*areaIterator)) continue;
+    const auto& elevation = rawMapCopy.at("elevation", *areaIterator);
+    const auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
+    const auto& time = rawMapCopy.at("methodStartTime", *areaIterator);
+    const double timeDuration = (updatedTime - initialTime_).toSec();
+    if (timeDuration - time > scanningTime_) {
+      if (elevation > maxHeight && !std::isnan(maxHeight)) {
+        removeIndices.push_back(*areaIterator);
+      }
+    }
+  }
+
+  // Remove points in current raw map.
   scopedLockForRawData.lock();
-  for(Index removeIndex : removeIndices){
+  for(const Index& removeIndex : removeIndices){
     if(rawMap_.isValid(removeIndex)){
       auto& elevation = rawMap_.at("elevation", removeIndex);
       elevation = NAN;
@@ -597,10 +602,10 @@ void ElevationMap::removePenetratedPoints(const Eigen::Affine3d transformationSe
   }
   scopedLockForRawData.unlock();
 
-  ros::WallDuration duration(ros::WallTime::now() - time);
-  ROS_INFO("Penetrated points has been removed in %f s.(%d points)", duration.toSec(), (int)removeIndices.size());
-  if(duration.toSec() > removePenetratedPointsDuration_)
-    ROS_WARN("remove_penetrated_points_rate is too high (current rate is %f).", 1.0 / duration.toSec());
+  ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
+  ROS_INFO("Visibility cleanup has been performed in %f s.(%d points)", duration.toSec(), (int)removeIndices.size());
+  if(duration.toSec() > visibilityCleanupDuration_)
+    ROS_WARN("Visibility cleanup duration is too high (current rate is %f).", 1.0 / duration.toSec());
 }
 
 void ElevationMap::move(const Eigen::Vector2d& position)

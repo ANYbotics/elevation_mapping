@@ -61,11 +61,9 @@ public:
 	 * @param[out] variances the measurement variances expressed in the target frame.
 	 * @return true if successful.
 	 */
-	bool process(
-	      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
-	      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-	      const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput,
-	      Eigen::VectorXf& variances);
+  bool process(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
+               const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+               const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput, Eigen::VectorXf& variances);
 
   typedef std::unique_ptr<SensorProcessorBase> Ptr;
 

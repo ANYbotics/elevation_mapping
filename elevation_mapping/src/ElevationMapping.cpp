@@ -88,12 +88,14 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
         false, false);
     fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
   }
-  if (!removePenetratedPointsTimerDuration_.isZero()){
+
+  // Multi-threading for raytracing cleanup.
+  if (!visibilityCleanupTimerDuration_.isZero()){
     TimerOptions timerOptions = TimerOptions(
-        removePenetratedPointsTimerDuration_,
-        boost::bind(&ElevationMapping::removePenetratedPointsCallback, this, _1), &removePenetratedPointsQueue_,
+        visibilityCleanupTimerDuration_,
+        boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1), &visibilityCleanupQueue_,
         false, false);
-    removePenetratedPointsTimer_ = nodeHandle_.createTimer(timerOptions);
+    visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
@@ -145,13 +147,13 @@ bool ElevationMapping::readParameters()
   }
 
   double removePenetratedPointsRate;
-  nodeHandle_.param("remove_penetrated_points_rate", removePenetratedPointsRate, 0.0);
+  nodeHandle_.param("visibility_cleanup_rate", removePenetratedPointsRate, 0.0);
   if (removePenetratedPointsRate == 0.0) {
-    removePenetratedPointsTimerDuration_.fromSec(0.0);
-    ROS_WARN("Rate for removing the penetrated points is zero.");
+    visibilityCleanupTimerDuration_.fromSec(0.0);
+    ROS_WARN("Rate for visibility cleanup is zero and therefore disabled.");
   } 
   else {
-    removePenetratedPointsTimerDuration_.fromSec(1.0 / removePenetratedPointsRate);
+    visibilityCleanupTimerDuration_.fromSec(1.0 / removePenetratedPointsRate);
   }
 
 
@@ -217,30 +219,29 @@ bool ElevationMapping::initialize()
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
   fusedMapPublishTimer_.start();
-  removePenetratedPointsThread_ = boost::thread(boost::bind(&ElevationMapping::runRemovePenetratedPointsThread, this));
-  removePenetratedPointsTimer_.start();
+  visibilityCleanupThread_ = boost::thread(boost::bind(&ElevationMapping::visibilityCleanupThread, this));
+  visibilityCleanupTimer_.start();
   ROS_INFO("Done.");
   return true;
 }
 
 void ElevationMapping::runFusionServiceThread()
 {
-  static const double timeout = 0.01;
+  static const double timeout = 0.05;
 
   while (nodeHandle_.ok()) {
     fusionServiceQueue_.callAvailable(ros::WallDuration(timeout));
   }
 }
 
-void ElevationMapping::runRemovePenetratedPointsThread()
+void ElevationMapping::visibilityCleanupThread()
 {
-  static const double timeout = 0.01;
+  static const double timeout = 0.05;
 
   while (nodeHandle_.ok()) {
-    removePenetratedPointsQueue_.callAvailable(ros::WallDuration(timeout));
+    visibilityCleanupQueue_.callAvailable(ros::WallDuration(timeout));
   }
 }
-
 
 void ElevationMapping::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
@@ -256,9 +257,7 @@ void ElevationMapping::pointCloudCallback(
 
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
-  ros::Time time;
-  time.fromNSec(1000 * pointCloud->header.stamp);
-  newestTime_ = time;
+  lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
 
   ROS_INFO("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
@@ -266,7 +265,7 @@ void ElevationMapping::pointCloudCallback(
   updateMapLocation();
 
   // Update map from motion prediction.
-  if (!updatePrediction(time)) {
+  if (!updatePrediction(lastPointCloudUpdateTime_)) {
     ROS_ERROR("Updating process noise failed.");
     resetMapUpdateTimer();
     return;
@@ -276,9 +275,9 @@ void ElevationMapping::pointCloudCallback(
   Eigen::Matrix<double, 6, 6> robotPoseCovariance;
   robotPoseCovariance.setZero();
   if (!ignoreRobotMotionUpdates_) {
-    boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
+    boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(lastPointCloudUpdateTime_);
     if (!poseMessage) {
-      ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
+      ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
       return;
     }
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
@@ -295,7 +294,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances, time)) {
+  if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;
@@ -346,10 +345,10 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
   map_.publishFusedElevationMap();
 }
 
-void ElevationMapping::removePenetratedPointsCallback(const ros::TimerEvent&)
+void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent&)
 {
-  ROS_INFO("removePenetratedPointsCallback");
-  map_.removePenetratedPoints(sensorProcessor_->transformationSensorToMap_, newestTime_);
+  ROS_DEBUG("Elevation map is running visibility cleanup.");
+  map_.visibilityCleanup(sensorProcessor_->transformationSensorToMap_, lastPointCloudUpdateTime_);
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)

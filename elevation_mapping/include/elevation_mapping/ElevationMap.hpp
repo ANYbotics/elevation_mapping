@@ -60,10 +60,10 @@ class ElevationMap
    * Add new measurements to the elevation map.
    * @param pointCloud the point cloud data.
    * @param pointCloudVariances the corresponding variances of the point cloud data.
+   * @param timeStamp the time of the input point cloud.
    * @return true if successful.
    */
-  // bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time time_update);
-bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time updatedTime);
+  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp);
 
   /*!
    * Update the elevation map with variance update data.
@@ -101,7 +101,12 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
    */
   bool clear();
 
-  void removePenetratedPoints(const Eigen::Affine3d transformationSensorToMap, const ros::Time updatedTime);
+  /*!
+   * Removes parts of the map based on visibility criterion with ray tracing.
+   * @param transformationSensorToMap
+   * @param updatedTime
+   */
+  void visibilityCleanup(const Eigen::Affine3d& transformationSensorToMap, const ros::Time& updatedTime);
 
   /*!
    * Move the grid map w.r.t. to the grid map frame.
@@ -298,7 +303,7 @@ bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorX
   std::string underlyingMapTopic_;
   bool enableSkipLowerPoints_;
   double scanningTime_;
-  double removePenetratedPointsDuration_;
+  double visibilityCleanupDuration_;
   grid_map::Index topLeftIndexForRemoval_;
   grid_map::Index bottomRightIndexForRemoval_;
 };
