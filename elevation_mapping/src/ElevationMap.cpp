@@ -81,8 +81,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     initialTime_ = timestamp;
   }
 
-  // TODO Is this in the right position?
- rawMap_.clear("new_height"); // TODO Rename.
  const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
@@ -513,7 +511,8 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
     if (!rawMapCopy.isValid(*areaIterator)) continue;
     const auto& newHeight = rawMapCopy.at("new_height", *areaIterator);
-    if (std::isnan(newHeight)) continue;
+    const auto& time = rawMapCopy.at("time", *areaIterator);
+    if (std::isnan(newHeight) || timeDuration - time > scanningTime_) continue;
     Position point;
     rawMapCopy.getPosition(*areaIterator, point);
     float pointDiffX = point.x() - sensorTranslation.x(); // TODO Do with Eigen.
