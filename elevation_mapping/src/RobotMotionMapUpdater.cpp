@@ -17,10 +17,10 @@ using namespace kindr;
 namespace elevation_mapping {
 
 RobotMotionMapUpdater::RobotMotionMapUpdater(ros::NodeHandle nodeHandle)
-    : nodeHandle_(nodeHandle)
+    : nodeHandle_(nodeHandle),
+      covarianceScale_(1.0)
 {
   previousReducedCovariance_.setZero();
-  covarianceScale_.setOnes();
   previousUpdateTime_ = ros::Time::now();
   // TODO How to initialize previousRobotPose_?
 }
@@ -32,12 +32,7 @@ RobotMotionMapUpdater::~RobotMotionMapUpdater()
 
 bool RobotMotionMapUpdater::readParameters()
 {
-  nodeHandle_.param("robot_motion_map_update/covariance_scale_translation_x", covarianceScale_(0, 0), 1.0);
-  nodeHandle_.param("robot_motion_map_update/covariance_scale_translation_y", covarianceScale_(1, 1), 1.0);
-  nodeHandle_.param("robot_motion_map_update/covariance_scale_translation_z", covarianceScale_(2, 2), 1.0);
-  nodeHandle_.param("robot_motion_map_update/covariance_scale_rotation_x", covarianceScale_(3, 3), 1.0);
-  nodeHandle_.param("robot_motion_map_update/covariance_scale_rotation_y", covarianceScale_(4, 4), 1.0);
-  nodeHandle_.param("robot_motion_map_update/covariance_scale_rotation_z", covarianceScale_(5, 5), 1.0);
+  nodeHandle_.param("robot_motion_map_update/covariance_scale", covarianceScale_, 1.0);
   return true;
 }
 
@@ -45,7 +40,7 @@ bool RobotMotionMapUpdater::update(
     ElevationMap& map, const Pose& robotPose,
     const PoseCovariance& robotPoseCovariance, const ros::Time& time)
 {
-  PoseCovariance robotPoseCovarianceScaled = (covarianceScale_ * robotPoseCovariance.array()).matrix();
+  const PoseCovariance robotPoseCovarianceScaled = covarianceScale_ * robotPoseCovariance;
 
   // Check if update necessary.
   if (previousUpdateTime_ == time) return false;
