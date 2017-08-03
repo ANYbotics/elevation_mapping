@@ -34,25 +34,27 @@ find_package(Eigen3 REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-    INCLUDE_DIRS
-      include
-    LIBRARIES
-      ${PROJECT_NAME}_library
-    CATKIN_DEPENDS
-	    grid_map_core
-	    grid_map_ros
-	    grid_map_msgs
-	    pcl_ros
-	    roscpp
-	    message_filters
-	    sensor_msgs
-	    std_msgs
-	    tf
-	    tf_conversions
-	    eigen_conversions
-	    kindr
-	    kindr_ros
-#  DEPENDS system_lib
+  INCLUDE_DIRS
+    include
+    ${Eigen_INCLUDE_DIRS}
+  LIBRARIES
+    ${PROJECT_NAME}_library
+  CATKIN_DEPENDS
+    grid_map_core
+    grid_map_ros
+    grid_map_msgs
+    pcl_ros
+    roscpp
+    message_filters
+    sensor_msgs
+    std_msgs
+    tf
+    tf_conversions
+    eigen_conversions
+    kindr
+    kindr_ros
+  DEPENDS
+    Boost
 )
 
 ###########
@@ -85,8 +87,7 @@ target_link_libraries(${PROJECT_NAME}_library
 )
 
 ## Declare a cpp executable
-add_executable(
-  ${PROJECT_NAME}
+add_executable(${PROJECT_NAME}
   src/elevation_mapping_node.cpp
 )
 
@@ -108,3 +109,21 @@ catkin_add_gtest(${PROJECT_NAME}-test
 if(TARGET ${PROJECT_NAME}-test)
   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME}_library)
 endif()
+
+#############
+## Install ##
+#############
+
+install(TARGETS ${PROJECT_NAME}_library ${PROJECT_NAME}
+  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+install(DIRECTORY include/${PROJECT_NAME}/
+  DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
+)
+
+install(DIRECTORY config
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
+)
