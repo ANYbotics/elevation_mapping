@@ -63,7 +63,7 @@ class ElevationMap
    * @param timeStamp the time of the input point cloud.
    * @return true if successful.
    */
-  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp);
+  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp, const Eigen::Affine3d& transformationSensorToMap);
 
   /*!
    * Update the elevation map with variance update data.

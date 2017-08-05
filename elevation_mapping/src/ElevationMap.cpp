@@ -31,7 +31,7 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "max_height"}),
+      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan", "max_height"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false),
       visibilityCleanupDuration_(0),
@@ -63,7 +63,7 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and "  << rawMap_.getSize()(1) << " columns.");
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timestamp)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timestamp, const Eigen::Affine3d& transformationSensorToMap)
 {
   if (pointCloud->size() != pointCloudVariances.size()) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
@@ -95,6 +95,10 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& color = rawMap_.at("color", index);
     auto& time = rawMap_.at("time", index);
     auto& lowestScanPoint = rawMap_.at("lowest_scan_point", index);
+    auto& sensorXatLowestScan = rawMap_.at("sensor_x_at_lowest_scan", index);
+    auto& sensorYatLowestScan = rawMap_.at("sensor_y_at_lowest_scan", index);
+    auto& sensorZatLowestScan = rawMap_.at("sensor_z_at_lowest_scan", index);
+
     const float& pointVariance = pointCloudVariances(i);
     const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
@@ -137,6 +141,10 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
         bottomRightIndexForRemoval_.x() = index.x();
       if(bottomRightIndexForRemoval_.y() < index.y())
         bottomRightIndexForRemoval_.y() = index.y();
+      const Position3 sensorTranslation(transformationSensorToMap.translation());
+      sensorXatLowestScan = sensorTranslation.x();
+      sensorYatLowestScan = sensorTranslation.y();
+      sensorZatLowestScan = sensorTranslation.z();
     }
 
     // Fuse measurement with elevation map data.
@@ -485,6 +493,9 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   auto topLeftIndexCopy = topLeftIndexForRemoval_;
   auto bottomRightIndexCopy = bottomRightIndexForRemoval_;
   rawMap_.clear("lowest_scan_point");
+  rawMap_.clear("sensor_x_at_lowest_scan");
+  rawMap_.clear("sensor_y_at_lowest_scan");
+  rawMap_.clear("sensor_z_at_lowest_scan");
   rawMap_.clear("max_height");
   topLeftIndexForRemoval_ = Index(rawMap_.getSize().x(), rawMap_.getSize().y());
   bottomRightIndexForRemoval_ = Index(0, 0);
@@ -493,27 +504,30 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
   // Get sensor position in map.
   Index indexAtSensor;
   const Position3 sensorTranslation(transformationSensorToMap.translation());
-  rawMapCopy.getIndex(Position(sensorTranslation.x(), sensorTranslation.y()), indexAtSensor);
 
   if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y()) return;
 
   for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
     if (!rawMapCopy.isValid(*areaIterator)) continue;
     const auto& lowestScanPoint = rawMapCopy.at("lowest_scan_point", *areaIterator);
+    const auto& sensorXatLowestScan = rawMapCopy.at("sensor_x_at_lowest_scan", *areaIterator);
+    const auto& sensorYatLowestScan = rawMapCopy.at("sensor_y_at_lowest_scan", *areaIterator);
+    const auto& sensorZatLowestScan = rawMapCopy.at("sensor_z_at_lowest_scan", *areaIterator);
     if (std::isnan(lowestScanPoint)) continue;
+    if(!rawMapCopy.getIndex(Position(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) continue;
     Position point;
     rawMapCopy.getPosition(*areaIterator, point);
-    float pointDiffX = point.x() - sensorTranslation.x(); // TODO Do with Eigen.
-    float pointDiffY = point.y() - sensorTranslation.y();
+    float pointDiffX = point.x() - sensorXatLowestScan; // TODO Do with Eigen.
+    float pointDiffY = point.y() - sensorYatLowestScan;
     float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
     if (distanceToPoint > 0.0) {
       for (grid_map::LineIterator iterator(rawMapCopy, indexAtSensor, *areaIterator); !iterator.isPastEnd(); ++iterator) {
         Position cellPosition;
         rawMapCopy.getPosition(*iterator, cellPosition);
-        const float cellDiffX = cellPosition.x() - sensorTranslation.x(); // TODO Do with Eigen.
-        const float cellDiffY = cellPosition.y() - sensorTranslation.y();
+        const float cellDiffX = cellPosition.x() - sensorXatLowestScan; // TODO Do with Eigen.
+        const float cellDiffY = cellPosition.y() - sensorYatLowestScan;
         const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
-        const float maxHeightPoint = lowestScanPoint + (sensorTranslation.z() - lowestScanPoint) / distanceToPoint * distanceToCell;
+        const float maxHeightPoint = lowestScanPoint + (sensorZatLowestScan - lowestScanPoint) / distanceToPoint * distanceToCell;
         auto& cellMaxHeight = rawMapCopy.at("max_height", *iterator);
         if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint) {
           cellMaxHeight = maxHeightPoint;
@@ -546,7 +560,6 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
       // TODO: check if the index is valid in the new map
     }
   }
-  rawMap_["max_height"] = rawMapCopy["max_height"];
   scopedLockForRawData.unlock();
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
