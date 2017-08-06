@@ -319,8 +319,6 @@ class ElevationMap
   bool enableVisibilityCleanup_;
   double visibilityCleanupDuration_;
   double scanningTime_;
-  grid_map::Index topLeftIndexForRemoval_;
-  grid_map::Index bottomRightIndexForRemoval_;
 };
 
 } /* namespace */

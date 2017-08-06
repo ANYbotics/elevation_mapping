@@ -34,9 +34,7 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false),
-      visibilityCleanupDuration_(0.0),
-      topLeftIndexForRemoval_(Index(rawMap_.getSize().x(), rawMap_.getSize().y())),
-      bottomRightIndexForRemoval_(Index(0, 0))
+      visibilityCleanupDuration_(0.0)
 {
   rawMap_.setBasicLayers({"elevation", "variance"});
   fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
@@ -135,14 +133,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     const float pointHeightPlusUncertainty = point.z + 3.0 * sqrt(pointVariance); // 3 sigma.
     if (std::isnan(lowestScanPoint) || pointHeightPlusUncertainty < lowestScanPoint){
       lowestScanPoint = pointHeightPlusUncertainty;
-      if(topLeftIndexForRemoval_.x() > index.x())
-        topLeftIndexForRemoval_.x() = index.x();
-      if(topLeftIndexForRemoval_.y() > index.y())
-        topLeftIndexForRemoval_.y() = index.y();
-      if(bottomRightIndexForRemoval_.x() < index.x())
-        bottomRightIndexForRemoval_.x() = index.x();
-      if(bottomRightIndexForRemoval_.y() < index.y())
-        bottomRightIndexForRemoval_.y() = index.y();
       const Position3 sensorTranslation(transformationSensorToMap.translation());
       sensorXatLowestScan = sensorTranslation.x();
       sensorYatLowestScan = sensorTranslation.y();
@@ -496,35 +486,30 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
   boost::recursive_mutex::scoped_lock scopedLockForVisibilityCleanupData(visibilityCleanupMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   visibilityCleanupMap_ = rawMap_;
-  auto topLeftIndexCopy = topLeftIndexForRemoval_;
-  auto bottomRightIndexCopy = bottomRightIndexForRemoval_;
   rawMap_.clear("lowest_scan_point");
   rawMap_.clear("sensor_x_at_lowest_scan");
   rawMap_.clear("sensor_y_at_lowest_scan");
   rawMap_.clear("sensor_z_at_lowest_scan");
-  topLeftIndexForRemoval_ = Index(rawMap_.getSize().x(), rawMap_.getSize().y());
-  bottomRightIndexForRemoval_ = Index(0, 0);
   scopedLockForRawData.unlock();
   visibilityCleanupMap_.add("max_height");
 
-  if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y()) return;
-
-  for (SubmapIterator areaIterator(visibilityCleanupMap_, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
-    if (!visibilityCleanupMap_.isValid(*areaIterator)) continue;
-    const auto& lowestScanPoint = visibilityCleanupMap_.at("lowest_scan_point", *areaIterator);
-    const auto& sensorXatLowestScan = visibilityCleanupMap_.at("sensor_x_at_lowest_scan", *areaIterator);
-    const auto& sensorYatLowestScan = visibilityCleanupMap_.at("sensor_y_at_lowest_scan", *areaIterator);
-    const auto& sensorZatLowestScan = visibilityCleanupMap_.at("sensor_z_at_lowest_scan", *areaIterator);
+  // Create max. height layer with ray tracing.
+  for (GridMapIterator iterator(visibilityCleanupMap_); !iterator.isPastEnd(); ++iterator) {
+    if (!visibilityCleanupMap_.isValid(*iterator)) continue;
+    const auto& lowestScanPoint = visibilityCleanupMap_.at("lowest_scan_point", *iterator);
+    const auto& sensorXatLowestScan = visibilityCleanupMap_.at("sensor_x_at_lowest_scan", *iterator);
+    const auto& sensorYatLowestScan = visibilityCleanupMap_.at("sensor_y_at_lowest_scan", *iterator);
+    const auto& sensorZatLowestScan = visibilityCleanupMap_.at("sensor_z_at_lowest_scan", *iterator);
     if (std::isnan(lowestScanPoint)) continue;
     Index indexAtSensor;
     if(!visibilityCleanupMap_.getIndex(Position(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) continue;
     Position point;
-    visibilityCleanupMap_.getPosition(*areaIterator, point);
+    visibilityCleanupMap_.getPosition(*iterator, point);
     float pointDiffX = point.x() - sensorXatLowestScan;
     float pointDiffY = point.y() - sensorYatLowestScan;
     float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
     if (distanceToPoint > 0.0) {
-      for (grid_map::LineIterator iterator(visibilityCleanupMap_, indexAtSensor, *areaIterator); !iterator.isPastEnd(); ++iterator) {
+      for (grid_map::LineIterator iterator(visibilityCleanupMap_, indexAtSensor, *iterator); !iterator.isPastEnd(); ++iterator) {
         Position cellPosition;
         visibilityCleanupMap_.getPosition(*iterator, cellPosition);
         const float cellDiffX = cellPosition.x() - sensorXatLowestScan;
@@ -540,29 +525,31 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
   }
 
   // Vector of indices that will be removed.
-  std::vector<Index> removeIndices;
-  for (SubmapIterator areaIterator(visibilityCleanupMap_, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
-    if (!visibilityCleanupMap_.isValid(*areaIterator)) continue;
-    const auto& elevation = visibilityCleanupMap_.at("elevation", *areaIterator);
-    const auto& variance = visibilityCleanupMap_.at("variance", *areaIterator);
-    const auto& maxHeight = visibilityCleanupMap_.at("max_height", *areaIterator);
-    const auto& time = visibilityCleanupMap_.at("time", *areaIterator);
+  std::vector<Position> cellPositionsToRemove;
+  for (GridMapIterator iterator(visibilityCleanupMap_); !iterator.isPastEnd(); ++iterator) {
+    if (!visibilityCleanupMap_.isValid(*iterator)) continue;
+    const auto& time = visibilityCleanupMap_.at("time", *iterator);
     if (timeSinceInitialization - time > scanningTime_) {
       // Only remove cells that have not been updated during the last scan duration.
       // This prevents a.o. removal of overhanging objects.
+      const auto& elevation = visibilityCleanupMap_.at("elevation", *iterator);
+      const auto& variance = visibilityCleanupMap_.at("variance", *iterator);
+      const auto& maxHeight = visibilityCleanupMap_.at("max_height", *iterator);
       if (!std::isnan(maxHeight) && elevation - 3.0 * sqrt(variance) > maxHeight) {
-        removeIndices.push_back(*areaIterator);
+        Position position;
+        visibilityCleanupMap_.getPosition(*iterator, position);
+        cellPositionsToRemove.push_back(position);
       }
     }
   }
 
   // Remove points in current raw map.
   scopedLockForRawData.lock();
-  for(const Index& removeIndex : removeIndices){
-    if(rawMap_.isValid(removeIndex)){
-      auto& elevation = rawMap_.at("elevation", removeIndex);
-      elevation = NAN;
-      // TODO: check if the index is valid in the new map
+  for(const auto& cellPosition : cellPositionsToRemove){
+    Index index;
+    if (!rawMap_.getIndex(cellPosition, index)) continue;
+    if(rawMap_.isValid(index)){
+      rawMap_.at("elevation", index) = NAN;
     }
   }
   scopedLockForRawData.unlock();
@@ -571,7 +558,7 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
   publishVisibilityCleanupMap();
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-  ROS_INFO("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int)removeIndices.size());
+  ROS_INFO("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int)cellPositionsToRemove.size());
   if(duration.toSec() > visibilityCleanupDuration_)
     ROS_WARN("Visibility cleanup duration is too high (current rate is %f).", 1.0 / duration.toSec());
 }
