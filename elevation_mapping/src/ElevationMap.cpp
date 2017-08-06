@@ -31,10 +31,10 @@ namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
-      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan", "max_height"}),
+      rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
       hasUnderlyingMap_(false),
-      visibilityCleanupDuration_(0),
+      visibilityCleanupDuration_(0.0),
       topLeftIndexForRemoval_(Index(rawMap_.getSize().x(), rawMap_.getSize().y())),
       bottomRightIndexForRemoval_(Index(0, 0))
 {
@@ -46,6 +46,8 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map", 1);
   if (!underlyingMapTopic_.empty()) underlyingMapSubscriber_ =
       nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
+  // TODO if (enableVisibilityCleanup_) when parameter cleanup is ready.
+  visbilityCleanupMapPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("visibility_cleanup_map", 1);
 
   initialTime_ = ros::Time::now();
 }
@@ -474,61 +476,62 @@ bool ElevationMap::clear()
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForVisibilityCleanupData(visibilityCleanupMapMutex_);
   rawMap_.clearAll();
   rawMap_.resetTimestamp();
   fusedMap_.clearAll();
   fusedMap_.resetTimestamp();
+  visibilityCleanupMap_.clearAll();
+  visibilityCleanupMap_.resetTimestamp();
   return true;
 }
 
-void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensorToMap, const ros::Time& updatedTime)
+void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
 {
   // Get current time to compute calculation time.
   const ros::WallTime methodStartTime(ros::WallTime::now());
   const double timeSinceInitialization = (updatedTime - initialTime_).toSec();
 
   // Copy raw elevation map data for safe multi-threading.
+  boost::recursive_mutex::scoped_lock scopedLockForVisibilityCleanupData(visibilityCleanupMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
-  auto rawMapCopy = rawMap_;
+  visibilityCleanupMap_ = rawMap_;
   auto topLeftIndexCopy = topLeftIndexForRemoval_;
   auto bottomRightIndexCopy = bottomRightIndexForRemoval_;
   rawMap_.clear("lowest_scan_point");
   rawMap_.clear("sensor_x_at_lowest_scan");
   rawMap_.clear("sensor_y_at_lowest_scan");
   rawMap_.clear("sensor_z_at_lowest_scan");
-  rawMap_.clear("max_height");
   topLeftIndexForRemoval_ = Index(rawMap_.getSize().x(), rawMap_.getSize().y());
   bottomRightIndexForRemoval_ = Index(0, 0);
   scopedLockForRawData.unlock();
-
-  // Get sensor position in map.
-  Index indexAtSensor;
-  const Position3 sensorTranslation(transformationSensorToMap.translation());
+  visibilityCleanupMap_.add("max_height");
 
   if(topLeftIndexCopy.x() > bottomRightIndexCopy.x() || topLeftIndexCopy.y() > bottomRightIndexCopy.y()) return;
 
-  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
-    if (!rawMapCopy.isValid(*areaIterator)) continue;
-    const auto& lowestScanPoint = rawMapCopy.at("lowest_scan_point", *areaIterator);
-    const auto& sensorXatLowestScan = rawMapCopy.at("sensor_x_at_lowest_scan", *areaIterator);
-    const auto& sensorYatLowestScan = rawMapCopy.at("sensor_y_at_lowest_scan", *areaIterator);
-    const auto& sensorZatLowestScan = rawMapCopy.at("sensor_z_at_lowest_scan", *areaIterator);
+  for (SubmapIterator areaIterator(visibilityCleanupMap_, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
+    if (!visibilityCleanupMap_.isValid(*areaIterator)) continue;
+    const auto& lowestScanPoint = visibilityCleanupMap_.at("lowest_scan_point", *areaIterator);
+    const auto& sensorXatLowestScan = visibilityCleanupMap_.at("sensor_x_at_lowest_scan", *areaIterator);
+    const auto& sensorYatLowestScan = visibilityCleanupMap_.at("sensor_y_at_lowest_scan", *areaIterator);
+    const auto& sensorZatLowestScan = visibilityCleanupMap_.at("sensor_z_at_lowest_scan", *areaIterator);
     if (std::isnan(lowestScanPoint)) continue;
-    if(!rawMapCopy.getIndex(Position(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) continue;
+    Index indexAtSensor;
+    if(!visibilityCleanupMap_.getIndex(Position(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) continue;
     Position point;
-    rawMapCopy.getPosition(*areaIterator, point);
-    float pointDiffX = point.x() - sensorXatLowestScan; // TODO Do with Eigen.
+    visibilityCleanupMap_.getPosition(*areaIterator, point);
+    float pointDiffX = point.x() - sensorXatLowestScan;
     float pointDiffY = point.y() - sensorYatLowestScan;
     float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
     if (distanceToPoint > 0.0) {
-      for (grid_map::LineIterator iterator(rawMapCopy, indexAtSensor, *areaIterator); !iterator.isPastEnd(); ++iterator) {
+      for (grid_map::LineIterator iterator(visibilityCleanupMap_, indexAtSensor, *areaIterator); !iterator.isPastEnd(); ++iterator) {
         Position cellPosition;
-        rawMapCopy.getPosition(*iterator, cellPosition);
-        const float cellDiffX = cellPosition.x() - sensorXatLowestScan; // TODO Do with Eigen.
+        visibilityCleanupMap_.getPosition(*iterator, cellPosition);
+        const float cellDiffX = cellPosition.x() - sensorXatLowestScan;
         const float cellDiffY = cellPosition.y() - sensorYatLowestScan;
         const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
         const float maxHeightPoint = lowestScanPoint + (sensorZatLowestScan - lowestScanPoint) / distanceToPoint * distanceToCell;
-        auto& cellMaxHeight = rawMapCopy.at("max_height", *iterator);
+        auto& cellMaxHeight = visibilityCleanupMap_.at("max_height", *iterator);
         if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint) {
           cellMaxHeight = maxHeightPoint;
         }
@@ -538,14 +541,16 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
 
   // Vector of indices that will be removed.
   std::vector<Index> removeIndices;
-  for (SubmapIterator areaIterator(rawMapCopy, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
-    if (!rawMapCopy.isValid(*areaIterator)) continue;
-    const auto& elevation = rawMapCopy.at("elevation", *areaIterator);
-    const auto& variance = rawMapCopy.at("variance", *areaIterator);
-    const auto& maxHeight = rawMapCopy.at("max_height", *areaIterator);
-    const auto& time = rawMapCopy.at("time", *areaIterator);
-    if (timeSinceInitialization - time > scanningTime_) { // TODO needed?
-      if (elevation - 3.0 * sqrt(variance) > maxHeight && !std::isnan(maxHeight)) {
+  for (SubmapIterator areaIterator(visibilityCleanupMap_, topLeftIndexCopy, bottomRightIndexCopy); !areaIterator.isPastEnd(); ++areaIterator) {
+    if (!visibilityCleanupMap_.isValid(*areaIterator)) continue;
+    const auto& elevation = visibilityCleanupMap_.at("elevation", *areaIterator);
+    const auto& variance = visibilityCleanupMap_.at("variance", *areaIterator);
+    const auto& maxHeight = visibilityCleanupMap_.at("max_height", *areaIterator);
+    const auto& time = visibilityCleanupMap_.at("time", *areaIterator);
+    if (timeSinceInitialization - time > scanningTime_) {
+      // Only remove cells that have not been updated during the last scan duration.
+      // This prevents a.o. removal of overhanging objects.
+      if (!std::isnan(maxHeight) && elevation - 3.0 * sqrt(variance) > maxHeight) {
         removeIndices.push_back(*areaIterator);
       }
     }
@@ -561,6 +566,9 @@ void ElevationMap::visibilityCleanup(const Eigen::Affine3d& transformationSensor
     }
   }
   scopedLockForRawData.unlock();
+
+  // Publish visibility cleanup map for debugging.
+  publishVisibilityCleanupMap();
 
   ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   ROS_INFO("Visibility cleanup has been performed in %f s (%d points).", duration.toSec(), (int)removeIndices.size());
@@ -585,6 +593,10 @@ bool ElevationMap::publishRawElevationMap()
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
+  rawMapCopy.erase("lowest_scan_point");
+  rawMapCopy.erase("sensor_x_at_lowest_scan");
+  rawMapCopy.erase("sensor_y_at_lowest_scan");
+  rawMapCopy.erase("sensor_z_at_lowest_scan");
   rawMapCopy.add("standard_deviation", rawMapCopy.get("variance").array().sqrt().matrix());
   rawMapCopy.add("horizontal_standard_deviation", (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
   rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
@@ -606,6 +618,26 @@ bool ElevationMap::publishFusedElevationMap()
   GridMapRosConverter::toMessage(fusedMapCopy, message);
   elevationMapFusedPublisher_.publish(message);
   ROS_DEBUG("Elevation map (fused) has been published.");
+  return true;
+}
+
+bool ElevationMap::publishVisibilityCleanupMap()
+{
+  if (visbilityCleanupMapPublisher_.getNumSubscribers() < 1) return false;
+  boost::recursive_mutex::scoped_lock scopedLock(visibilityCleanupMapMutex_);
+  grid_map::GridMap visibilityCleanupMapCopy = visibilityCleanupMap_;
+  scopedLock.unlock();
+  visibilityCleanupMapCopy.erase("elevation");
+  visibilityCleanupMapCopy.erase("variance");
+  visibilityCleanupMapCopy.erase("horizontal_variance_x");
+  visibilityCleanupMapCopy.erase("horizontal_variance_y");
+  visibilityCleanupMapCopy.erase("horizontal_variance_xy");
+  visibilityCleanupMapCopy.erase("color");
+  visibilityCleanupMapCopy.erase("time");
+  grid_map_msgs::GridMap message;
+  GridMapRosConverter::toMessage(visibilityCleanupMapCopy, message);
+  visbilityCleanupMapPublisher_.publish(message);
+  ROS_DEBUG("Visibility cleanup map has been published.");
   return true;
 }
 

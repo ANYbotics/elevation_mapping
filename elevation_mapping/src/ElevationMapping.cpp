@@ -357,7 +357,7 @@ void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent&)
 {
   ROS_DEBUG("Elevation map is running visibility cleanup.");
   // Copy constructors for thread-safety.
-  map_.visibilityCleanup(Eigen::Affine3d(sensorProcessor_->transformationSensorToMap_), ros::Time(lastPointCloudUpdateTime_));
+  map_.visibilityCleanup(ros::Time(lastPointCloudUpdateTime_));
 }
 
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)

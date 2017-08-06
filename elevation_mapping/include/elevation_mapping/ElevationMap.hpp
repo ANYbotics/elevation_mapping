@@ -61,9 +61,11 @@ class ElevationMap
    * @param pointCloud the point cloud data.
    * @param pointCloudVariances the corresponding variances of the point cloud data.
    * @param timeStamp the time of the input point cloud.
+   * @param transformationSensorToMap
    * @return true if successful.
    */
-  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp, const Eigen::Affine3d& transformationSensorToMap);
+  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances,
+           const ros::Time& timeStamp, const Eigen::Affine3d& transformationSensorToMap);
 
   /*!
    * Update the elevation map with variance update data.
@@ -106,7 +108,7 @@ class ElevationMap
    * @param transformationSensorToMap
    * @param updatedTime
    */
-  void visibilityCleanup(const Eigen::Affine3d& transformationSensorToMap, const ros::Time& updatedTime);
+  void visibilityCleanup(const ros::Time& updatedTime);
 
   /*!
    * Move the grid map w.r.t. to the grid map frame.
@@ -126,6 +128,12 @@ class ElevationMap
    * @return true if successful.
    */
   bool publishFusedElevationMap();
+
+  /*!
+   * Publishes the (latest) visibility cleanup map.
+   * @return true if successful.
+   */
+  bool publishVisibilityCleanupMap();
 
   /*!
    * Gets a reference to the raw grid map.
@@ -266,6 +274,9 @@ class ElevationMap
   //! Fused elevation map as grid map.
   grid_map::GridMap fusedMap_;
 
+  //! Visibility cleanup debug map.
+  grid_map::GridMap visibilityCleanupMap_;
+
   //! Underlying map, used for ground truth maps, multi-robot mapping etc.
   grid_map::GridMap underlyingMap_;
 
@@ -278,12 +289,16 @@ class ElevationMap
   //! ROS publishers.
   ros::Publisher elevationMapRawPublisher_;
   ros::Publisher elevationMapFusedPublisher_;
+  ros::Publisher visbilityCleanupMapPublisher_;
 
   //! Mutex lock for fused map.
   boost::recursive_mutex fusedMapMutex_;
 
   //! Mutex lock for raw map.
   boost::recursive_mutex rawMapMutex_;
+
+  //! Mutex lock for vsibility cleanup map.
+  boost::recursive_mutex visibilityCleanupMapMutex_;
 
   //! Underlying map subscriber.
   ros::Subscriber underlyingMapSubscriber_;
