@@ -188,6 +188,18 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 * **`min_horizontal_variance`**, **`max_horizontal_variance`** (double, default: pow(resolution / 2.0, 2), 0.5)
 
     The minimum and maximum values for the elevation map horizontal variance data.
+    
+* **`enable_visibility_cleanup`** (bool, default: true)
+
+    Enable the visibility cleanup based on ray tracing. Enabling this makes the dynamic objects removal faster.
+
+* **`visibility_cleanup_rate`** (double, default: 1.0)
+
+    The rate (in Hz) at which the elevation map is cleaned by ray tracing. 
+    
+* **`scanning_time`** (double, default: 1.0)
+
+    The sensor's scanning time which is used at visibility cleanup (e.g. Laser sensor: 3s, TOF cameras: 0.01s). This sets the trade off between removing the dynamic objects fast and keeping the map stable.    
 
 * **`sensor_cutoff_min_depth`**, **`sensor_cutoff_max_depth`** (double, default: 0.2, 2.0)
 
