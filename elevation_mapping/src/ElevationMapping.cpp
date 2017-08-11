@@ -147,7 +147,7 @@ bool ElevationMapping::readParameters()
   }
 
   double visibilityCleanupRate;
-  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 0.0);
+  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 1.0);
   if (visibilityCleanupRate == 0.0) {
     visibilityCleanupTimerDuration_.fromSec(0.0);
     ROS_WARN("Rate for visibility cleanup is zero and therefore disabled.");
@@ -194,11 +194,11 @@ bool ElevationMapping::readParameters()
   }
 
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
-  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 0.0);
+  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 1.0);
   if(visibilityCleanupRate != 0.0) {
     map_.visibilityCleanupDuration_ = 1.0 / visibilityCleanupRate;
   }
-  nodeHandle_.param("scanning_time", map_.scanningTime_, 0.01); // TODO Needed?
+  nodeHandle_.param("scanning_time", map_.scanningTime_, 1.0);
 
   // SensorProcessor parameters.
   string sensorType;
