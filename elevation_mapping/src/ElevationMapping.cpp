@@ -154,6 +154,7 @@ bool ElevationMapping::readParameters()
   } 
   else {
     visibilityCleanupTimerDuration_.fromSec(1.0 / visibilityCleanupRate);
+    map_.visibilityCleanupDuration_ = 1.0 / visibilityCleanupRate;
   }
 
 
@@ -194,10 +195,6 @@ bool ElevationMapping::readParameters()
   }
 
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
-  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 1.0);
-  if(visibilityCleanupRate != 0.0) {
-    map_.visibilityCleanupDuration_ = 1.0 / visibilityCleanupRate;
-  }
   nodeHandle_.param("scanning_time", map_.scanningTime_, 1.0);
 
   // SensorProcessor parameters.
