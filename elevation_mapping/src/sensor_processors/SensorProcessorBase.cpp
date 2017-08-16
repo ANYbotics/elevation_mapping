@@ -28,8 +28,8 @@ namespace elevation_mapping {
 SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
     : nodeHandle_(nodeHandle),
       transformListener_(transformListener),
-      mapFrameId_(""),
-      robotBaseFrameId_("")
+      ignorePointsUpperThreshold_(std::numeric_limits<double>::infinity()),
+      ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity())
 {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
 	transformationSensorToMap_.setIdentity();
@@ -40,6 +40,15 @@ SensorProcessorBase::~SensorProcessorBase() {}
 
 bool SensorProcessorBase::readParameters()
 {
+  nodeHandle_.param("sensor_frame_id", sensorFrameId_, std::string("/sensor")); // TODO Fail if parameters are not found.
+  nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
+  nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
+
+  double minUpdateRate;
+  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
+  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
+  ROS_ASSERT(!transformListenerTimeout_.isZero());
+
   nodeHandle_.param("sensor_processor/ignore_points_above", ignorePointsUpperThreshold_, std::numeric_limits<double>::infinity());
   nodeHandle_.param("sensor_processor/ignore_points_below", ignorePointsLowerThreshold_, -std::numeric_limits<double>::infinity());
   return true;
@@ -51,31 +60,32 @@ bool SensorProcessorBase::process(
 		const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudMapFrame,
 		Eigen::VectorXf& variances)
 {
-	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudSensorFrame(new pcl::PointCloud<pcl::PointXYZRGB>);
-	pcl::copyPointCloud(*pointCloudInput, *pointCloudSensorFrame);
-	cleanPointCloud(pointCloudSensorFrame);
-	ros::Time timeStamp;
-	timeStamp.fromNSec(1000 * pointCloudSensorFrame->header.stamp);
+  ros::Time timeStamp;
+  timeStamp.fromNSec(1000 * pointCloudInput->header.stamp);
+  if (!updateTransformations(timeStamp)) return false;
 
-	if (!updateTransformations(pointCloudSensorFrame->header.frame_id, timeStamp)) return false;
+	pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudSensorFrame(new pcl::PointCloud<pcl::PointXYZRGB>);
+	transformPointCloud(pointCloudInput, pointCloudSensorFrame, sensorFrameId_);
+	cleanPointCloud(pointCloudSensorFrame);
+
 	if (!transformPointCloud(pointCloudSensorFrame, pointCloudMapFrame, mapFrameId_)) return false;
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pointClouds({pointCloudMapFrame, pointCloudSensorFrame});
   removePointsOutsideLimits(pointCloudMapFrame, pointClouds);
 	if (!computeVariances(pointCloudSensorFrame, robotPoseCovariance, variances)) return false;
+
 	return true;
 }
 
-bool SensorProcessorBase::updateTransformations(const std::string& sensorFrameId,
-                                                const ros::Time& timeStamp)
+bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp)
 {
   try {
-    transformListener_.waitForTransform(sensorFrameId, mapFrameId_, timeStamp, ros::Duration(1.0));
+    transformListener_.waitForTransform(sensorFrameId_, mapFrameId_, timeStamp, ros::Duration(1.0));
 
     tf::StampedTransform transformTf;
-    transformListener_.lookupTransform(mapFrameId_, sensorFrameId, timeStamp, transformTf);
+    transformListener_.lookupTransform(mapFrameId_, sensorFrameId_, timeStamp, transformTf);
     poseTFToEigen(transformTf, transformationSensorToMap_);
 
-    transformListener_.lookupTransform(robotBaseFrameId_, sensorFrameId, timeStamp, transformTf);  // TODO Why wrong direction?
+    transformListener_.lookupTransform(robotBaseFrameId_, sensorFrameId_, timeStamp, transformTf);  // TODO Why wrong direction?
     Eigen::Affine3d transform;
     poseTFToEigen(transformTf, transform);
     rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
@@ -94,12 +104,27 @@ bool SensorProcessorBase::updateTransformations(const std::string& sensorFrameId
 }
 
 bool SensorProcessorBase::transformPointCloud(
-		const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud,
+		pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
 		pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudTransformed,
 		const std::string& targetFrame)
 {
-	pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transformationSensorToMap_.cast<float>());
-	pointCloudTransformed->header.frame_id = targetFrame;
+  ros::Time timeStamp;
+  timeStamp.fromNSec(1000 * pointCloud->header.stamp);
+  const std::string inputFrameId(pointCloud->header.frame_id);
+
+  tf::StampedTransform transformTf;
+  try {
+    transformListener_.waitForTransform(targetFrame, inputFrameId, timeStamp, ros::Duration(1.0));
+    transformListener_.lookupTransform(targetFrame, inputFrameId, timeStamp, transformTf);
+  } catch (tf::TransformException &ex) {
+    ROS_ERROR("%s", ex.what());
+    return false;
+  }
+
+  Eigen::Affine3d transform;
+  poseTFToEigen(transformTf, transform);
+  pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.cast<float>());
+  pointCloudTransformed->header.frame_id = targetFrame;
 
 	ROS_DEBUG("Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),
 			ros::Time(pointCloudTransformed->header.stamp).toSec());
@@ -114,7 +139,7 @@ void SensorProcessorBase::removePointsOutsideLimits(
 
   pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter(true);
   passThroughFilter.setInputCloud(reference);
-  passThroughFilter.setFilterFieldName("z"); // Should this be configurable?
+  passThroughFilter.setFilterFieldName("z"); // TODO: Should this be configurable?
   double relativeLowerThreshold = translationMapToBaseInMapFrame_.z() + ignorePointsLowerThreshold_;
   double relativeUpperThreshold = translationMapToBaseInMapFrame_.z() + ignorePointsUpperThreshold_;
   passThroughFilter.setFilterLimits(relativeLowerThreshold, relativeUpperThreshold);

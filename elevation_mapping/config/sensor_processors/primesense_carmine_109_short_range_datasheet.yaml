@@ -2,7 +2,7 @@
 # http://www.openni.org/rd1-09-specifications/
 # Coefficients for normal model computed with least squares regression.
 # Coefficients for lateral model taken from kinect_nguyen_et_al.yaml
-sensor_processor/type: Kinect
+sensor_processor/type: structured_light
 sensor_processor/cutoff_min_depth: 0.2
 sensor_processor/cutoff_max_depth: 2.0
 sensor_processor/factor_a: 0.000181

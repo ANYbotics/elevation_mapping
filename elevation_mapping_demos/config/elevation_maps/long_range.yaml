@@ -7,5 +7,3 @@ min_variance: 0.0001
 max_variance: 10000.0
 mahalanobis_distance_threshold: 2.5
 multi_height_noise: 0.00002
-surface_normal_estimation_radius: 0.24
-surface_normal_positive_axis: z

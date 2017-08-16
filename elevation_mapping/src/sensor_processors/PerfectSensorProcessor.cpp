@@ -35,15 +35,6 @@ PerfectSensorProcessor::~PerfectSensorProcessor()
 
 bool PerfectSensorProcessor::readParameters()
 {
-  SensorProcessorBase::readParameters();
-  nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
-  nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
-
-  double minUpdateRate;
-  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
-  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
-  ROS_ASSERT(!transformListenerTimeout_.isZero());
-
   return true;
 }
 
