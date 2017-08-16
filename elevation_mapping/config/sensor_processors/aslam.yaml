@@ -2,7 +2,7 @@
 # "Localization and Path Planning of a Climbing Robot for Corrosion Monitoring",
 # Hannes Keller, Semester Project, ETH Zurich, 2014.
 
-sensor_processor/type: Stereo
+sensor_processor/type: stereo
 sensor_processor/p_1:   0.03287
 sensor_processor/p_2:  -0.0001276
 sensor_processor/p_3:   0.4850

@@ -181,18 +181,18 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
   nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
-  nodeHandle_.param("scanning_time", map_.scanningTime_, 1.0);
+  nodeHandle_.param("scanning_duration", map_.scanningDuration_, 1.0);
 
   // SensorProcessor parameters.
   string sensorType;
-  nodeHandle_.param("sensor_processor/type", sensorType, string("StructuredLight"));
-  if (sensorType == "StructuredLight") {
+  nodeHandle_.param("sensor_processor/type", sensorType, string("structured_light"));
+  if (sensorType == "structured_light") {
     sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, transformListener_));
-  } else if (sensorType == "Stereo") {
+  } else if (sensorType == "stereo") {
     sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
-  } else if (sensorType == "Laser") {
+  } else if (sensorType == "laser") {
     sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, transformListener_));
-  } else if (sensorType == "Perfect") {
+  } else if (sensorType == "perfect") {
     sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, transformListener_));
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());

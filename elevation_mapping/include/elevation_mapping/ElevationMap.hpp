@@ -305,7 +305,7 @@ class ElevationMap
   std::string underlyingMapTopic_;
   bool enableVisibilityCleanup_;
   double visibilityCleanupDuration_;
-  double scanningTime_;
+  double scanningDuration_;
 };
 
 } /* namespace */

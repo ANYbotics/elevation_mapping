@@ -116,10 +116,10 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     // Deal with multiple heights in one cell.
     const double mahalanobisDistance = fabs(point.z - elevation) / sqrt(variance);
     if (mahalanobisDistance > mahalanobisDistanceThreshold_) {
-      if (scanTimeSinceInitialization - time <= scanningTime_ && elevation > point.z) {
+      if (scanTimeSinceInitialization - time <= scanningDuration_ && elevation > point.z) {
         // Ignore point if measurement is from the same point cloud (time comparison) and
         // if measurement is lower then the elevation in the map.
-      } else if (scanTimeSinceInitialization - time <= scanningTime_) {
+      } else if (scanTimeSinceInitialization - time <= scanningDuration_) {
         // If point is higher.
         elevation = point.z;
         variance = pointVariance;
@@ -437,7 +437,7 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
   for (GridMapIterator iterator(visibilityCleanupMap_); !iterator.isPastEnd(); ++iterator) {
     if (!visibilityCleanupMap_.isValid(*iterator)) continue;
     const auto& time = visibilityCleanupMap_.at("time", *iterator);
-    if (timeSinceInitialization - time > scanningTime_) {
+    if (timeSinceInitialization - time > scanningDuration_) {
       // Only remove cells that have not been updated during the last scan duration.
       // This prevents a.o. removal of overhanging objects.
       const auto& elevation = visibilityCleanupMap_.at("elevation", *iterator);

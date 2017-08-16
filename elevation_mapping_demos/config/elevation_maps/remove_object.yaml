@@ -28,5 +28,5 @@ mahalanobis_distance_threshold: 2.5
 multi_height_noise: 0.01
 fused_map_publishing_rate: 2.0
 enable_skip_lower_points: true
-scanning_time: 0.01
+scanning_duration: 0.01
 remove_penetrated_points_rate: 5.0
