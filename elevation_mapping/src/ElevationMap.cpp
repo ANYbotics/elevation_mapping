@@ -32,7 +32,7 @@ namespace elevation_mapping {
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
-      fusedMap_({"elevation", "upper_bound", "lower_bound", "color", "surface_normal_x", "surface_normal_y", "surface_normal_z"}),
+      fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
       hasUnderlyingMap_(false),
       visibilityCleanupDuration_(0.0)
 {
@@ -186,14 +186,14 @@ bool ElevationMap::update(const grid_map::Matrix& varianceUpdate, const grid_map
   return true;
 }
 
-bool ElevationMap::fuseAll(const bool computeSurfaceNormals)
+bool ElevationMap::fuseAll()
 {
   ROS_DEBUG("Requested to fuse entire elevation map.");
   boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
-  return fuse(Index(0, 0), fusedMap_.getSize(), computeSurfaceNormals);
+  return fuse(Index(0, 0), fusedMap_.getSize());
 }
 
-bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2d& length, const bool computeSurfaceNormals)
+bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2d& length)
 {
   ROS_DEBUG("Requested to fuse an area of the elevation map with center at (%f, %f) and side lengths (%f, %f)",
             position[0], position[1], length[0], length[1]);
@@ -213,10 +213,10 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
                        rawMap_.getPosition(), rawMap_.getResolution(), rawMap_.getSize(),
                        rawMap_.getStartIndex());
 
-  return fuse(topLeftIndex, submapBufferSize, computeSurfaceNormals);
+  return fuse(topLeftIndex, submapBufferSize);
 }
 
-bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Index& size, const bool computeSurfaceNormals)
+bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Index& size)
 {
   ROS_DEBUG("Fusing elevation map...");
 
@@ -360,11 +360,6 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     fusedMap_.at("upper_bound", *areaIterator) = upperBoundDistribution.quantile(0.99); // TODO
     // TODO Add fusion of colors.
     fusedMap_.at("color", *areaIterator) = rawMapCopy.at("color", *areaIterator);
-
-    // Stop from data corruption with old surface normals.
-    fusedMap_.at("surface_normal_x", *areaIterator) = NAN;
-    fusedMap_.at("surface_normal_y", *areaIterator) = NAN;
-    fusedMap_.at("surface_normal_z", *areaIterator) = NAN;
   }
 
   fusedMap_.setTimestamp(rawMapCopy.getTimestamp());
@@ -372,95 +367,8 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
   const ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
   ROS_INFO("Elevation map has been fused in %f s.", duration.toSec());
 
-  if (computeSurfaceNormals) return ElevationMap::computeSurfaceNormals(topLeftIndex, size);
   return true;
 }
-
-bool ElevationMap::computeSurfaceNormals(const Eigen::Array2i& topLeftIndex, const Eigen::Array2i& size)
-{
-  // TODO Change this to raw map!
-  ROS_DEBUG("Computing surface normals...");
-
-  // Initializations.
-  const ros::WallTime methodStartTime(ros::WallTime::now());
-  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
-
-  vector<string> surfaceNormalTypes;
-  surfaceNormalTypes.push_back("surface_normal_x");
-  surfaceNormalTypes.push_back("surface_normal_y");
-  surfaceNormalTypes.push_back("surface_normal_z");
-
-  // For each cell in requested area.
-  for (SubmapIterator areaIterator(fusedMap_, topLeftIndex, size); !areaIterator.isPastEnd(); ++areaIterator) {
-
-    // Check if this is an empty cell (hole in the map).
-    if (!fusedMap_.isValid(*areaIterator)) continue;
-    // Check if surface normal for this cell has already been computed earlier.
-    if (fusedMap_.isValid(*areaIterator, surfaceNormalTypes)) continue;
-
-    // Size of submap area for surface normal estimation.
-    Length submapLength = Length::Ones() * (2.0 * surfaceNormalEstimationRadius_);
-
-    // Requested position (center) of submap in map.
-    Position submapPosition;
-    fusedMap_.getPosition(*areaIterator, submapPosition);
-    Index submapTopLeftIndex, submapBufferSize, requestedIndexInSubmap;
-    getSubmapInformation(submapTopLeftIndex, submapBufferSize, submapPosition, submapLength,
-                         requestedIndexInSubmap, submapPosition, submapLength,
-                         fusedMap_.getLength(), fusedMap_.getPosition(), fusedMap_.getResolution(),
-                         fusedMap_.getSize(), fusedMap_.getStartIndex());
-
-    // Prepare data computation.
-    const int maxNumberOfCells = submapBufferSize.prod();
-    Eigen::MatrixXd points(3, maxNumberOfCells);
-
-    // Gather surrounding data.
-    size_t nPoints = 0;
-    for (SubmapIterator submapIterator(fusedMap_, submapTopLeftIndex, submapBufferSize); !submapIterator.isPastEnd(); ++submapIterator) {
-      if (!fusedMap_.isValid(*submapIterator)) continue;
-      Position3 point;
-      fusedMap_.getPosition3("elevation", *submapIterator, point);
-      points.col(nPoints) = point;
-      nPoints++;
-    }
-//    nPoints.conservativeResize(3, nPoints); // TODO Eigen version?
-
-    // Compute eigenvectors.
-    const Eigen::Vector3d mean = points.leftCols(nPoints).rowwise().sum() / nPoints;
-    const Eigen::MatrixXd NN = points.leftCols(nPoints).colwise() - mean;
-
-    const Eigen::Matrix3d covarianceMatrix(NN * NN.transpose());
-    Eigen::Vector3d eigenvalues = Eigen::Vector3d::Identity();
-    Eigen::Matrix3d eigenvectors = Eigen::Matrix3d::Identity();
-    // Ensure that the matrix is suited for eigenvalues calculation
-    if (covarianceMatrix.fullPivHouseholderQr().rank() >= 3) {
-      const Eigen::EigenSolver<Eigen::MatrixXd> solver(covarianceMatrix);
-      eigenvalues = solver.eigenvalues().real();
-      eigenvectors = solver.eigenvectors().real();
-    } else {
-      ROS_DEBUG("Covariance matrix needed for eigen decomposition is degenerated. Expected cause: no noise in data (nPoints = %i)", (int) nPoints);
-    }
-    // Keep the smallest eigenvector as surface normal
-    int smallestId(0);
-    double smallestValue(numeric_limits<double>::max());
-    for (int j = 0; j < eigenvectors.cols(); j++) {
-      if (eigenvalues(j) < smallestValue) {
-        smallestId = j;
-        smallestValue = eigenvalues(j);
-      }
-    }
-    Eigen::Vector3d eigenvector = eigenvectors.col(smallestId);
-    if (eigenvector.dot(surfaceNormalPositiveAxis_) < 0.0) eigenvector = -eigenvector;
-    fusedMap_.at("surface_normal_x", *areaIterator) = eigenvector.x();
-    fusedMap_.at("surface_normal_y", *areaIterator) = eigenvector.y();
-    fusedMap_.at("surface_normal_z", *areaIterator) = eigenvector.z();
-  }
-
-  ros::WallDuration duration(ros::WallTime::now() - methodStartTime);
-  ROS_INFO("Surface normals have been computed in %f s.", duration.toSec());
-  return true;
-}
-
 
 bool ElevationMap::clear()
 {

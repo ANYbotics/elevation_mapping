@@ -26,8 +26,6 @@ min_variance: 0.0001
 max_variance: 0.05
 mahalanobis_distance_threshold: 2.5
 multi_height_noise: 0.01
-surface_normal_estimation_radius: 0.1
-surface_normal_positive_axis: z
 fused_map_publishing_rate: 2.0
 enable_skip_lower_points: true
 scanning_time: 0.01

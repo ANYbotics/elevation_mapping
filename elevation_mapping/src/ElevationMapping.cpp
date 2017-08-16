@@ -151,7 +151,7 @@ bool ElevationMapping::readParameters()
   if (visibilityCleanupRate == 0.0) {
     visibilityCleanupTimerDuration_.fromSec(0.0);
     ROS_WARN("Rate for visibility cleanup is zero and therefore disabled.");
-  } 
+  }
   else {
     visibilityCleanupTimerDuration_.fromSec(1.0 / visibilityCleanupRate);
     map_.visibilityCleanupDuration_ = 1.0 / visibilityCleanupRate;
@@ -179,21 +179,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("multi_height_noise", map_.multiHeightNoise_, pow(0.003, 2));
   nodeHandle_.param("min_horizontal_variance", map_.minHorizontalVariance_, pow(resolution / 2.0, 2)); // two-sigma
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
-  nodeHandle_.param("surface_normal_estimation_radius", map_.surfaceNormalEstimationRadius_, 0.05);
   nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
-
-  string surfaceNormalPositiveAxis;
-  nodeHandle_.param("surface_normal_positive_axis", surfaceNormalPositiveAxis, string("z"));
-  if (surfaceNormalPositiveAxis == "z") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitZ();
-  } else if (surfaceNormalPositiveAxis == "y") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitY();
-  } else if (surfaceNormalPositiveAxis == "x") {
-    map_.surfaceNormalPositiveAxis_ = grid_map::Vector3::UnitX();
-  } else {
-    ROS_ERROR("The surface normal positive axis '%s' is not valid.", surfaceNormalPositiveAxis.c_str());
-  }
-
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
   nodeHandle_.param("scanning_time", map_.scanningTime_, 1.0);
 
@@ -308,7 +294,7 @@ void ElevationMapping::pointCloudCallback(
   // Publish elevation map.
   map_.publishRawElevationMap();
   if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
+    map_.fuseAll();
     map_.publishFusedElevationMap();
   }
 
@@ -334,7 +320,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
   // Publish elevation map.
   map_.publishRawElevationMap();
   if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll(true);
+    map_.fuseAll();
     map_.publishFusedElevationMap();
   }
 
@@ -346,7 +332,7 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&)
   if (!map_.hasFusedMapSubscribers()) return;
   ROS_DEBUG("Elevation map is fused and published from timer.");
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(false);
+  map_.fuseAll();
   map_.publishFusedElevationMap();
 }
 
@@ -360,7 +346,7 @@ void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent&)
 bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&)
 {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
+  map_.fuseAll();
   map_.publishFusedElevationMap();
   return true;
 }
@@ -427,18 +413,8 @@ bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, gr
   grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
   Length requestedSubmapLength(request.length_x, request.length_y);
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
-
-  bool computeSurfaceNormals = false;
-  if (request.layers.empty()) {
-    computeSurfaceNormals = true;
-  } else {
-    for (const auto& type : request.layers) {
-      if (type.find("surface_normal") != std::string::npos) computeSurfaceNormals = true;
-    }
-  }
-
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength, computeSurfaceNormals);
+  map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
 
   bool isSuccess;
   Index index;
@@ -469,7 +445,7 @@ bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, gri
 {
   ROS_INFO("Saving map to file.");
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
-  map_.fuseAll(true);
+  map_.fuseAll();
   std::string topic = nodeHandle_.getNamespace() + "/elevation_map";
   response.success = GridMapRosConverter::saveToBag(map_.getFusedGridMap(), request.file_path, topic);
   response.success = GridMapRosConverter::saveToBag(map_.getRawGridMap(), request.file_path + "_raw", topic + "_raw");
