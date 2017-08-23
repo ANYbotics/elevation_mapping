@@ -2,13 +2,14 @@
 
 ## Overview
 
-This is a [ROS] package developed for elevation mapping with a mobile robot. The software is designed for (local) navigation tasks with robots which are equipped with a pose estimation (e.g. IMU & odometry) and a distance sensor (e.g. kinect, laser range sensor, stereo camera). The provided elevation map is limited around the robot and reflects the pose uncertainty that is aggregated through the motion of the robot (robot-centric mapping). This method is developed to explicitly handle drift of the robot pose estimation.
+This is a [ROS] package developed for elevation mapping with a mobile robot. The software is designed for (local) navigation tasks with robots which are equipped with a pose estimation (e.g. IMU & odometry) and a distance sensor (e.g. structured light (Kinect, RealSense), laser range sensor, stereo camera). The provided elevation map is limited around the robot and reflects the pose uncertainty that is aggregated through the motion of the robot (robot-centric mapping). This method is developed to explicitly handle drift of the robot pose estimation.
 
 The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo and Ubuntu 14.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 **Author: Péter Fankhauser, pfankhauser@ethz.ch<br />
 Affiliation: Autonomous Systems Lab, ETH Zurich**
 
+[![Build Status](http://rsl-ci.ethz.ch/buildStatus/icon?job=elevation_mapping)](http://rsl-ci.ethz.ch/job/elevation_mapping/)
 
 ## Citing
 
@@ -188,6 +189,18 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 * **`min_horizontal_variance`**, **`max_horizontal_variance`** (double, default: pow(resolution / 2.0, 2), 0.5)
 
     The minimum and maximum values for the elevation map horizontal variance data.
+
+* **`enable_visibility_cleanup`** (bool, default: true)
+
+    Enable visibility cleanup. This runs a separate thread to remove elements in the map based on the visibility constraint.
+
+* **`visibility_cleanup_rate`** (double, default: 1.0)
+
+    The rate (in Hz) at which the visibility constraint is performed.
+
+* **`scanning_duration`** (double, default: 1.0)
+
+    The sensor's scanning duration (in s) which is used for the visibility cleanup. Set this roughly to the duration it takes between two consecutive full scans (e.g. 0.033 for a ToF camera with 30 Hz, or 3 s for a rotating laser scanner). Depending on how dense or sparse your scans are, increase or reduce the scanning duration. Smaller values lead to faster dynamic object removal and bigger values help to reduce faulty map cleanups.   
 
 * **`sensor_cutoff_min_depth`**, **`sensor_cutoff_max_depth`** (double, default: 0.2, 2.0)
 

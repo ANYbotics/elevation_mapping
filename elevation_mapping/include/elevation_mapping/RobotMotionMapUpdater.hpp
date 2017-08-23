@@ -97,8 +97,8 @@ class RobotMotionMapUpdater
   //! Robot pose covariance (reduced) from the previous update.
   ReducedCovariance previousReducedCovariance_;
 
-  //! Scaling factor for the covariance matrix (default all ones).
-  Eigen::Array<double, 6, 6> covarianceScale_;
+  //! Scaling factor for the covariance matrix (default 1).
+  double covarianceScale_;
 };
 
 } /* namespace */

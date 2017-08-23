@@ -87,6 +87,13 @@ class ElevationMapping
    */
   void publishFusedMapCallback(const ros::TimerEvent& timerEvent);
 
+
+  /*!
+   * Callback function for cleaning map based on visibility ray tracing.
+   * @param timerEvent the timer event.
+   */
+  void visibilityCleanupCallback(const ros::TimerEvent& timerEvent);
+
   /*!
    * ROS service callback function to trigger the fusion of the entire
    * elevation map.
@@ -138,6 +145,11 @@ class ElevationMapping
    * Separate thread for all fusion service calls.
    */
   void runFusionServiceThread();
+
+  /*!
+   * Separate thread for visibility cleanup.
+   */
+  void visibilityCleanupThread();
 
   /*!
    * Update the elevation map from the robot motion up to a certain time.
@@ -218,6 +230,9 @@ class ElevationMapping
   //! If true, robot motion updates are ignored.
   bool ignoreRobotMotionUpdates_;
 
+  //! Time of the last point cloud update.
+  ros::Time lastPointCloudUpdateTime_;
+
   //! Timer for the robot motion update.
   ros::Timer mapUpdateTimer_;
 
@@ -236,6 +251,18 @@ class ElevationMapping
 
   //! If map is fused after every change for debugging/analysis purposes.
   bool isContinouslyFusing_;
+
+  //! Timer for the raytracing cleanup.
+  ros::Timer visibilityCleanupTimer_;
+
+  //! Duration for the raytracing cleanup timer.
+  ros::Duration visibilityCleanupTimerDuration_;
+
+  //! Callback queue for raytracing cleanup thread.
+  ros::CallbackQueue visibilityCleanupQueue_;
+
+  //! Callback thread for raytracing cleanup.
+  boost::thread visibilityCleanupThread_;
 };
 
 } /* namespace */
