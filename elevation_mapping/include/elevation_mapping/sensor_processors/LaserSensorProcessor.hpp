@@ -25,7 +25,7 @@ public:
    * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-  LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf2_ros::Buffer& tfBuffer);
 
   /*!
    * Destructor.

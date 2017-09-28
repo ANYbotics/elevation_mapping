@@ -8,21 +8,14 @@
 
 #pragma once
 
-// ROS
-#include <ros/ros.h>
-#include <tf/transform_listener.h>
+#include "elevation_mapping/typedefs.hpp"
 
-// PCL
+#include <Eigen/Core>
+#include <ros/ros.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
+#include <tf2_ros/buffer.h>
 
-// Eigen
-#include <Eigen/Core>
-
-// Kindr
-#include <kindr/Core>
-
-// STL
 #include <unordered_map>
 #include <string>
 #include <memory>
@@ -46,12 +39,18 @@ public:
    * @param nodeHandle the ROS node handle.
    * @param transformListener the ROS transform listener.
    */
-	SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+	SensorProcessorBase(ros::NodeHandle& nodeHandle, tf2_ros::Buffer& tfBuffer);
 
 	/*!
 	 * Destructor.
 	 */
 	virtual ~SensorProcessorBase();
+
+  /*!
+   * Reads and verifies the parameters.
+   * @return true if successful, false otherwise.
+   */
+  virtual bool readParameters();
 
 	/*!
 	 * Processes the point cloud.
@@ -70,13 +69,6 @@ public:
 	friend class ElevationMapping;
 
  protected:
-
-  /*!
-   * Reads and verifies the parameters.
-   * @return true if successful.
-   */
-  virtual bool readParameters();
-
   /*!
    * Cleans the point cloud.
    * @param pointCloud the point cloud to clean.
@@ -124,26 +116,23 @@ public:
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
 
-  //! TF transform listener.
-  tf::TransformListener& transformListener_;
+  /// TF buffer.
+  tf2_ros::Buffer& tfBuffer_;
 
-  //! The timeout duration for the lookup of the transformation between sensor frame and target frame.
-  ros::Duration transformListenerTimeout_;
+  //! Rotation from Sensor to Base frame (C_BS).
+  RotationMatrix rotationSensorToBase_;
 
-  //! Rotation from Base to Sensor frame (C_SB)
-  kindr::RotationMatrixD rotationBaseToSensor_;
+  //! Translation from Base to Sensor in Base frame (B_r_BS).
+  Position3 translationBaseToSensorInBaseFrame_;
 
-  //! Translation from Base to Sensor in Base frame (B_r_BS)
-  kindr::Position3D translationBaseToSensorInBaseFrame_;
+  //! Rotation from Base to (elevation) Map frame (C_MB).
+  RotationMatrix rotationBaseToMap_;
 
-  //! Rotation from (elevation) Map to Base frame (C_BM)
-  kindr::RotationMatrixD rotationMapToBase_;
+  //! Translation from Map to Base in Map frame (M_r_MB).
+  Position3 translationMapToBaseInMapFrame_;
 
-  //! Translation from Map to Base in Map frame (M_r_MB)
-  kindr::Position3D translationMapToBaseInMapFrame_;
-
-  //! Transformation from Sensor to Map frame
-  Eigen::Affine3d transformationSensorToMap_;
+  //! Transformation from Sensor to Map frame.
+  Transform transformationSensorToMap_;
 
   //! TF frame id of the map.
   std::string mapFrameId_;

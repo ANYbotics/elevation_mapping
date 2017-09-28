@@ -25,8 +25,8 @@ namespace elevation_mapping {
  * International Conference on Applied Robotics for the Power Industry (CARPI), 2012.
  */
 
-LaserSensorProcessor::LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
-    : SensorProcessorBase(nodeHandle, transformListener)
+LaserSensorProcessor::LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf2_ros::Buffer& tfBuffer)
+    : SensorProcessorBase(nodeHandle, tfBuffer)
 {
 
 }
@@ -67,15 +67,15 @@ bool LaserSensorProcessor::computeVariances(
 	const Eigen::RowVector3f projectionVector = Eigen::RowVector3f::UnitZ();
 
 	// Sensor Jacobian (J_s).
-	const Eigen::RowVector3f sensorJacobian = projectionVector * (rotationMapToBase_.transposed() * rotationBaseToSensor_.transposed()).toImplementation().cast<float>();
+	const Eigen::RowVector3f sensorJacobian = projectionVector * (rotationBaseToMap_ * rotationSensorToBase_).toImplementation().cast<float>();
 
 	// Robot rotation covariance matrix (Sigma_q).
 	Eigen::Matrix3f rotationVariance = robotPoseCovariance.bottomRightCorner(3, 3).cast<float>();
 
 	// Preparations for robot rotation Jacobian (J_q) to minimize computation for every point in point cloud.
-	const Eigen::Matrix3f C_BM_transpose = rotationMapToBase_.transposed().toImplementation().cast<float>();
+	const Eigen::Matrix3f C_BM_transpose = rotationBaseToMap_.toImplementation().cast<float>();
 	const Eigen::RowVector3f P_mul_C_BM_transpose = projectionVector * C_BM_transpose;
-	const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
+	const Eigen::Matrix3f C_SB_transpose = rotationSensorToBase_.toImplementation().cast<float>();
 	const Eigen::Matrix3f B_r_BS_skew = kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
   for (size_t i = 0; i < pointCloud->size(); ++i) {
