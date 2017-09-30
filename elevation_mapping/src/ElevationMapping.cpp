@@ -269,7 +269,7 @@ void ElevationMapping::pointCloudCallback(
       ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
       return;
     }
-    ROS_WARN_STREAM("Time error for robot pose from buffer: " << (lastPointCloudUpdateTime_ - poseMessage->header.stamp).toSec() << " s.");
+    ROS_DEBUG_STREAM("Time error for robot pose from buffer: " << (lastPointCloudUpdateTime_ - poseMessage->header.stamp).toSec() << " s.");
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
 
