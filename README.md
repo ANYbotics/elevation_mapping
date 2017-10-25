@@ -9,7 +9,7 @@ The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo a
 **Author: Péter Fankhauser, pfankhauser@ethz.ch<br />
 Affiliation: Autonomous Systems Lab, ETH Zurich**
 
-[![Build Status](http://rsl-ci.ethz.ch/buildStatus/icon?job=elevation_mapping)](http://rsl-ci.ethz.ch/job/elevation_mapping/)
+[![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_ethz-asl/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_ethz-asl/job/elevation_mapping/job/master/)
 
 ## Citing
 
