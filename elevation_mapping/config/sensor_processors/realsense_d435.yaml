@@ -1,0 +1,11 @@
+# Written by Takahiro Miki.
+# Modeling Realsense ZR300 Sensor Noise for Improved 3D Reconstruction and Tracking.
+sensor_processor/type: structured_light
+sensor_processor/cutoff_min_depth: 0.35
+sensor_processor/cutoff_max_depth: 3.0
+sensor_processor/normal_factor_a: 0.00241809
+sensor_processor/normal_factor_b: 0.00662547
+sensor_processor/normal_factor_c: 0.77199589
+sensor_processor/normal_factor_d: 0
+sensor_processor/normal_factor_e: 1
+sensor_processor/lateral_factor: 0.00220941
