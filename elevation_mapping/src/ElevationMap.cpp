@@ -261,6 +261,13 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     const float& sigmaYsquare = rawMapCopy.at("horizontal_variance_y", *areaIterator);
     const float& sigmaXYsquare = rawMapCopy.at("horizontal_variance_xy", *areaIterator);
 
+    // Validate variances
+    if (!std::isfinite(sigmaXsquare) || !std::isfinite(sigmaYsquare) || !std::isfinite(sigmaXYsquare)) {
+      ROS_ERROR("Invalid variances when fusing the map: sigmaXsquare = %f, sigmaYsquare = %f, sigmaXYsquare = %f",
+                sigmaXsquare, sigmaYsquare, sigmaXYsquare);
+      continue;
+    }
+
     Eigen::Matrix2d covarianceMatrix;
     covarianceMatrix << sigmaXsquare, sigmaXYsquare, sigmaXYsquare, sigmaYsquare;
     // 95.45% confidence ellipse which is 2.486-sigma for 2 dof problem.
