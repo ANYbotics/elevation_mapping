@@ -47,6 +47,9 @@ using namespace pcl;
 using namespace kindr;
 using namespace kindr_ros;
 
+// In order to suppress startup errors 
+#define DELAYED_LOG_PERIOD 5
+
 namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
@@ -257,7 +260,7 @@ void ElevationMapping::pointCloudCallback(
 
   // Update map from motion prediction.
   if (!updatePrediction(lastPointCloudUpdateTime_)) {
-    ROS_ERROR("Updating process noise failed.");
+    ROS_ERROR_DELAYED_THROTTLE(DELAYED_LOG_PERIOD, "Updating process noise failed.");
     resetMapUpdateTimer();
     return;
   }
@@ -268,7 +271,7 @@ void ElevationMapping::pointCloudCallback(
   if (!ignoreRobotMotionUpdates_) {
     boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(lastPointCloudUpdateTime_);
     if (!poseMessage) {
-      ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
+      ROS_ERROR_DELAYED_THROTTLE(DELAYED_LOG_PERIOD, "Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
       return;
     }
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
@@ -312,7 +315,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
 
   // Update map from motion prediction.
   if (!updatePrediction(time)) {
-    ROS_ERROR("Updating process noise failed.");
+    ROS_ERROR_DELAYED_THROTTLE(DELAYED_LOG_PERIOD, "Updating process noise failed.");
     resetMapUpdateTimer();
     return;
   }
@@ -368,7 +371,7 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   // Get robot pose at requested time.
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
   if (!poseMessage) {
-    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
+    ROS_ERROR_DELAYED_THROTTLE(DELAYED_LOG_PERIOD, "Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
     return false;
   }
 
