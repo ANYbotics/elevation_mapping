@@ -99,6 +99,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
+  clearSubMapService_ = nodeHandle_.advertiseService("clear_sub_map", &ElevationMapping::clearSubMap, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
 
   initialize();
@@ -439,6 +440,14 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
 {
   ROS_INFO("Clearing map.");
   return map_.clear();
+}
+
+bool ElevationMapping::clearSubMap(grid_map_msgs::ClearSubGridMap::Request& request, grid_map_msgs::ClearSubGridMap::Response& response)
+{
+  ROS_INFO("Clearing sub map.");
+  GridMap subMap;
+  GridMapRosConverter::fromMessage(request.map, subMap);
+  return map_.clearSubMap(subMap, request.inverted);
 }
 
 bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)

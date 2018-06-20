@@ -384,6 +384,17 @@ bool ElevationMap::clear()
   return true;
 }
 
+bool ElevationMap::clearSubMap(const GridMap& subMap, bool inverted)
+{
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
+  boost::recursive_mutex::scoped_lock scopedLockForVisibilityCleanupData(visibilityCleanupMapMutex_);
+  rawMap_.clearSubMap(subMap, inverted);
+  fusedMap_.clearSubMap(subMap, inverted);
+  visibilityCleanupMap_.clearSubMap(subMap, inverted);
+  return true;
+}
+
 void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
 {
   // Get current time to compute calculation time.
