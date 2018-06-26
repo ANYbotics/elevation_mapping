@@ -384,7 +384,7 @@ bool ElevationMap::clear()
   return true;
 }
 
-bool ElevationMap::clearSubMap(const GridMap& subMap, bool inverted)
+bool ElevationMap::clearSubMap(const GridMap& subMap, const bool inverted)
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);

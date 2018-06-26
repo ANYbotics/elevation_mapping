@@ -103,8 +103,10 @@ class ElevationMap
 
   /*!
   * Clears cells that are set to 1.0 in the layer "clear".
+  * @param subMap the grid map containing the data which cells are cleared.
+  * @param inverted if false, cells with 1.0 (true) are cleared.
   */
-  bool clearSubMap(const grid_map::GridMap& subMap, bool inverted);
+  bool clearSubMap(const grid_map::GridMap& subMap, const bool inverted);
 
   /*!
    * Removes parts of the map based on visibility criterion with ray tracing.
