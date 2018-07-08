@@ -1,4 +1,4 @@
-# Written by Marko Bjelonic.
+# Written by Lefteris kotsonis.
 # Modeling Realsense D435 Sensor Noise for Improved 3D Reconstruction and Tracking.
 sensor_processor/type: structured_light
 sensor_processor/cutoff_min_depth: 0.5
