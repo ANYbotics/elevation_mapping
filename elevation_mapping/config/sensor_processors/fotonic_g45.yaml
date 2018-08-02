@@ -1,0 +1,11 @@
+# Written by Lefteris kotsonis.
+# Modeling Fotonic G45 Sensor Noise for Improved 3D Reconstruction and Tracking.
+sensor_processor/type: structured_light
+sensor_processor/cutoff_min_depth: 0.5
+sensor_processor/cutoff_max_depth: 3.25
+sensor_processor/normal_factor_a: 0.0263
+sensor_processor/normal_factor_b:  0
+sensor_processor/normal_factor_c: 0
+sensor_processor/normal_factor_d: 0
+sensor_processor/normal_factor_e: 1
+sensor_processor/lateral_factor: 0.003163
