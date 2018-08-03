@@ -6,7 +6,7 @@ This is a [ROS] package developed for elevation mapping with a mobile robot. The
 
 The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo and Ubuntu 14.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
-**Author: Péter Fankhauser, pfankhauser@ethz.ch<br />
+**Author: Péter Fankhauser, pfankhauser@anybotics.com<br />
 Affiliation: Autonomous Systems Lab, ETH Zurich**
 
 [![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_ethz-asl/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_ethz-asl/job/elevation_mapping/job/master/)

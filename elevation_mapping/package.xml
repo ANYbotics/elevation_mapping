@@ -3,11 +3,11 @@
   <name>elevation_mapping</name>
   <version>0.3.4</version>
   <description>Generates an elevation map from distance measurements and robot pose information.</description>
-  <maintainer email="pfankhauser@ethz.ch">Péter Fankhauser</maintainer>
+  <maintainer email="pfankhauser@anybotics.com">Péter Fankhauser</maintainer>
   <license>BSD</license>
   <url type="website">http://github.com/ethz-asl/elevation_mapping</url>
   <url type="bugtracker">http://github.com/ethz-asl/elevation_mapping/issues</url>
-  <author email="pfankhauser@ethz.ch">Péter Fankhauser</author>
+  <author email="pfankhauser@anybotics.com">Péter Fankhauser</author>
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
   <depend>message_filters</depend>
