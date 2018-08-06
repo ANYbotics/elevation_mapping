@@ -9,7 +9,10 @@ The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo a
 **Author: Péter Fankhauser<br />
 Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
 Maintainer: Péter Fankhauser, pfankhauser@anybotics.com<br />**
+
 This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
+
+[This work is conducted as part of ANYmal Research, a community to advance legged robotics.](https://www.anymal-research.org/)
 
 [![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_anybotics/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_anybotics/job/elevation_mapping/job/master/)
 
@@ -22,8 +25,6 @@ Videos of the elevation mapping software in use:
 <a alt="ANYmal outdoor terrain mapping" href="https://www.youtube.com/watch?v=iVMsQPTM65M"><img src="elevation_mapping_demos/doc/anymal_forrest.jpg" align="left" width="180" ></a>
 <a alt="ANYmal rough-terrain locomotion planner" href="https://www.youtube.com/watch?v=CpzQu25iLa0"><img src="elevation_mapping_demos/doc/anymal_locomotion_planner.jpg" align="left" width="180" ></a>
 <a alt="ANYmal outdoor stair climbing" href="https://www.youtube.com/watch?v=vSveQrJLRTo"><img src="elevation_mapping_demos/doc/anymal_outdoor_stairs.jpg" width="180" ></a>
-
-[This work has been conducted as part of ANYmal Research, a community to advance legged robotics.](https://www.anymal-research.org/)
 
 ## Citing
 
