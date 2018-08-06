@@ -15,7 +15,10 @@ This projected was initially developed at ETH Zurich (Autonomous Systems Lab & R
 
 ![Elevation Map Example](elevation_mapping_demos/doc/elevation_map.jpg){:width="700px"}
 
-[![StarlETH Kinect Elevation Mapping](elevation_mapping_demos/doc/starleth_kinect.jpg){:width="200px"}](http://www.youtube.com/watch?v=I9eP8GrMyNQ)
+
+<img alt="Elevation Map Example" src="elevation_mapping_demos/doc/elevation_map.jpg" width="700">
+
+<a alt="StarlETH Kinect Elevation Mapping" href="http://www.youtube.com/watch?v=I9eP8GrMyNQ"><img src="elevation_mapping_demos/doc/starleth_kinect.jpg" align="left" width="150" ></a>
 
 ## Citing
 
