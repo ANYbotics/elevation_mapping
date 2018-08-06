@@ -13,6 +13,10 @@ This projected was initially developed at ETH Zurich (Autonomous Systems Lab & R
 
 [![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_anybotics/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_anybotics/job/elevation_mapping/job/master/)
 
+![Elevation Map Example](elevation_mapping_demos/doc/elevation_map.jpg){:width="700px"}
+
+[![StarlETH Kinect Elevation Mapping](elevation_mapping_demos/doc/starleth_kinect.jpg){:width="200px"}](http://www.youtube.com/watch?v=I9eP8GrMyNQ)
+
 ## Citing
 
 The robot-centric elevation mapping methods used in this software are described in the following paper (available [here](https://doi.org/10.3929/ethz-b-000272110)). If you use this work in an academic context, please cite the following publication(s):
