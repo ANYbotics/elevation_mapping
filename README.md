@@ -16,12 +16,14 @@ This projected was initially developed at ETH Zurich (Autonomous Systems Lab & R
 <img alt="Elevation Map Example" src="elevation_mapping_demos/doc/elevation_map.jpg" width="700">
 
 
-Videos of elevation mapping in use:
+Videos of the elevation mapping software in use:
 
 <a alt="StarlETH Kinect elevation mapping" href="https://www.youtube.com/watch?v=I9eP8GrMyNQ"><img src="elevation_mapping_demos/doc/starleth_kinect.jpg" align="left" width="180" ></a>
 <a alt="ANYmal outdoor terrain mapping" href="https://www.youtube.com/watch?v=iVMsQPTM65M"><img src="elevation_mapping_demos/doc/anymal_forrest.jpg" align="left" width="180" ></a>
 <a alt="ANYmal rough-terrain locomotion planner" href="https://www.youtube.com/watch?v=CpzQu25iLa0"><img src="elevation_mapping_demos/doc/anymal_locomotion_planner.jpg" align="left" width="180" ></a>
 <a alt="ANYmal outdoor stair climbing" href="https://www.youtube.com/watch?v=vSveQrJLRTo"><img src="elevation_mapping_demos/doc/anymal_outdoor_stairs.jpg" width="180" ></a>
+
+[This work has been conducted as part of ANYmal Research, a community to advance legged robotics.](https://www.anymal-research.org/)
 
 ## Citing
 
@@ -52,11 +54,6 @@ in International Conference on Climbing and Walking Robots (CLAWAR), 2014. ([PDF
           booktitle = {International Conference on Climbing and Walking Robots (CLAWAR)},
           year = {2014}
         }
-
-Here a videos of this software in use:
-[![StarlETH Kinect Elevation Mapping](elevation_mapping_demos/doc/starleth_kinect.jpg)](http://www.youtube.com/watch?v=I9eP8GrMyNQ)
-[![Outdoor Terrain Mapping with ANYmal](https://img.youtube.com/vi/iVMsQPTM65M/0.jpg)](https://www.youtube.com/watch?v=iVMsQPTM65M)
-
 
 ## Installation
 
