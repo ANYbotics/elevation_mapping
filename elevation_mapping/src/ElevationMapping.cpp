@@ -3,7 +3,7 @@
  *
  *  Created on: Nov 12, 2013
  *      Author: Péter Fankhauser
- *	 Institute: ETH Zurich, Autonomous Systems Lab
+ *	 Institute: ETH Zurich, ANYbotics
  */
 #include "elevation_mapping/ElevationMapping.hpp"
 

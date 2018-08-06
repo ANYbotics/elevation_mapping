@@ -6,10 +6,12 @@ This is a [ROS] package developed for elevation mapping with a mobile robot. The
 
 The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo and Ubuntu 14.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
-**Author: Péter Fankhauser, pfankhauser@anybotics.com<br />
-Affiliation: Autonomous Systems Lab, ETH Zurich**
+**Author: Péter Fankhauser<br />
+Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
+Maintainer: Péter Fankhauser, pfankhauser@anybotics.com<br />**
+This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
 
-[![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_ethz-asl/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_ethz-asl/job/elevation_mapping/job/master/)
+[![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_anybotics/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_anybotics/job/elevation_mapping/job/master/)
 
 ## Citing
 
@@ -37,9 +39,9 @@ Here a videos of this software in use:
 
 This software is built on the Robotic Operating System ([ROS]), which needs to be [installed](http://wiki.ros.org) first. Additionally, the Robot-Centric Elevation Mapping depends on following software:
 
-- [Grid Map](https://github.com/ethz-asl/grid_map) (grid map library for mobile robots)
-- [kindr](http://github.com/ethz-asl/kindr) (kinematics and dynamics library for robotics),
-- [kindr_ros](https://github.com/ethz-asl/kindr_ros) (ROS wrapper for kindr),
+- [Grid Map](https://github.com/anybotics/grid_map) (grid map library for mobile robots)
+- [kindr](http://github.com/anybotics/kindr) (kinematics and dynamics library for robotics),
+- [kindr_ros](https://github.com/anybotics/kindr_ros) (ROS wrapper for kindr),
 - [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing),
 - [Eigen](http://eigen.tuxfamily.org) (linear algebra library).
 
@@ -49,7 +51,7 @@ This software is built on the Robotic Operating System ([ROS]), which needs to b
 In order to install the Robot-Centric Elevation Mapping, clone the latest version from this repository into your catkin workspace and compile the package using ROS.
 
     cd catkin_workspace/src
-    git clone https://github.com/ethz-asl/elevation_mapping.git
+    git clone https://github.com/anybotics/elevation_mapping.git
     cd ../
     catkin_make
 
@@ -213,14 +215,14 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 ## Bugs & Feature Requests
 
-Please report bugs and request features using the [Issue Tracker](https://github.com/ethz-asl/elevation_mapping/issues).
+Please report bugs and request features using the [Issue Tracker](https://github.com/anybotics/elevation_mapping/issues).
 
 
 [ROS]: http://www.ros.org
 [rviz]: http://wiki.ros.org/rviz
-[grid_map_msg/GridMap]: https://github.com/ethz-asl/grid_map/blob/master/grid_map_msg/msg/GridMap.msg
+[grid_map_msg/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/msg/GridMap.msg
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [tf/tfMessage]: http://docs.ros.org/kinetic/api/tf/html/msg/tfMessage.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
-[grid_map_msg/GetGridMap]: https://github.com/ethz-asl/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
+[grid_map_msg/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv

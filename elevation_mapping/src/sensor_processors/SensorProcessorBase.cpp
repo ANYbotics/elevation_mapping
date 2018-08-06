@@ -3,7 +3,7 @@
  *
  *  Created on: Jun 6, 2014
  *      Author: Péter Fankhauser, Hannes Keller
- *   Institute: ETH Zurich, Autonomous Systems Lab
+ *   Institute: ETH Zurich, ANYbotics
  */
 
 #include <elevation_mapping/sensor_processors/SensorProcessorBase.hpp>
