@@ -13,12 +13,15 @@ This projected was initially developed at ETH Zurich (Autonomous Systems Lab & R
 
 [![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_anybotics/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_anybotics/job/elevation_mapping/job/master/)
 
-![Elevation Map Example](elevation_mapping_demos/doc/elevation_map.jpg){:width="700px"}
-
-
 <img alt="Elevation Map Example" src="elevation_mapping_demos/doc/elevation_map.jpg" width="700">
 
-<a alt="StarlETH Kinect Elevation Mapping" href="http://www.youtube.com/watch?v=I9eP8GrMyNQ"><img src="elevation_mapping_demos/doc/starleth_kinect.jpg" align="left" width="150" ></a>
+
+Videos of elevation mapping in use:
+
+<a alt="StarlETH Kinect elevation mapping" href="https://www.youtube.com/watch?v=I9eP8GrMyNQ"><img src="elevation_mapping_demos/doc/starleth_kinect.jpg" align="left" width="180" ></a>
+<a alt="ANYmal outdoor terrain mapping" href="https://www.youtube.com/watch?v=iVMsQPTM65M"><img src="elevation_mapping_demos/doc/anymal_forrest.jpg" align="left" width="180" ></a>
+<a alt="ANYmal rough-terrain locomotion planner" href="https://www.youtube.com/watch?v=CpzQu25iLa0"><img src="elevation_mapping_demos/doc/anymal_locomotion_planner.jpg" align="left" width="180" ></a>
+<a alt="ANYmal outdoor stair climbing" href="https://www.youtube.com/watch?v=vSveQrJLRTo"><img src="elevation_mapping_demos/doc/anymal_outdoor_stairs.jpg" align="left" width="180" ></a><br />
 
 ## Citing
 
