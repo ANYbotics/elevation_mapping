@@ -3,7 +3,7 @@
  *
  *  Created on: Jun 6, 2014
  *      Author: Péter Fankhauser, Hannes Keller
- *   Institute: ETH Zurich, Autonomous Systems Lab
+ *   Institute: ETH Zurich, ANYbotics
  */
 
 #pragma once

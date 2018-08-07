@@ -4,32 +4,57 @@
 
 This is a [ROS] package developed for elevation mapping with a mobile robot. The software is designed for (local) navigation tasks with robots which are equipped with a pose estimation (e.g. IMU & odometry) and a distance sensor (e.g. structured light (Kinect, RealSense), laser range sensor, stereo camera). The provided elevation map is limited around the robot and reflects the pose uncertainty that is aggregated through the motion of the robot (robot-centric mapping). This method is developed to explicitly handle drift of the robot pose estimation.
 
-The Robot-Centric Elevation Mapping packages have been tested under ROS Indigo and Ubuntu 14.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
+The Robot-Centric Elevation Mapping packages have been tested under ROS Kinetic and Ubuntu 16.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
-**Author: Péter Fankhauser, pfankhauser@ethz.ch<br />
-Affiliation: Autonomous Systems Lab, ETH Zurich**
+**Author: Péter Fankhauser<br />
+Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
+Maintainer: Péter Fankhauser, pfankhauser@anybotics.com<br />**
 
-[![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_ethz-asl/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_ethz-asl/job/elevation_mapping/job/master/)
+This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
+
+[This work is conducted as part of ANYmal Research, a community to advance legged robotics.](https://www.anymal-research.org/)
+
+[![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_anybotics/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_anybotics/job/elevation_mapping/job/master/)
+
+<img alt="Elevation Map Example" src="elevation_mapping_demos/doc/elevation_map.jpg" width="700">
+
+
+Videos of the elevation mapping software in use:
+
+<a alt="StarlETH Kinect elevation mapping" href="https://www.youtube.com/watch?v=I9eP8GrMyNQ"><img src="elevation_mapping_demos/doc/starleth_kinect.jpg" align="left" width="180" ></a>
+<a alt="ANYmal outdoor terrain mapping" href="https://www.youtube.com/watch?v=iVMsQPTM65M"><img src="elevation_mapping_demos/doc/anymal_forrest.jpg" align="left" width="180" ></a>
+<a alt="ANYmal rough-terrain locomotion planner" href="https://www.youtube.com/watch?v=CpzQu25iLa0"><img src="elevation_mapping_demos/doc/anymal_locomotion_planner.jpg" align="left" width="180" ></a>
+<a alt="ANYmal outdoor stair climbing" href="https://www.youtube.com/watch?v=vSveQrJLRTo"><img src="elevation_mapping_demos/doc/anymal_outdoor_stairs.jpg" width="180" ></a>
 
 ## Citing
 
-The robot-centric elevation mapping methods used in this software are described in the following paper (available [here](http://dx.doi.org/10.3929/ethz-a-010173654)):
+The robot-centric elevation mapping methods used in this software are described in the following paper (available [here](https://doi.org/10.3929/ethz-b-000272110)). If you use this work in an academic context, please cite the following publication(s):
 
-P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
+* P. Fankhauser, M. Bloesch, and M. Hutter,
+**"Probabilistic Terrain Mapping for Mobile Robots with Uncertain Localization"**,
+in IEEE Robotics and Automation Letters (RA-L), vol. 3, no. 4, pp. 3019–3026, 2018. ([PDF](http://dx.doi.org/10.1109/LRA.2018.2849506))
+
+        @article{Fankhauser2018ProbabilisticTerrainMapping,
+          author = {Fankhauser, P{\'{e}}ter and Bloesch, Michael and Hutter, Marco},
+          doi = {10.1109/LRA.2018.2849506},
+          title = {Probabilistic Terrain Mapping for Mobile Robots with Uncertain Localization},
+          journal = {IEEE Robotics and Automation Letters (RA-L)},
+          volume = {3},
+          number = {4},
+          pages = {3019--3026},
+          year = {2018}
+        }
+
+* P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
 **"Robot-Centric Elevation Mapping with Uncertainty Estimates"**,
-in International Conference on Climbing and Walking Robots (CLAWAR), 2014.
+in International Conference on Climbing and Walking Robots (CLAWAR), 2014. ([PDF](http://dx.doi.org/10.3929/ethz-a-010173654))
 
-    @inproceedings{Fankhauser2014RobotCentricElevationMapping,
-      author = {Fankhauser, P\'{e}ter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
-      title = {Robot-Centric Elevation Mapping with Uncertainty Estimates},
-      booktitle = {International Conference on Climbing and Walking Robots (CLAWAR)},
-      year = {2014}
-    }
-
-Here a videos of this software in use:
-[![StarlETH Kinect Elevation Mapping](elevation_mapping_demos/doc/starleth_kinect.jpg)](http://www.youtube.com/watch?v=I9eP8GrMyNQ)
-[![Outdoor Terrain Mapping with ANYmal](https://img.youtube.com/vi/iVMsQPTM65M/0.jpg)](https://www.youtube.com/watch?v=iVMsQPTM65M)
-
+        @inproceedings{Fankhauser2014RobotCentricElevationMapping,
+          author = {Fankhauser, P\'{e}ter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
+          title = {Robot-Centric Elevation Mapping with Uncertainty Estimates},
+          booktitle = {International Conference on Climbing and Walking Robots (CLAWAR)},
+          year = {2014}
+        }
 
 ## Installation
 
@@ -37,9 +62,9 @@ Here a videos of this software in use:
 
 This software is built on the Robotic Operating System ([ROS]), which needs to be [installed](http://wiki.ros.org) first. Additionally, the Robot-Centric Elevation Mapping depends on following software:
 
-- [Grid Map](https://github.com/ethz-asl/grid_map) (grid map library for mobile robots)
-- [kindr](http://github.com/ethz-asl/kindr) (kinematics and dynamics library for robotics),
-- [kindr_ros](https://github.com/ethz-asl/kindr_ros) (ROS wrapper for kindr),
+- [Grid Map](https://github.com/anybotics/grid_map) (grid map library for mobile robots)
+- [kindr](http://github.com/anybotics/kindr) (kinematics and dynamics library for robotics),
+- [kindr_ros](https://github.com/anybotics/kindr_ros) (ROS wrapper for kindr),
 - [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing),
 - [Eigen](http://eigen.tuxfamily.org) (linear algebra library).
 
@@ -49,7 +74,7 @@ This software is built on the Robotic Operating System ([ROS]), which needs to b
 In order to install the Robot-Centric Elevation Mapping, clone the latest version from this repository into your catkin workspace and compile the package using ROS.
 
     cd catkin_workspace/src
-    git clone https://github.com/ethz-asl/elevation_mapping.git
+    git clone https://github.com/anybotics/elevation_mapping.git
     cd ../
     catkin_make
 
@@ -213,14 +238,14 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 ## Bugs & Feature Requests
 
-Please report bugs and request features using the [Issue Tracker](https://github.com/ethz-asl/elevation_mapping/issues).
+Please report bugs and request features using the [Issue Tracker](https://github.com/anybotics/elevation_mapping/issues).
 
 
 [ROS]: http://www.ros.org
 [rviz]: http://wiki.ros.org/rviz
-[grid_map_msg/GridMap]: https://github.com/ethz-asl/grid_map/blob/master/grid_map_msg/msg/GridMap.msg
+[grid_map_msg/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/msg/GridMap.msg
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [tf/tfMessage]: http://docs.ros.org/kinetic/api/tf/html/msg/tfMessage.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
-[grid_map_msg/GetGridMap]: https://github.com/ethz-asl/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
+[grid_map_msg/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
