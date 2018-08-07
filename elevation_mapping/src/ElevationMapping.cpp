@@ -447,7 +447,7 @@ bool ElevationMapping::clearSubMap(grid_map_msgs::ClearSubGridMap::Request& requ
   ROS_INFO("Clearing sub map.");
   GridMap subMap;
   GridMapRosConverter::fromMessage(request.map, subMap);
-  return map_.clearSubMap(subMap, request.inverted);
+  return map_.clearSubMap(subMap);
 }
 
 bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)
