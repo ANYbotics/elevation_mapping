@@ -30,9 +30,9 @@ Videos of the elevation mapping software in use:
 
 The robot-centric elevation mapping methods used in this software are described in the following paper (available [here](https://doi.org/10.3929/ethz-b-000272110)). If you use this work in an academic context, please cite the following publication(s):
 
-* P. Fankhauser, M. Bloesch, and M. Hutter,
-**"Probabilistic Terrain Mapping for Mobile Robots with Uncertain Localization"**,
-in IEEE Robotics and Automation Letters (RA-L), vol. 3, no. 4, pp. 3019–3026, 2018. ([PDF](http://dx.doi.org/10.1109/LRA.2018.2849506))
+* > P. Fankhauser, M. Bloesch, and M. Hutter,
+  > **"Probabilistic Terrain Mapping for Mobile Robots with Uncertain Localization"**,
+  > in IEEE Robotics and Automation Letters (RA-L), vol. 3, no. 4, pp. 3019–3026, 2018. ([PDF](http://dx.doi.org/10.1109/LRA.2018.2849506))
 
         @article{Fankhauser2018ProbabilisticTerrainMapping,
           author = {Fankhauser, P{\'{e}}ter and Bloesch, Michael and Hutter, Marco},
@@ -45,9 +45,9 @@ in IEEE Robotics and Automation Letters (RA-L), vol. 3, no. 4, pp. 3019–3026, 
           year = {2018}
         }
 
-* P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
-**"Robot-Centric Elevation Mapping with Uncertainty Estimates"**,
-in International Conference on Climbing and Walking Robots (CLAWAR), 2014. ([PDF](http://dx.doi.org/10.3929/ethz-a-010173654))
+* > P. Fankhauser, M. Bloesch, C. Gehring, M. Hutter, and R. Siegwart,
+  > **"Robot-Centric Elevation Mapping with Uncertainty Estimates"**,
+  > in International Conference on Climbing and Walking Robots (CLAWAR), 2014. ([PDF](http://dx.doi.org/10.3929/ethz-a-010173654))
 
         @inproceedings{Fankhauser2014RobotCentricElevationMapping,
           author = {Fankhauser, P\'{e}ter and Bloesch, Michael and Gehring, Christian and Hutter, Marco and Siegwart, Roland},
