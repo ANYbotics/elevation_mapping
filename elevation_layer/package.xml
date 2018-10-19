@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<package>
+  <name>elevation_layer</name>
+
+  <version>0.0.2</version>
+
+  <description>adds elevation mapping informations to costmap_2d</description>
+
+  <!--  <author email="echisari@anybotics.com">Eugenio Chisari</author>  -->
+  <maintainer email="echisari@anybotics.com">Eugenio Chisari</maintainer>
+
+  <license>BSD</license>
+
+  <buildtool_depend>catkin</buildtool_depend>
+
+  <build_depend>roscpp</build_depend>
+  <build_depend>tf</build_depend>
+  <build_depend>costmap_2d</build_depend>
+  <build_depend>dynamic_reconfigure</build_depend>
+  <build_depend>grid_map_ros</build_depend>
+
+  <run_depend>roscpp</run_depend>
+  <run_depend>tf</run_depend>
+  <run_depend>costmap_2d</run_depend>
+  <run_depend>dynamic_reconfigure</run_depend>
+  <run_depend>grid_map_ros</run_depend>
+
+  <export>
+    <costmap_2d plugin="${prefix}/costmap_plugins.xml" />
+  </export>
+</package>
