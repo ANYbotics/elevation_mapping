@@ -51,6 +51,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         std::vector<geometry_msgs::Point> transformed_footprint_;
         bool rolling_window_;
         bool footprint_clearing_enabled_;
+        bool elevation_map_received_;
         void updateFootprint(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                              double* max_x, double* max_y);
 
@@ -59,6 +60,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         grid_map::GridMap elevation_map_;
         ros::Subscriber elevation_subscriber_;
         double height_treshold_;
+        std::string elevation_topic_;
     };
 
 }   // namespace elevation_layer

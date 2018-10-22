@@ -30,19 +30,20 @@ namespace elevation_layer
 
         ElevationLayer::matchSize();
         current_ = true;
+        elevation_map_received_ = false;
         global_frame_ = layered_costmap_->getGlobalFrameID();
 
         // get our tf prefix
         ros::NodeHandle prefix_nh;
         const std::string tf_prefix = tf::getPrefixParam(prefix_nh);
 
-        std::string elevation_topic;
         // get the topics that we'll subscribe to from the parameter server
-        nh.param("elevation_topic", elevation_topic, std::string(""));
-        ROS_INFO("    Subscribed to Topics: %s", elevation_topic.c_str());
+        nh.param("elevation_topic", elevation_topic_, std::string(""));
+        ROS_INFO("    Subscribed to Topics: %s", elevation_topic_.c_str());
         nh.param("height_treshold", height_treshold_, 0.1);
+        ROS_INFO_STREAM("height_treshold" << height_treshold_);
 
-        elevation_subscriber_ = nh.subscribe(elevation_topic, 1, &ElevationLayer::elevationMapCallback, this);
+        elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
         dsrv_ = NULL;
         setupDynamicReconfigure(nh);
     }
@@ -58,29 +59,19 @@ namespace elevation_layer
     {
         if (rolling_window_)
             updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
-        if (!enabled_)
+        if (!enabled_ || !elevation_map_received_)
             return;
         useExtraBounds(min_x, min_y, max_x, max_y);
 
 
-        grid_map::Matrix& data = elevation_map_["elevation"];   //TODO: put layer name in config file
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
-            int px = gridmap_index(0);
-            int py = gridmap_index(1);
+            grid_map::Position vertexPositionXY;
+            elevation_map_.getPosition(gridmap_index, vertexPositionXY);
+            double px = vertexPositionXY.x();
+            double py = vertexPositionXY.y();
 
-            // now we need to compute the map coordinates for the observation
-            unsigned int mx, my;
-            if (!worldToMap(px, py, mx, my)) {
-                ROS_DEBUG("Computing map coords failed");
-                continue;
-            }
-            if ( data(px, py) > height_treshold_ )  // If point too high, label as obstacle
-            {
-                unsigned int costmap_index = getIndex(mx, my);
-                costmap_[costmap_index] = LETHAL_OBSTACLE;
-                touch(px, py, min_x, min_y, max_x, max_y);
-            }
+            touch(px, py, min_x, min_y, max_x, max_y);
         }
         updateFootprint(robot_x, robot_y, robot_yaw, min_x, min_y, max_x, max_y);
     }
@@ -99,8 +90,28 @@ namespace elevation_layer
 
     void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
     {
-        if (!enabled_)
+        if (!enabled_ || !elevation_map_received_)
             return;
+
+
+        grid_map::Matrix& data = elevation_map_["elevation"];   //TODO: put layer name in config file
+        for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
+            const grid_map::Index gridmap_index(*iterator);
+            grid_map::Position vertexPositionXY;
+            elevation_map_.getPosition(gridmap_index, vertexPositionXY);
+            double px = vertexPositionXY.x();
+            double py = vertexPositionXY.y();
+            // now we need to compute the map coordinates for the observation
+            unsigned int mx, my;
+            if (!worldToMap(px, py, mx, my)) {
+                ROS_WARN("Computing map coords failed");
+                continue;
+            }
+            if ( data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, label as obstacle
+            {
+                master_grid.setCost(mx, my, LETHAL_OBSTACLE);
+            }
+        }
 
         if (footprint_clearing_enabled_)
         {
@@ -125,6 +136,11 @@ namespace elevation_layer
         if(!grid_map::GridMapRosConverter::fromMessage(*elevation, elevation_map_))
         {
             ROS_WARN("Grid Map msg Conversion failed !");
+        }
+        if(!elevation_map_received_)
+        {
+            elevation_map_received_ = true;
+            ROS_INFO("map received !!!!!!!!!!!!!!!!!!!!!!!!!!!!!*****************");
         }
     }
 
@@ -152,18 +168,12 @@ namespace elevation_layer
     void ElevationLayer::activate()
     {
         // if we're stopped we need to re-subscribe to topics
-        for (unsigned int i = 0; i < elevation_subscribers_.size(); ++i)
-        {
-            if (elevation_subscribers_[i] != NULL)
-                elevation_subscribers_[i]->subscribe();
-        }
+        ros::NodeHandle nh("~/" + name_);
+        elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
+
     }
     void ElevationLayer::deactivate()
     {
-        for (unsigned int i = 0; i < elevation_subscribers_.size(); ++i)
-        {
-            if (elevation_subscribers_[i] != NULL)
-                elevation_subscribers_[i]->unsubscribe();
-        }
+        elevation_subscriber_.shutdown();
     }
 }

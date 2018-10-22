@@ -1,5 +1,5 @@
 <class_libraries>
-  <library path="lib/elevation_layer">
+  <library path="lib/libelevation_layer">
     <class type="elevation_layer::ElevationLayer" base_class_type="costmap_2d::Layer">
       <description>adds elevation map info to costmap_2d.</description>
     </class>
