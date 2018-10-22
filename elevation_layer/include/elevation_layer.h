@@ -11,6 +11,7 @@
 #include <costmap_2d/observation_buffer.h>
 #include <message_filters/subscriber.h>
 #include "grid_map_ros/GridMapRosConverter.hpp"
+#include <filters/filter_chain.h>
 
 #include <nav_msgs/OccupancyGrid.h>
 #include <dynamic_reconfigure/server.h>
@@ -61,7 +62,16 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         ros::Subscriber elevation_subscriber_;
         double height_treshold_;
         std::string elevation_topic_;
-    };
+
+        //! Filter chain.
+        filters::FilterChain<grid_map::GridMap> filterChain_;
+
+        //! Filter chain parameters name.
+        std::string filter_chain_parameters_name_;
+
+        bool filters_configuration_loaded_;
+        std::string layer_name_;
+        };
 
 }   // namespace elevation_layer
 

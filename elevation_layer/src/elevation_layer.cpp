@@ -31,6 +31,7 @@ namespace elevation_layer
         ElevationLayer::matchSize();
         current_ = true;
         elevation_map_received_ = false;
+        filters_configuration_loaded_ = false;
         global_frame_ = layered_costmap_->getGlobalFrameID();
 
         // get our tf prefix
@@ -42,10 +43,22 @@ namespace elevation_layer
         ROS_INFO("    Subscribed to Topics: %s", elevation_topic_.c_str());
         nh.param("height_treshold", height_treshold_, 0.1);
         ROS_INFO_STREAM("height_treshold" << height_treshold_);
+        if( !nh.param("filter_chain_parameters_name", filter_chain_parameters_name_, std::string("elevation_filters")) )
+        {
+            ROS_WARN("did not find filter_chain_param_name, using default");
+        }
 
         elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
         dsrv_ = NULL;
         setupDynamicReconfigure(nh);
+
+        // Setup filter chain.
+        if (!filterChain_.configure(filter_chain_parameters_name_, nh)) {
+            ROS_WARN("Could not configure the filter chain!");
+        }
+        else{
+            filters_configuration_loaded_ = true;
+        }
     }
 
     ElevationLayer::~ElevationLayer()
@@ -94,7 +107,7 @@ namespace elevation_layer
             return;
 
 
-        grid_map::Matrix& data = elevation_map_["elevation"];   //TODO: put layer name in config file
+        grid_map::Matrix& data = elevation_map_[layer_name_];   
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
             grid_map::Position vertexPositionXY;
@@ -133,14 +146,26 @@ namespace elevation_layer
 
     void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& elevation)
     {
-        if(!grid_map::GridMapRosConverter::fromMessage(*elevation, elevation_map_))
+        grid_map::GridMap incoming_map;
+        grid_map::GridMap filtered_map;
+        if(!grid_map::GridMapRosConverter::fromMessage(*elevation, incoming_map))
         {
             ROS_WARN("Grid Map msg Conversion failed !");
         }
         if(!elevation_map_received_)
         {
             elevation_map_received_ = true;
-            ROS_INFO("map received !!!!!!!!!!!!!!!!!!!!!!!!!!!!!*****************");
+        }
+        // Apply filter chain.
+        if (filters_configuration_loaded_ && filterChain_.update(incoming_map, filtered_map))
+        {
+            elevation_map_ = filtered_map;
+            layer_name_ = "edges";
+        }
+        else{
+            ROS_WARN("Could not use the filter chain!");
+            elevation_map_ = incoming_map;
+            layer_name_ = "edges";
         }
     }
 
