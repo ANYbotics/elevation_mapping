@@ -15,7 +15,7 @@
 #include <nav_msgs/OccupancyGrid.h>
 #include <dynamic_reconfigure/server.h>
 #include <costmap_2d/footprint.h>
-#include <costmap_2d/ElevationPluginConfig.h>
+#include <elevation_layer/ElevationPluginConfig.h>
 
 
 namespace elevation_layer
@@ -43,7 +43,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer
     protected:
         std::string global_frame_;  ///< @brief The global frame for the costmap
         std::vector<boost::shared_ptr<message_filters::SubscriberBase> > elevation_subscribers_;  ///< @brief Used for the observation message filters
-        dynamic_reconfigure::Server<costmap_2d::ElevationPluginConfig> *dsrv_;
+        dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> *dsrv_;
         virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
 
 
@@ -56,7 +56,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer
                              double* max_x, double* max_y);
 
     private:
-        void reconfigureCB(costmap_2d::ElevationPluginConfig &config, uint32_t level);
+        void reconfigureCB(elevation_layer::ElevationPluginConfig &config, uint32_t level);
         grid_map::GridMap elevation_map_;
         ros::Subscriber elevation_subscriber_;
         double height_treshold_;

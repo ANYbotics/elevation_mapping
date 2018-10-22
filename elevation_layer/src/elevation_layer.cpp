@@ -146,13 +146,13 @@ namespace elevation_layer
 
     void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle& nh)
     {
-        dsrv_ = new dynamic_reconfigure::Server<costmap_2d::ElevationPluginConfig>(nh);
-        dynamic_reconfigure::Server<costmap_2d::ElevationPluginConfig>::CallbackType cb = boost::bind(
+        dsrv_ = new dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>(nh);
+        dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>::CallbackType cb = boost::bind(
                 &ElevationLayer::reconfigureCB, this, _1, _2);
         dsrv_->setCallback(cb);
     }
 
-    void ElevationLayer::reconfigureCB(costmap_2d::ElevationPluginConfig &config, uint32_t level)
+    void ElevationLayer::reconfigureCB(elevation_layer::ElevationPluginConfig &config, uint32_t level)
     {
         enabled_ = config.enabled;
     }
