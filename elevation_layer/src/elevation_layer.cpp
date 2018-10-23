@@ -104,7 +104,6 @@ namespace elevation_layer
             // now we need to compute the map coordinates for the observation
             unsigned int mx, my;
             if (!worldToMap(px, py, mx, my)) {
-                ROS_WARN("Computing map coords failed");
                 continue;
             }
             if ( data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, label as obstacle
