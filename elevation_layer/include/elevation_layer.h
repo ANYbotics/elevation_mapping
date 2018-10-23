@@ -24,11 +24,7 @@ namespace elevation_layer
 class ElevationLayer : public costmap_2d::CostmapLayer
     {
     public:
-        ElevationLayer()
-        {
-            costmap_ = NULL;  // this is the unsigned char* member of parent class Costmap2D.
-        }
-
+        ElevationLayer();
         virtual ~ElevationLayer();
         virtual void onInitialize();
         virtual void updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,

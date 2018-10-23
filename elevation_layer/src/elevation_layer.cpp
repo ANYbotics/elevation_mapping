@@ -17,6 +17,11 @@ using costmap_2d::Observation;
 namespace elevation_layer
 {
 
+    ElevationLayer::ElevationLayer() : filterChain_("grid_map::GridMap")
+    {
+        costmap_ = NULL;  // this is the unsigned char* member of parent class Costmap2D.
+    }
+
     void ElevationLayer::onInitialize() {
         ros::NodeHandle nh("~/" + name_), g_nh;
         rolling_window_ = layered_costmap_->isRolling();
@@ -42,7 +47,7 @@ namespace elevation_layer
         nh.param("elevation_topic", elevation_topic_, std::string(""));
         ROS_INFO("    Subscribed to Topics: %s", elevation_topic_.c_str());
         nh.param("height_treshold", height_treshold_, 0.1);
-        ROS_INFO_STREAM("height_treshold" << height_treshold_);
+        ROS_INFO_STREAM("height_treshold: " << height_treshold_);
         if( !nh.param("filter_chain_parameters_name", filter_chain_parameters_name_, std::string("elevation_filters")) )
         {
             ROS_WARN("did not find filter_chain_param_name, using default");
@@ -53,7 +58,7 @@ namespace elevation_layer
         setupDynamicReconfigure(nh);
 
         // Setup filter chain.
-        if (!filterChain_.configure(filter_chain_parameters_name_, nh)) {
+        if (!filterChain_.configure(filter_chain_parameters_name_, nh)) { //TODO: add the yaml
             ROS_WARN("Could not configure the filter chain!");
         }
         else{
@@ -107,7 +112,7 @@ namespace elevation_layer
             return;
 
 
-        grid_map::Matrix& data = elevation_map_[layer_name_];   
+        grid_map::Matrix& data = elevation_map_[layer_name_];
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
             grid_map::Position vertexPositionXY;
@@ -160,12 +165,29 @@ namespace elevation_layer
         if (filters_configuration_loaded_ && filterChain_.update(incoming_map, filtered_map))
         {
             elevation_map_ = filtered_map;
+            std::vector<std::string> filtered_layer_names, incoming_layer_names;
+
+            ROS_INFO("incoming_map:");
+            incoming_layer_names = incoming_map.getLayers();
+            for (int i = 0; i < incoming_layer_names.size(); ++i)
+            {
+                ROS_INFO_STREAM(incoming_layer_names[i]);
+            }
+
+            ROS_INFO("filtered_map:");
+            filtered_layer_names = filtered_map.getLayers();
+            for (int i = 0; i < filtered_layer_names.size(); ++i)
+            {
+                ROS_INFO_STREAM(filtered_layer_names[i]);
+            }
+
+
             layer_name_ = "edges";
         }
         else{
             ROS_WARN("Could not use the filter chain!");
             elevation_map_ = incoming_map;
-            layer_name_ = "edges";
+            layer_name_ = "elevation";
         }
     }
 

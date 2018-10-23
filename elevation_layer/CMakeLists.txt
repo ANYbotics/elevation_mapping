@@ -11,6 +11,7 @@ find_package(catkin REQUIRED COMPONENTS
   costmap_2d
   dynamic_reconfigure
   grid_map_ros
+  filters
 )
 
 # add dynamic reconfigure configs
@@ -30,6 +31,7 @@ catkin_package(
     costmap_2d
     dynamic_reconfigure
     grid_map_ros
+    filters
 )
 
 
