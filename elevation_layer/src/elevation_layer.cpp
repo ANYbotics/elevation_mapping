@@ -26,13 +26,6 @@ namespace elevation_layer
         ros::NodeHandle nh("~/" + name_), g_nh;
         rolling_window_ = layered_costmap_->isRolling();
 
-        bool track_unknown_space;
-        nh.param("track_unknown_space", track_unknown_space, layered_costmap_->isTrackingUnknown());
-        if (track_unknown_space)
-            default_value_ = NO_INFORMATION;
-        else
-            default_value_ = FREE_SPACE;
-
         ElevationLayer::matchSize();
         current_ = true;
         elevation_map_received_ = false;
@@ -43,25 +36,43 @@ namespace elevation_layer
         ros::NodeHandle prefix_nh;
         const std::string tf_prefix = tf::getPrefixParam(prefix_nh);
 
-        // get the topics that we'll subscribe to from the parameter server
-        nh.param("elevation_topic", elevation_topic_, std::string(""));
-        ROS_INFO("    Subscribed to Topics: %s", elevation_topic_.c_str());
-        nh.param("height_treshold", height_treshold_, 0.1);
-        ROS_INFO_STREAM("height_treshold: " << height_treshold_);
+        // get parameters from config file
+        if(!nh.param("elevation_topic", elevation_topic_, std::string("")))
+        {
+            ROS_WARN("did not find elevation_topic, using default");
+        }
+        if(!nh.param("height_treshold", height_treshold_, 0.12))
+        {
+            ROS_WARN("did not find height_treshold, using default");
+        }
         if( !nh.param("filter_chain_parameters_name", filter_chain_parameters_name_, std::string("elevation_filters")) )
         {
             ROS_WARN("did not find filter_chain_param_name, using default");
         }
+        if(!nh.param("footprint_clearing_enabled", footprint_clearing_enabled_, true))
+        {
+            ROS_WARN("did not find footprint_clearing_enabled, using default");
+        }
+        if(!nh.param("combination_method", combination_method_, 2))
+        {
+            ROS_WARN("did not find combination_method, using default");
+        }
+        bool track_unknown_space;
+        nh.param("track_unknown_space", track_unknown_space, layered_costmap_->isTrackingUnknown());
+        if (track_unknown_space)
+            default_value_ = NO_INFORMATION;
+        else
+            default_value_ = FREE_SPACE;
 
+        // Subscribe to topic
         elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
         dsrv_ = NULL;
         setupDynamicReconfigure(nh);
 
         // Setup filter chain.
-        if (!filterChain_.configure(filter_chain_parameters_name_, nh)) { //TODO: add the yaml
+        if (!filterChain_.configure(filter_chain_parameters_name_, nh)) {
             ROS_WARN("Could not configure the filter chain!");
-        }
-        else{
+        }else{
             filters_configuration_loaded_ = true;
         }
     }
@@ -77,10 +88,9 @@ namespace elevation_layer
     {
         if (rolling_window_)
             updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
-        if (!enabled_ || !elevation_map_received_)
+        if (!(enabled_ && elevation_map_received_))
             return;
         useExtraBounds(min_x, min_y, max_x, max_y);
-
 
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
@@ -122,11 +132,11 @@ namespace elevation_layer
             // now we need to compute the map coordinates for the observation
             unsigned int mx, my;
             if (!worldToMap(px, py, mx, my)) {
-                ROS_WARN("Computing map coords failed");
                 continue;
             }
             if ( data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, label as obstacle
             {
+                ROS_INFO_STREAM("Found value: " << data(gridmap_index(0), gridmap_index(1)));
                 master_grid.setCost(mx, my, LETHAL_OBSTACLE);
             }
         }
@@ -139,7 +149,7 @@ namespace elevation_layer
         switch (combination_method_)
         {
             case 0:  // Overwrite
-                updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
+                updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);   // TODO: This doesnt work, check why
                 break;
             case 1:  // Maximum
                 updateWithMax(master_grid, min_i, min_j, max_i, max_j);
@@ -157,37 +167,21 @@ namespace elevation_layer
         {
             ROS_WARN("Grid Map msg Conversion failed !");
         }
-        if(!elevation_map_received_)
-        {
-            elevation_map_received_ = true;
-        }
+        incoming_map.convertToDefaultStartIndex();
         // Apply filter chain.
         if (filters_configuration_loaded_ && filterChain_.update(incoming_map, filtered_map))
         {
             elevation_map_ = filtered_map;
-            std::vector<std::string> filtered_layer_names, incoming_layer_names;
-
-            ROS_INFO("incoming_map:");
-            incoming_layer_names = incoming_map.getLayers();
-            for (int i = 0; i < incoming_layer_names.size(); ++i)
-            {
-                ROS_INFO_STREAM(incoming_layer_names[i]);
-            }
-
-            ROS_INFO("filtered_map:");
-            filtered_layer_names = filtered_map.getLayers();
-            for (int i = 0; i < filtered_layer_names.size(); ++i)
-            {
-                ROS_INFO_STREAM(filtered_layer_names[i]);
-            }
-
-
             layer_name_ = "edges";
         }
         else{
             ROS_WARN("Could not use the filter chain!");
             elevation_map_ = incoming_map;
             layer_name_ = "elevation";
+        }
+        if(!elevation_map_received_)
+        {
+            elevation_map_received_ = true;
         }
     }
 
