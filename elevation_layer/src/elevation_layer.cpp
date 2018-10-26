@@ -186,6 +186,7 @@ namespace elevation_layer
         {
             elevation_map_ = filtered_map;
             filter_applied_ = true;
+            height_treshold_ /= 2;      // Half the treshold since the highest sharpness is at midheigth of the obstacles
         }
         else{
             ROS_WARN("Could not use the filter chain!");
