@@ -57,6 +57,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         grid_map::GridMap elevation_map_;
         ros::Subscriber elevation_subscriber_;
         double height_treshold_;
+        double edges_sharpness_treshold_;
         std::string elevation_topic_;
 
         //! Filter chain.
@@ -66,8 +67,10 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         std::string filter_chain_parameters_name_;
 
         bool filters_configuration_loaded_;
-        std::string layer_name_;
-        };
+        bool filter_applied_;
+        std::string elevation_layer_name_;
+        std::string edges_layer_name_;
+};
 
 }   // namespace elevation_layer
 

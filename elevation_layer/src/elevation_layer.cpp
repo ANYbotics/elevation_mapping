@@ -31,6 +31,9 @@ namespace elevation_layer
         elevation_map_received_ = false;
         filters_configuration_loaded_ = false;
         global_frame_ = layered_costmap_->getGlobalFrameID();
+        elevation_layer_name_ = "elevation";
+        edges_layer_name_ = "edges";
+        filter_applied_ = false;
 
         // get our tf prefix
         ros::NodeHandle prefix_nh;
@@ -56,6 +59,10 @@ namespace elevation_layer
         if(!nh.param("combination_method", combination_method_, 2))
         {
             ROS_WARN("did not find combination_method, using default");
+        }
+        if(!nh.param("edges_sharpness_treshold", edges_sharpness_treshold_, 0.12))
+        {
+            ROS_WARN("did not find edges_sharpness_treshold, using default");
         }
         bool track_unknown_space;
         nh.param("track_unknown_space", track_unknown_space, layered_costmap_->isTrackingUnknown());
@@ -121,8 +128,6 @@ namespace elevation_layer
         if (!enabled_ || !elevation_map_received_)
             return;
 
-
-        grid_map::Matrix& data = elevation_map_[layer_name_];
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
             grid_map::Position vertexPositionXY;
@@ -131,12 +136,20 @@ namespace elevation_layer
             double py = vertexPositionXY.y();
             // now we need to compute the map coordinates for the observation
             unsigned int mx, my;
-            if (!worldToMap(px, py, mx, my)) {
+            if (!worldToMap(px, py, mx, my))    // if point outside of local costmap, ignore
+            {
                 continue;
             }
-            if ( data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, label as obstacle
+            const grid_map::Matrix& elevation_data = elevation_map_[elevation_layer_name_];
+            if ( elevation_data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, it could be an obstacle
             {
-                ROS_INFO_STREAM("Found value: " << data(gridmap_index(0), gridmap_index(1)));
+                if (filter_applied_) {
+                    const grid_map::Matrix &edges_data = elevation_map_[edges_layer_name_];
+                    if (edges_data(gridmap_index(0), gridmap_index(1)) < edges_sharpness_treshold_)  // if area not sharp, dont label as obstacle
+                    {
+                        continue;
+                    }
+                }
                 master_grid.setCost(mx, my, LETHAL_OBSTACLE);
             }
         }
@@ -172,12 +185,12 @@ namespace elevation_layer
         if (filters_configuration_loaded_ && filterChain_.update(incoming_map, filtered_map))
         {
             elevation_map_ = filtered_map;
-            layer_name_ = "edges";
+            filter_applied_ = true;
         }
         else{
             ROS_WARN("Could not use the filter chain!");
             elevation_map_ = incoming_map;
-            layer_name_ = "elevation";
+            filter_applied_ = false;
         }
         if(!elevation_map_received_)
         {
