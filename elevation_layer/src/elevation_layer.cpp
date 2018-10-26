@@ -128,6 +128,7 @@ namespace elevation_layer
         if (!enabled_ || !elevation_map_received_)
             return;
 
+        const grid_map::Matrix& elevation_data = elevation_map_[elevation_layer_name_];
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
             grid_map::Position vertexPositionXY;
@@ -140,7 +141,6 @@ namespace elevation_layer
             {
                 continue;
             }
-            const grid_map::Matrix& elevation_data = elevation_map_[elevation_layer_name_];
             if ( elevation_data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, it could be an obstacle
             {
                 if (filter_applied_) {
