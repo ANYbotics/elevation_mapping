@@ -5,6 +5,10 @@
 #ifndef ELEVATION_LAYER_H
 #define ELEVATION_LAYER_H
 
+
+#include <atomic>
+#include <mutex>
+
 #include <ros/ros.h>
 #include <costmap_2d/costmap_layer.h>
 #include <costmap_2d/layered_costmap.h>
@@ -48,13 +52,14 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         std::vector<geometry_msgs::Point> transformed_footprint_;
         bool rolling_window_;
         bool footprint_clearing_enabled_;
-        bool elevation_map_received_;
+        std::atomic_bool elevation_map_received_;
         void updateFootprint(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                              double* max_x, double* max_y);
 
     private:
         void reconfigureCB(elevation_layer::ElevationPluginConfig &config, uint32_t level);
         grid_map::GridMap elevation_map_;
+        std::mutex elevation_map_mutex_;
         ros::Subscriber elevation_subscriber_;
         double height_treshold_;
         double edges_sharpness_treshold_;
@@ -67,7 +72,6 @@ class ElevationLayer : public costmap_2d::CostmapLayer
         std::string filter_chain_parameters_name_;
 
         bool filters_configuration_loaded_;
-        bool filter_applied_;
         std::string elevation_layer_name_;
         std::string edges_layer_name_;
 };

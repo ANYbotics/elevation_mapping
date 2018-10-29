@@ -33,7 +33,6 @@ namespace elevation_layer
         global_frame_ = layered_costmap_->getGlobalFrameID();
         elevation_layer_name_ = "elevation";
         edges_layer_name_ = "edges";
-        filter_applied_ = false;
 
         // get our tf prefix
         ros::NodeHandle prefix_nh;
@@ -93,6 +92,7 @@ namespace elevation_layer
     void ElevationLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y,
                               double* max_x, double* max_y)
     {
+        std::lock_guard<std::mutex> lock(elevation_map_mutex_);
         if (rolling_window_)
             updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
         if (!(enabled_ && elevation_map_received_))
@@ -125,9 +125,10 @@ namespace elevation_layer
 
     void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j)
     {
+        std::lock_guard<std::mutex> lock(elevation_map_mutex_);
         if (!enabled_ || !elevation_map_received_)
             return;
-
+        const bool has_edges_layer = elevation_map_.exists(edges_layer_name_);
         const grid_map::Matrix& elevation_data = elevation_map_[elevation_layer_name_];
         for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
             const grid_map::Index gridmap_index(*iterator);
@@ -143,7 +144,9 @@ namespace elevation_layer
             }
             if ( elevation_data(gridmap_index(0), gridmap_index(1)) > height_treshold_ )  // If point too high, it could be an obstacle
             {
-                if (filter_applied_) {
+                if (!has_edges_layer) {
+                    ROS_WARN("No edges layer found !!");
+                } else{
                     const grid_map::Matrix &edges_data = elevation_map_[edges_layer_name_];
                     if (edges_data(gridmap_index(0), gridmap_index(1)) < edges_sharpness_treshold_)  // if area not sharp, dont label as obstacle
                     {
@@ -184,17 +187,18 @@ namespace elevation_layer
         // Apply filter chain.
         if (filters_configuration_loaded_ && filterChain_.update(incoming_map, filtered_map))
         {
+            std::lock_guard<std::mutex> lock(elevation_map_mutex_);
             elevation_map_ = filtered_map;
-            filter_applied_ = true;
             height_treshold_ /= 2;      // Half the treshold since the highest sharpness is at midheigth of the obstacles
         }
         else{
+            std::lock_guard<std::mutex> lock(elevation_map_mutex_);
             ROS_WARN("Could not use the filter chain!");
             elevation_map_ = incoming_map;
-            filter_applied_ = false;
         }
         if(!elevation_map_received_)
         {
+//            elevation_map_received_.store(true);
             elevation_map_received_ = true;
         }
     }
