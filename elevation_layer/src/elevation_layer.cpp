@@ -153,7 +153,7 @@ namespace elevation_layer
                         continue;
                     }
                 }
-                master_grid.setCost(mx, my, LETHAL_OBSTACLE);
+                setCost(mx, my, LETHAL_OBSTACLE);
             }
         }
 
