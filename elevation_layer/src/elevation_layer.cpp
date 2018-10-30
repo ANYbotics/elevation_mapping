@@ -150,10 +150,14 @@ namespace elevation_layer
                     const grid_map::Matrix &edges_data = elevation_map_[edges_layer_name_];
                     if (edges_data(gridmap_index(0), gridmap_index(1)) < edges_sharpness_treshold_)  // if area not sharp, dont label as obstacle
                     {
+                        setCost(mx, my, FREE_SPACE);
                         continue;
                     }
                 }
                 setCost(mx, my, LETHAL_OBSTACLE);
+            }
+            else{
+                setCost(mx, my, FREE_SPACE);
             }
         }
 
@@ -165,7 +169,7 @@ namespace elevation_layer
         switch (combination_method_)
         {
             case 0:  // Overwrite
-                updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);   // TODO: This doesnt work, check why
+                updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
                 break;
             case 1:  // Maximum
                 updateWithMax(master_grid, min_i, min_j, max_i, max_j);
