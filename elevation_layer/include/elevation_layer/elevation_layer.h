@@ -44,7 +44,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   std::string global_frame_;  ///< @brief The global frame for the costmap
   std::vector<boost::shared_ptr<message_filters::SubscriberBase> >
       elevation_subscribers_;  ///< @brief Used for the observation message filters
-  dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>* dsrv_;
+  std::unique_ptr< dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> > dsrv_;
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
 
   int combination_method_;

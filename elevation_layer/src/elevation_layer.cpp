@@ -172,7 +172,7 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& 
 }
 
 void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle& nh) {
-  dsrv_ = new dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>(nh);
+  dsrv_.reset(new dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>(nh));
   dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>::CallbackType cb =
       boost::bind(&ElevationLayer::reconfigureCB, this, _1, _2);
   dsrv_->setCallback(cb);
