@@ -33,8 +33,6 @@ void ElevationLayer::onInitialize() {
   elevation_map_received_ = false;
   filters_configuration_loaded_ = false;
   global_frame_ = layered_costmap_->getGlobalFrameID();
-  elevation_layer_name_ = "elevation";
-  edges_layer_name_ = "edges";
 
   // get our tf prefix
   ros::NodeHandle prefix_nh;
@@ -42,13 +40,15 @@ void ElevationLayer::onInitialize() {
 
   // get parameters from config file
   param_io::getParam(nh, "elevation_topic", elevation_topic_);
-  param_io::getParam(nh,"height_threshold", height_threshold_);
-  param_io::getParam(nh,"filter_chain_parameters_name", filter_chain_parameters_name_);
-  param_io::getParam(nh,"footprint_clearing_enabled", footprint_clearing_enabled_);
-  param_io::getParam(nh,"combination_method", combination_method_);
-  param_io::getParam(nh,"edges_sharpness_threshold", edges_sharpness_threshold_);
+  param_io::getParam(nh, "height_threshold", height_threshold_);
+  param_io::getParam(nh, "filter_chain_parameters_name", filter_chain_parameters_name_);
+  param_io::getParam(nh, "elevation_layer_name", elevation_layer_name_);
+  param_io::getParam(nh, "edges_layer_name", edges_layer_name_);
+  param_io::getParam(nh, "footprint_clearing_enabled", footprint_clearing_enabled_);
+  param_io::getParam(nh, "combination_method", combination_method_);
+  param_io::getParam(nh, "edges_sharpness_threshold", edges_sharpness_threshold_);
   bool track_unknown_space = layered_costmap_->isTrackingUnknown();
-  param_io::getParam(nh,"track_unknown_space", track_unknown_space);
+  param_io::getParam(nh, "track_unknown_space", track_unknown_space);
   default_value_ = track_unknown_space ? NO_INFORMATION : FREE_SPACE;
 
   // Subscribe to topic
@@ -149,11 +149,11 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& 
   grid_map::GridMap incoming_map;
   grid_map::GridMap filtered_map;
   if (!grid_map::GridMapRosConverter::fromMessage(*elevation, incoming_map)) {
-    ROS_WARN_THROTTLE(0.2,"Grid Map msg Conversion failed !");
+    ROS_WARN_THROTTLE(0.2, "Grid Map msg Conversion failed !");
   }
   incoming_map.convertToDefaultStartIndex();
   if (!(global_frame_ == incoming_map.getFrameId())) {
-    ROS_WARN_THROTTLE(0.2, "Incoming elevation_map frame different than expected! " );
+    ROS_WARN_THROTTLE(0.2, "Incoming elevation_map frame different than expected! ");
   }
   // Apply filter chain.
   if (filters_configuration_loaded_ && filterChain_.update(incoming_map, filtered_map)) {
@@ -162,7 +162,7 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& 
     height_threshold_ /= 2.0;  // Half the threshold since the highest sharpness is at midheigth of the obstacles
   } else {
     std::lock_guard<std::mutex> lock(elevation_map_mutex_);
-    ROS_WARN_THROTTLE(0.2,"Could not use the filter chain!");
+    ROS_WARN_THROTTLE(0.2, "Could not use the filter chain!");
     elevation_map_ = incoming_map;
   }
   if (!elevation_map_received_) {
