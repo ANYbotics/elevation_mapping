@@ -16,6 +16,7 @@
   <depend>dynamic_reconfigure</depend>
   <depend>grid_map_ros</depend>
   <depend>filters</depend>
+  <depend>param_io</depend>
 
   <export>
     <costmap_2d plugin="${prefix}/costmap_plugins.xml" />

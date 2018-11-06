@@ -18,6 +18,7 @@
 #include <message_filters/subscriber.h>
 #include <ros/ros.h>
 #include "grid_map_ros/GridMapRosConverter.hpp"
+#include <param_io/get_param.hpp>
 
 #include <costmap_2d/footprint.h>
 #include <dynamic_reconfigure/server.h>
