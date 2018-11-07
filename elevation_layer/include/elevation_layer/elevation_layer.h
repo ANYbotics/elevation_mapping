@@ -17,8 +17,8 @@
 #include <filters/filter_chain.h>
 #include <message_filters/subscriber.h>
 #include <ros/ros.h>
-#include "grid_map_ros/GridMapRosConverter.hpp"
 #include <param_io/get_param.hpp>
+#include "grid_map_ros/GridMapRosConverter.hpp"
 
 #include <costmap_2d/footprint.h>
 #include <dynamic_reconfigure/server.h>
@@ -27,7 +27,7 @@
 
 namespace elevation_layer {
 
-enum CombinationMethod {Overwrite, Maximum, Unknown};
+enum CombinationMethod { Overwrite, Maximum, Unknown };
 CombinationMethod convertCombinationMethod(const std::string& str);
 
 class ElevationLayer : public costmap_2d::CostmapLayer {
@@ -48,7 +48,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   std::string global_frame_;  ///< @brief The global frame for the costmap
   std::vector<boost::shared_ptr<message_filters::SubscriberBase> >
       elevation_subscribers_;  ///< @brief Used for the observation message filters
-  std::unique_ptr< dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> > dsrv_;
+  std::unique_ptr<dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> > dsrv_;
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
   CombinationMethod combination_method_;
   std::vector<geometry_msgs::Point> transformed_footprint_;
@@ -62,6 +62,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   grid_map::GridMap elevation_map_;
   std::mutex elevation_map_mutex_;
   ros::Subscriber elevation_subscriber_;
+  ros::Time last_elevation_map_update_;
   double height_threshold_;
   double edges_sharpness_threshold_;
   std::string elevation_topic_;

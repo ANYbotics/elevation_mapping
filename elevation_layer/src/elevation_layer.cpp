@@ -102,6 +102,10 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
   if (!has_edges_layer) {
     ROS_WARN_THROTTLE(0.2, "No edges layer found !!");
   }
+  ros::Duration time_since_elevation_map_received = ros::Time::now() - last_elevation_map_update_;
+  if (time_since_elevation_map_received > ros::Duration(5.0)) {
+    current_ = false;
+  }
   const grid_map::Matrix& elevation_data = elevation_map_[elevation_layer_name_];
   for (grid_map::GridMapIterator iterator(elevation_map_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index gridmap_index(*iterator);
@@ -164,6 +168,7 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& 
   if (!grid_map::GridMapRosConverter::fromMessage(*elevation, incoming_map)) {
     ROS_WARN_THROTTLE(0.2, "Grid Map msg Conversion failed !");
   }
+  last_elevation_map_update_ = ros::Time::now();
   incoming_map.convertToDefaultStartIndex();
   if (!(global_frame_ == incoming_map.getFrameId())) {
     ROS_WARN_THROTTLE(0.2, "Incoming elevation_map frame different than expected! ");
