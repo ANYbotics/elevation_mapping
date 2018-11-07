@@ -17,7 +17,6 @@
 #include <filters/filter_chain.h>
 #include <message_filters/subscriber.h>
 #include <ros/ros.h>
-#include <param_io/get_param.hpp>
 #include "grid_map_ros/GridMapRosConverter.hpp"
 
 #include <costmap_2d/footprint.h>

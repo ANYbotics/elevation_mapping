@@ -15,7 +15,6 @@ find_package(catkin REQUIRED COMPONENTS
   dynamic_reconfigure
   grid_map_ros
   filters
-  param_io
 )
 
 # Find system libraries
@@ -47,7 +46,6 @@ catkin_package(
     dynamic_reconfigure
     grid_map_ros
     filters
-    param_io
   DEPENDS
     Boost
 )

@@ -25,7 +25,7 @@ ElevationLayer::ElevationLayer() : filterChain_("grid_map::GridMap"), elevation_
 }
 
 void ElevationLayer::onInitialize() {
-  ros::NodeHandle nh("~/" + name_), g_nh;
+  ros::NodeHandle nh("~/" + name_);
   rolling_window_ = layered_costmap_->isRolling();
 
   ElevationLayer::matchSize();
@@ -39,18 +39,36 @@ void ElevationLayer::onInitialize() {
   const std::string tf_prefix = tf::getPrefixParam(prefix_nh);
 
   // get parameters from config file
-  param_io::getParam(nh, "elevation_topic", elevation_topic_);
-  param_io::getParam(nh, "height_threshold", height_threshold_);
-  param_io::getParam(nh, "filter_chain_parameters_name", filter_chain_parameters_name_);
-  param_io::getParam(nh, "elevation_layer_name", elevation_layer_name_);
-  param_io::getParam(nh, "edges_layer_name", edges_layer_name_);
-  param_io::getParam(nh, "footprint_clearing_enabled", footprint_clearing_enabled_);
-  param_io::getParam(nh, "edges_sharpness_threshold", edges_sharpness_threshold_);
+  if (!nh.param("elevation_topic", elevation_topic_, std::string(""))) {
+    ROS_WARN("did not find elevation_topic, using default");
+  }
+  if (!nh.param("height_threshold", height_threshold_, 0.0)) {
+    ROS_WARN("did not find height_treshold, using default");
+  }
+  if (!nh.param("filter_chain_parameters_name", filter_chain_parameters_name_, std::string(""))) {
+    ROS_WARN("did not find filter_chain_param_name, using default");
+  }
+  if (!nh.param("elevation_layer_name", elevation_layer_name_, std::string(""))) {
+    ROS_WARN("did not find elevation_layer_name, using default");
+  }
+  if (!nh.param("edges_layer_name", edges_layer_name_, std::string(""))) {
+    ROS_WARN("did not find edges_layer_name, using default");
+  }
+  if (!nh.param("footprint_clearing_enabled", footprint_clearing_enabled_, false)) {
+    ROS_WARN("did not find footprint_clearing_enabled, using default");
+  }
+  if (!nh.param("edges_sharpness_threshold", edges_sharpness_threshold_, 0.0)) {
+    ROS_WARN("did not find edges_sharpness_treshold, using default");
+  }
   bool track_unknown_space = layered_costmap_->isTrackingUnknown();
-  param_io::getParam(nh, "track_unknown_space", track_unknown_space);
+  if (!nh.param("track_unknown_space", track_unknown_space, false)) {
+    ROS_WARN("did not find track_unknown_space, using default");
+  }
   default_value_ = track_unknown_space ? NO_INFORMATION : FREE_SPACE;
   std::string combination_method;
-  param_io::getParam(nh, "combination_method", combination_method);
+  if (!nh.param("combination_method", combination_method, std::string(""))) {
+    ROS_WARN("did not find combination_method, using default");
+  }
   combination_method_ = convertCombinationMethod(combination_method);
 
   // Subscribe to topic
@@ -167,6 +185,7 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& 
   grid_map::GridMap filtered_map;
   if (!grid_map::GridMapRosConverter::fromMessage(*elevation, incoming_map)) {
     ROS_WARN_THROTTLE(0.2, "Grid Map msg Conversion failed !");
+    return;
   }
   last_elevation_map_update_ = ros::Time::now();
   incoming_map.convertToDefaultStartIndex();
