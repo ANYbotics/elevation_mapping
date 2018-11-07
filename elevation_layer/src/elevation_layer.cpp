@@ -45,11 +45,13 @@ void ElevationLayer::onInitialize() {
   param_io::getParam(nh, "elevation_layer_name", elevation_layer_name_);
   param_io::getParam(nh, "edges_layer_name", edges_layer_name_);
   param_io::getParam(nh, "footprint_clearing_enabled", footprint_clearing_enabled_);
-  param_io::getParam(nh, "combination_method", combination_method_);
   param_io::getParam(nh, "edges_sharpness_threshold", edges_sharpness_threshold_);
   bool track_unknown_space = layered_costmap_->isTrackingUnknown();
   param_io::getParam(nh, "track_unknown_space", track_unknown_space);
   default_value_ = track_unknown_space ? NO_INFORMATION : FREE_SPACE;
+  std::string combination_method;
+  param_io::getParam(nh, "combination_method", combination_method);
+  combination_method_ = convertCombinationMethod(combination_method);
 
   // Subscribe to topic
   elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
@@ -134,14 +136,25 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
   }
 
   switch (combination_method_) {
-    case 0:  // Overwrite
+    case Overwrite:
       updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
       break;
-    case 1:  // Maximum
+    case Maximum:
       updateWithMax(master_grid, min_i, min_j, max_i, max_j);
       break;
-    default:  // Nothing
+    default:  // Do Nothing
       break;
+  }
+}
+
+CombinationMethod convertCombinationMethod(const std::string& str) {
+  if (str == "Overwrite") {
+    return Overwrite;
+  } else if (str == "Maximum") {
+    return Maximum;
+  } else {
+    ROS_WARN_THROTTLE(0.2, "Unknow combination method !");
+    return Unknown;
   }
 }
 

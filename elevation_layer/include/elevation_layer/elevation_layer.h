@@ -26,6 +26,10 @@
 #include <nav_msgs/OccupancyGrid.h>
 
 namespace elevation_layer {
+
+enum CombinationMethod {Overwrite, Maximum, Unknown};
+CombinationMethod convertCombinationMethod(const std::string& str);
+
 class ElevationLayer : public costmap_2d::CostmapLayer {
  public:
   ElevationLayer();
@@ -46,8 +50,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
       elevation_subscribers_;  ///< @brief Used for the observation message filters
   std::unique_ptr< dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> > dsrv_;
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
-
-  int combination_method_;
+  CombinationMethod combination_method_;
   std::vector<geometry_msgs::Point> transformed_footprint_;
   bool rolling_window_;
   bool footprint_clearing_enabled_;
