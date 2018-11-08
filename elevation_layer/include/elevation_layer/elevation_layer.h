@@ -132,6 +132,9 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   ///< @brief whether the elevation_map msg was received
   std::atomic_bool elevation_map_received_;
 
+  ///< @brief after this time [seconds] without receiving any elevation_map, the robot will have to stop
+  double max_allowed_blind_time_;
+
  private:
 
   /**

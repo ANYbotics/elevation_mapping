@@ -60,6 +60,9 @@ void ElevationLayer::onInitialize() {
   if (!nh.param("edges_sharpness_threshold", edges_sharpness_threshold_, 0.0)) {
     ROS_WARN("did not find edges_sharpness_treshold, using default");
   }
+  if (!nh.param("max_allowed_blind_time", max_allowed_blind_time_, 0.0)) {
+    ROS_WARN("did not find max_allowed_blind_time, using default");
+  }
   bool track_unknown_space = layered_costmap_->isTrackingUnknown();
   if (!nh.param("track_unknown_space", track_unknown_space, false)) {
     ROS_WARN("did not find track_unknown_space, using default");
@@ -121,7 +124,7 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
     ROS_WARN_THROTTLE(0.2, "No edges layer found !!");
   }
   ros::Duration time_since_elevation_map_received = ros::Time::now() - last_elevation_map_update_;
-  if (time_since_elevation_map_received > ros::Duration(5.0)) {
+  if (time_since_elevation_map_received > ros::Duration(max_allowed_blind_time_)) {
     current_ = false;
   }
   const grid_map::Matrix& elevation_data = elevation_map_[elevation_layer_name_];
