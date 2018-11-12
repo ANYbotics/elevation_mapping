@@ -146,6 +146,8 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
    */
   void reconfigureCB(elevation_layer::ElevationPluginConfig& config, uint32_t level);
 
+  ros::NodeHandle nh_;
+
   ///< @brief the elevation_map from which to take the information abut the environment (filtered or not)
   grid_map::GridMap elevation_map_;
 

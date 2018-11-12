@@ -26,7 +26,7 @@ ElevationLayer::ElevationLayer()
 }
 
 void ElevationLayer::onInitialize() {
-  ros::NodeHandle nh("~/" + name_);
+  nh_ = ros::NodeHandle("~/" + name_);
   rolling_window_ = layered_costmap_->isRolling();
 
   ElevationLayer::matchSize();
@@ -35,53 +35,49 @@ void ElevationLayer::onInitialize() {
   filters_configuration_loaded_ = false;
   global_frame_ = layered_costmap_->getGlobalFrameID();
 
-  // get our tf prefix
-  ros::NodeHandle prefix_nh;
-  const std::string tf_prefix = tf::getPrefixParam(prefix_nh);
-
   // get parameters from config file
-  if (!nh.param("elevation_topic", elevation_topic_, std::string(""))) {
+  if (!nh_.param("elevation_topic", elevation_topic_, std::string(""))) {
     ROS_WARN("did not find elevation_topic, using default");
   }
-  if (!nh.param("height_threshold", height_threshold_, 0.0)) {
+  if (!nh_.param("height_threshold", height_threshold_, 0.0)) {
     ROS_WARN("did not find height_treshold, using default");
   }
-  if (!nh.param("filter_chain_parameters_name", filter_chain_parameters_name_, std::string(""))) {
+  if (!nh_.param("filter_chain_parameters_name", filter_chain_parameters_name_, std::string(""))) {
     ROS_WARN("did not find filter_chain_param_name, using default");
   }
-  if (!nh.param("elevation_layer_name", elevation_layer_name_, std::string(""))) {
+  if (!nh_.param("elevation_layer_name", elevation_layer_name_, std::string(""))) {
     ROS_WARN("did not find elevation_layer_name, using default");
   }
-  if (!nh.param("edges_layer_name", edges_layer_name_, std::string(""))) {
+  if (!nh_.param("edges_layer_name", edges_layer_name_, std::string(""))) {
     ROS_WARN("did not find edges_layer_name, using default");
   }
-  if (!nh.param("footprint_clearing_enabled", footprint_clearing_enabled_, false)) {
+  if (!nh_.param("footprint_clearing_enabled", footprint_clearing_enabled_, false)) {
     ROS_WARN("did not find footprint_clearing_enabled, using default");
   }
-  if (!nh.param("edges_sharpness_threshold", edges_sharpness_threshold_, 0.0)) {
+  if (!nh_.param("edges_sharpness_threshold", edges_sharpness_threshold_, 0.0)) {
     ROS_WARN("did not find edges_sharpness_treshold, using default");
   }
-  if (!nh.param("max_allowed_blind_time", max_allowed_blind_time_, 0.0)) {
+  if (!nh_.param("max_allowed_blind_time", max_allowed_blind_time_, 0.0)) {
     ROS_WARN("did not find max_allowed_blind_time, using default");
   }
   bool track_unknown_space = layered_costmap_->isTrackingUnknown();
-  if (!nh.param("track_unknown_space", track_unknown_space, false)) {
+  if (!nh_.param("track_unknown_space", track_unknown_space, false)) {
     ROS_WARN("did not find track_unknown_space, using default");
   }
   default_value_ = track_unknown_space ? NO_INFORMATION : FREE_SPACE;
   std::string combination_method;
-  if (!nh.param("combination_method", combination_method, std::string(""))) {
+  if (!nh_.param("combination_method", combination_method, std::string(""))) {
     ROS_WARN("did not find combination_method, using default");
   }
   combination_method_ = convertCombinationMethod(combination_method);
 
   // Subscribe to topic
-  elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
+  elevation_subscriber_ = nh_.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
   dsrv_ = nullptr;
-  setupDynamicReconfigure(nh);
+  setupDynamicReconfigure(nh_);
 
   // Setup filter chain.
-  if (!filterChain_.configure(filter_chain_parameters_name_, nh)) {
+  if (!filterChain_.configure(filter_chain_parameters_name_, nh_)) {
     ROS_WARN("Could not configure the filter chain!");
   } else {
     filters_configuration_loaded_ = true;
@@ -229,8 +225,8 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr &
   }
 }
 
-void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle &nh) {
-  dsrv_.reset(new dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>(nh));
+void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle &nh_) {
+  dsrv_.reset(new dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>(nh_));
   dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>::CallbackType cb =
       boost::bind(&ElevationLayer::reconfigureCB, this, _1, _2);
   dsrv_->setCallback(cb);
@@ -249,8 +245,7 @@ void ElevationLayer::reset() {
 
 void ElevationLayer::activate() {
   // if we're stopped we need to re-subscribe to topics
-  ros::NodeHandle nh("~/" + name_);
-  elevation_subscriber_ = nh.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
+  elevation_subscriber_ = nh_.subscribe(elevation_topic_, 1, &ElevationLayer::elevationMapCallback, this);
 }
 void ElevationLayer::deactivate() { elevation_subscriber_.shutdown(); }
 }  // namespace elevation_layer
