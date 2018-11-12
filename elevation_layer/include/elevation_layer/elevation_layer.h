@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include <costmap_2d/costmap_layer.h>
 #include <costmap_2d/layered_costmap.h>
@@ -80,6 +81,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   /** @brief Stop publishers. */
   void deactivate() override;
 
+  /** @brief Deactivate, reset the map and then reactivate*/
   void reset() override;
 
   /**

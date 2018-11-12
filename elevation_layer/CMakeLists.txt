@@ -38,7 +38,7 @@ catkin_package(
   INCLUDE_DIRS
     include
   LIBRARIES
-    elevation_layer
+    ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
     tf
@@ -84,7 +84,7 @@ target_link_libraries(${PROJECT_NAME}
 ## install ##
 
 ## executables and/or libraries for installation
-install(TARGETS elevation_layer
+install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
