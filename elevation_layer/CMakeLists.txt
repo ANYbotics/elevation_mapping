@@ -1,10 +1,13 @@
-# use c++11
-set(CMAKE_CXX_COMPILER_ARG1 -std=c++11)
-
 cmake_minimum_required(VERSION 2.8.3)
 project(elevation_layer)
 
-find_package(Boost REQUIRED COMPONENTS thread)
+## Use C++11
+add_definitions(-std=c++11)
+## By adding -Wall and -Werror, the compiler does not ignore warnings anymore,
+## enforcing cleaner code.
+#add_definitions(-std=c++11 -Wall -Werror)
+
+## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf
@@ -14,17 +17,28 @@ find_package(catkin REQUIRED COMPONENTS
   filters
 )
 
+# Find system libraries
+find_package(Boost REQUIRED)
+
 # add dynamic reconfigure configs
 generate_dynamic_reconfigure_options(
   cfg/ElevationPlugin.cfg
 )
 
-## declare catkin package
+###################################
+## catkin specific configuration ##
+###################################
+## The catkin_package macro generates cmake config files for your package
+## Declare things to be passed to dependent projects
+## INCLUDE_DIRS: uncomment this if your package contains header files
+## LIBRARIES: libraries you create in this project that dependent projects also need
+## CATKIN_DEPENDS: catkin_packages dependent projects also need
+## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
   INCLUDE_DIRS
     include
   LIBRARIES
-    elevation_layer
+    ${PROJECT_NAME}
   CATKIN_DEPENDS
     roscpp
     tf
@@ -32,19 +46,26 @@ catkin_package(
     dynamic_reconfigure
     grid_map_ros
     filters
+  DEPENDS
+    Boost
 )
-
-
 
 ## build ##
 
-include_directories(include)
+###########
+## Build ##
+###########
+
+## Specify additional locations of header files
+## Your package locations should be listed before other locations
 include_directories(
-  ${catkin_INCLUDE_DIRS}
+        include
+        ${catkin_INCLUDE_DIRS}
+        ${Boost_INCLUDE_DIRS}
 )
 
 ## declare a cpp library
-add_library(elevation_layer
+add_library(${PROJECT_NAME}
   src/elevation_layer.cpp
 )
 
@@ -52,26 +73,25 @@ add_library(elevation_layer
 ## cmake target dependencies of the executable/library
 
 # build config headers
-add_dependencies(elevation_layer elevation_layer_gencfg)
+add_dependencies(${PROJECT_NAME} elevation_layer_gencfg)
 
 ## libraries to link a library or executable target against
-target_link_libraries(elevation_layer
+target_link_libraries(${PROJECT_NAME}
   ${catkin_LIBRARIES}
 )
-
 
 
 ## install ##
 
 ## executables and/or libraries for installation
-install(TARGETS elevation_layer
+install(TARGETS ${PROJECT_NAME}
   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 ## cpp-header files for installation
-install(DIRECTORY include/
+install(DIRECTORY include/${PROJECT_NAME}/
   DESTINATION ${CATKIN_PACKAGE_INCLUDE_DESTINATION}
   FILES_MATCHING PATTERN "*.h"
 )
