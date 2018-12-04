@@ -193,7 +193,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 * **`position_x`**, **`position_y`** (double, default: 0.0)
 
-    The position of the elevation map (center) in the elevation map frame.
+    The position of the elevation map center, in the elevation map frame. This parameter sets the planar position offsets between the generated elevation map and the frame in which it is published (`map_frame_id`). It is only useful if no `track_point_frame_id` parameter is used.
 
 * **`resolution`** (double, default: 0.01, min: 0.0)
 
@@ -205,11 +205,14 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 * **`mahalanobis_distance_threshold`** (double, default: 2.5)
 
-    The threshold for the Mahalanobis distance. Decides if measurements are fused with the existing data, overwritten or ignored.
+    Each cell in the elevation map has an uncertainty for its height value. Depending on the Mahalonobis distance of the existing height distribution and the new measurements, the incoming data is fused with the existing estimate, overwritten, or ignored. This parameter determines the threshold on the Mahalanobis distance which determines how the incoming measurements are processed.
 
+* **`sensor_processor/ignore_points_above`** (double, default: 0.4) 
+    A hard threshold on the height of points introduced by the depth sensor. Points with a height over this threshold will not be considered valid during the data collection step.
+    
 * **`multi_height_noise`** (double, default: 9.0e-7)
 
-    Added noise for cell with multiple height measurements (e.g. walls).
+    Noise added to measurements that are higher than the current elevation map at that particular position. This noise-adding process is only performed if a point falls over the Mahalanobis distance threshold. A higher value is useful to adapt faster to dynamic environments (e.g., moving objects), but might cause more noise in the height estimation.
 
 * **`min_horizontal_variance`**, **`max_horizontal_variance`** (double, default: pow(resolution / 2.0, 2), 0.5)
 
@@ -217,7 +220,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 * **`enable_visibility_cleanup`** (bool, default: true)
 
-    Enable visibility cleanup. This runs a separate thread to remove elements in the map based on the visibility constraint.
+    Enable/disable a separate thread that removes elements from the map which are not visible anymore, by means of ray-tracing, originating from the sensor frame.
 
 * **`visibility_cleanup_rate`** (double, default: 1.0)
 
