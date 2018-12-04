@@ -8,22 +8,27 @@
 
 #pragma once
 
+// C++ Libraries
 #include <atomic>
-#include <mutex>
 #include <boost/algorithm/string/predicate.hpp>
+#include <mutex>
 
+// Ros headers
+#include <ros/ros.h>
+#include <dynamic_reconfigure/server.h>
+#include <nav_msgs/OccupancyGrid.h>
+
+// Costmap2d headers
 #include <costmap_2d/costmap_layer.h>
+#include <costmap_2d/footprint.h>
 #include <costmap_2d/layered_costmap.h>
 #include <costmap_2d/observation_buffer.h>
-#include <filters/filter_chain.h>
-#include <message_filters/subscriber.h>
-#include <ros/ros.h>
-#include "grid_map_ros/GridMapRosConverter.hpp"
 
-#include <costmap_2d/footprint.h>
-#include <dynamic_reconfigure/server.h>
-#include <elevation_layer/ElevationPluginConfig.h>
-#include <nav_msgs/OccupancyGrid.h>
+// Package related headers
+#include "elevation_layer/ElevationPluginConfig.h"
+#include <filters/filter_chain.h>
+#include <grid_map_ros/GridMapRosConverter.hpp>
+#include <message_filters/subscriber.h>
 
 namespace elevation_layer {
 
@@ -44,22 +49,22 @@ CombinationMethod convertCombinationMethod(const std::string& str);
  */
 class ElevationLayer : public costmap_2d::CostmapLayer {
  public:
-  /**
+  /*!
    * Constructor
    */
   ElevationLayer();
 
-  /**
+  /*!
    * Destructor
    */
   ~ElevationLayer() override = default;
 
-  /**
+  /*!
    * Function called from parent class at initialization
    */
   void onInitialize() override;
 
-  /**
+  /*!
    * @brief This is called by the LayeredCostmap to poll this plugin as to how
    *        much of the costmap it needs to update. Each layer can increase
    *        the size of this bounds.
@@ -69,37 +74,36 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
    */
   void updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x, double* max_y) override;
 
-  /**
+  /*!
    * @brief Actually update the underlying costmap, only within the bounds
    *        calculated during UpdateBounds().
    */
   void updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j) override;
 
-  /** @brief Restart publishers if they've been stopped. */
+  /*! @brief Restart publishers if they've been stopped. */
   void activate() override;
 
-  /** @brief Stop publishers. */
+  /*! @brief Stop publishers. */
   void deactivate() override;
 
-  /** @brief Deactivate, reset the map and then reactivate*/
+  /*! @brief Deactivate, reset the map and then reactivate*/
   void reset() override;
 
-  /**
+  /*!
    * Callback to receive the grid_map msg from elevation_map
    * @param occupancy_grid GridMap msg from elevation_map
    */
   void elevationMapCallback(const grid_map_msgs::GridMapConstPtr& occupancy_grid);
 
  protected:
-
-  /**
+  /*!
    * set up the dynamic reconfigure
    * @param nh
    */
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
 
-  /**
-   * clear obstacles inside the footprint of the robort if the flag footprint_clearing_enabled_ is true
+  /*!
+   * clear obstacles inside the footprint of the robort if the flag footprintClearingEnabled_ is true
    * @param robot_x
    * @param robot_y
    * @param robot_yaw
@@ -110,79 +114,75 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
    */
   void updateFootprint(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x, double* max_y);
 
-  ///< @brief The global frame for the costmap
-  std::string global_frame_;
+  //! The global frame for the costmap
+  std::string globalFrame_;
 
-  ///< @brief Used for the observation message filters
-  std::vector<boost::shared_ptr<message_filters::SubscriberBase> > elevation_subscribers_;
-
-  ///< @brief dynamic reconfigure server
+  //! dynamic reconfigure server
   std::unique_ptr<dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> > dsrv_;
 
-  ///< @brief combination method to use to update the cost of a portion of map
-  CombinationMethod combination_method_;
+  //! combination method to use to update the cost of a portion of map
+  CombinationMethod combinationMethod_;
 
-  ///< @brief polygon describing the form of the footprint of the robot
-  std::vector<geometry_msgs::Point> transformed_footprint_;
+  //! polygon describing the form of the footprint of the robot
+  std::vector<geometry_msgs::Point> transformedFootprint_;
 
-  ///< @brief whether the local costmap should move together with the robot
-  bool rolling_window_;
+  //! whether the local costmap should move together with the robot
+  bool rollingWindow_;
 
-  ///< @brief whether to clean the obstacles inside the robot footprint
-  bool footprint_clearing_enabled_;
+  //! whether to clean the obstacles inside the robot footprint
+  bool footprintClearingEnabled_;
 
-  ///< @brief whether the elevation_map msg was received
-  std::atomic_bool elevation_map_received_;
+  //! whether the elevation_map msg was received
+  std::atomic_bool elevationMapReceived_;
 
-  ///< @brief after this time [seconds] without receiving any elevation_map, the robot will have to stop
-  double max_allowed_blind_time_;
+  //! after this time [seconds] without receiving any elevation_map, the robot will have to stop
+  double maxAllowedBlindTime_;
 
  private:
-
-  /**
+  /*!
    * dynamic reconfiguration of the parameters
    * @param config
    * @param level
    */
   void reconfigureCB(elevation_layer::ElevationPluginConfig& config, uint32_t level);
 
-  ros::NodeHandle nh_;
+  ros::NodeHandle nodeHandle_;
 
-  ///< @brief the elevation_map from which to take the information abut the environment (filtered or not)
-  grid_map::GridMap elevation_map_;
+  //! the elevation_map from which to take the information abut the environment (filtered or not)
+  grid_map::GridMap elevationMap_;
 
-  ///< @brief lock_guard mutex to make elevation_map setting thread safe
-  std::mutex elevation_map_mutex_;
+  //! lock_guard mutex to make elevation_map setting thread safe
+  std::mutex elevationMapMutex_;
 
-  ///< @brief Ros subscriber to grid_map msgs
-  ros::Subscriber elevation_subscriber_;
+  //! Ros subscriber to grid_map msgs
+  ros::Subscriber elevationSubscriber_;
 
-  ///< @brief last time an elevation_map was received
-  ros::Time last_elevation_map_update_;
+  //! last time an elevation_map was received
+  ros::Time lastElevationMapUpdate_;
 
-  ///< @brief height threshold below which nothing is considered obstacle
-  double height_threshold_;
+  //! height threshold below which nothing is considered obstacle
+  double heightThreshold_;
 
-  ///< @brief sharpness threshold above which an object is considered an obstacle
-  double edges_sharpness_threshold_;
+  //! sharpness threshold above which an object is considered an obstacle
+  double edgesSharpnessThreshold_;
 
-  ///< @brief topic_name of the elevation_map incoming msg
-  std::string elevation_topic_;
+  //! topic_name of the elevation_map incoming msg
+  std::string elevationTopic_;
 
-  ///< @brief Filter chain used to filter the incoming elevation_map
+  //! Filter chain used to filter the incoming elevation_map
   filters::FilterChain<grid_map::GridMap> filterChain_;
 
-  ///< @brief Filter chain parameters name to use
-  std::string filter_chain_parameters_name_;
+  //! Filter chain parameters name to use
+  std::string filterChainParametersName_;
 
-  ///< @brief whether filters configuration parameters was found
-  bool filters_configuration_loaded_;
+  //! whether filters configuration parameters was found
+  bool filtersConfigurationLoaded_;
 
-  ///< @brief name of the layer of the incoming map to use
-  std::string elevation_layer_name_;
+  //! name of the layer of the incoming map to use
+  std::string elevationLayerName_;
 
-  ///< @brief name to give to the filtered layer
-  std::string edges_layer_name_;
+  //! name to give to the filtered layer
+  std::string edgesLayerName_;
 };
 
 }  // namespace elevation_layer
