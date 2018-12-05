@@ -384,14 +384,14 @@ bool ElevationMap::clear()
   return true;
 }
 
-bool ElevationMap::clearSubMap(const GridMap& subMap)
+bool ElevationMap::clearMapAtIndices(const std::vector<Index>& indices)
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForVisibilityCleanupData(visibilityCleanupMapMutex_);
-  rawMap_.clearSubMap(subMap);
-  fusedMap_.clearSubMap(subMap);
-  visibilityCleanupMap_.clearSubMap(subMap);
+  rawMap_.clearMapAtIndices(indices);
+  fusedMap_.clearMapAtIndices(indices);
+  visibilityCleanupMap_.clearMapAtIndices(indices);
   return true;
 }
 

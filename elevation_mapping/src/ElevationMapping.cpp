@@ -99,7 +99,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
-  clearSubMapService_ = nodeHandle_.advertiseService("clear_sub_map", &ElevationMapping::clearSubMap, this);
+  clearMapAtIndicesService_ = nodeHandle_.advertiseService("clear_map_at_indices", &ElevationMapping::clearMapAtIndices, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
 
   initialize();
@@ -442,12 +442,19 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
   return map_.clear();
 }
 
-bool ElevationMapping::clearSubMap(grid_map_msgs::ClearSubGridMap::Request& request, grid_map_msgs::ClearSubGridMap::Response& response)
+bool ElevationMapping::clearMapAtIndices(grid_map_msgs::ClearGridMapAtIndices::Request& request, grid_map_msgs::ClearGridMapAtIndices::Response& response)
 {
-  ROS_INFO("Clearing sub map.");
-  GridMap subMap;
-  GridMapRosConverter::fromMessage(request.map, subMap);
-  return map_.clearSubMap(subMap);
+  if (request.indices0.size() != request.indices1.size()) {
+    ROS_WARN("Could not clear map at indices, because sizeX != sizeY");
+    return false;
+  } else {
+    ROS_INFO("Clearing map at specified indices.");
+    std::vector<Index> indices(request.indices0.size());
+    for (unsigned int i = 0; i < request.indices0.size(); i++) {
+      indices.at(i) = Index(request.indices0[i],request.indices1[i]);
+    }
+    return map_.clearMapAtIndices(indices);
+  }
 }
 
 bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)
