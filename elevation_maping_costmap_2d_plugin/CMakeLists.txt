@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(elevation_layer)
+project(elevation_mapping_costmap_2d_plugin)
 
 ## Use C++11
 add_definitions(-std=c++11)
@@ -73,7 +73,7 @@ add_library(${PROJECT_NAME}
 ## cmake target dependencies of the executable/library
 
 # build config headers
-add_dependencies(${PROJECT_NAME} elevation_layer_gencfg)
+add_dependencies(${PROJECT_NAME} elevation_mapping_costmap_2d_plugin_gencfg)
 
 ## libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}

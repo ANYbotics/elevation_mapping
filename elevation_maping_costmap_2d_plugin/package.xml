@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>elevation_layer</name>
+  <name>elevation_mapping_costmap_2d_plugin</name>
   <version>0.0.2</version>
   <description>adds elevation mapping informations to costmap_2d</description>
   <author email="echisari@anybotics.com">Eugenio Chisari</author>

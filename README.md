@@ -237,7 +237,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 ## Costmap_2d plug-in
 
-**Elevation layer** is a plugin for Costmap_2d (http://wiki.ros.org/costmap_2d). Costmap_2d is part fo the ros navigation stack and it provides an implementation of a 2d costmap. Thanks to the elevation_layer plugin, the elevation mapping from this package can be used to build a costmap_2d to fit in the ros navigation stack. It takes the elevation map as input and generates a layer of obstacles in the local costmap_2d.
+**elevation_mapping_costmap_2d_plugin** is a plugin for Costmap_2d (http://wiki.ros.org/costmap_2d). Costmap_2d is part fo the ros navigation stack and it provides an implementation of a 2d costmap. Thanks to the elevation_mapping_costmap_2d_plugin, the elevation mapping from this package can be used to build a costmap_2d to fit in the ros navigation stack. It takes the elevation map as input and generates a layer of obstacles in the local costmap_2d.
 
 The layer applies two filters to the incoming data: a height filter and a sharpness filter. The behaviour can be adjusted tuning the relative parameters **`heightThreshold_`** and **`edgesSharpnessThreshold_`**. The former labels as obstacles all data above a certain height, while the latter labels as obstacles data above a certain edge sharpness, where a sharp edge is defined as a sudden change in height; this is used to avoid labeling slopes as obstacle. 
 

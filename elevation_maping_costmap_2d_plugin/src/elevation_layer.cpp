@@ -6,10 +6,10 @@
  *	 Institute: ANYbotics
  */
 
-#include "elevation_layer/elevation_layer.hpp"
+#include "elevation_mapping_costmap_2d_plugin/elevation_layer.hpp"
 #include <pluginlib/class_list_macros.h>
 
-PLUGINLIB_EXPORT_CLASS(elevation_layer::ElevationLayer, costmap_2d::Layer)
+PLUGINLIB_EXPORT_CLASS(elevation_mapping_costmap_2d_plugin::ElevationLayer, costmap_2d::Layer)
 
 using costmap_2d::FREE_SPACE;
 using costmap_2d::LETHAL_OBSTACLE;
@@ -18,7 +18,7 @@ using costmap_2d::NO_INFORMATION;
 using costmap_2d::Observation;
 using costmap_2d::ObservationBuffer;
 
-namespace elevation_layer {
+namespace elevation_mapping_costmap_2d_plugin {
 
 ElevationLayer::ElevationLayer()
     : filterChain_("grid_map::GridMap"), elevationMapReceived_(false), filtersConfigurationLoaded_(false) {
@@ -226,13 +226,13 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr &
 }
 
 void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle &nodeHandle_) {
-  dsrv_.reset(new dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>(nodeHandle_));
-  dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig>::CallbackType cb =
+  dsrv_.reset(new dynamic_reconfigure::Server<elevation_mapping_costmap_2d_plugin::ElevationPluginConfig>(nodeHandle_));
+  dynamic_reconfigure::Server<elevation_mapping_costmap_2d_plugin::ElevationPluginConfig>::CallbackType cb =
       boost::bind(&ElevationLayer::reconfigureCB, this, _1, _2);
   dsrv_->setCallback(cb);
 }
 
-void ElevationLayer::reconfigureCB(elevation_layer::ElevationPluginConfig &config, uint32_t level) {
+void ElevationLayer::reconfigureCB(elevation_mapping_costmap_2d_plugin::ElevationPluginConfig &config, uint32_t level) {
   enabled_ = config.enabled;
 }
 
@@ -248,4 +248,4 @@ void ElevationLayer::activate() {
   elevationSubscriber_ = nodeHandle_.subscribe(elevationTopic_, 1, &ElevationLayer::elevationMapCallback, this);
 }
 void ElevationLayer::deactivate() { elevationSubscriber_.shutdown(); }
-}  // namespace elevation_layer
+}  // namespace elevation_mapping_costmap_2d_plugin

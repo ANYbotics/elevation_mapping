@@ -25,12 +25,12 @@
 #include <costmap_2d/observation_buffer.h>
 
 // Package related headers
-#include "elevation_layer/ElevationPluginConfig.h"
+#include "elevation_mapping_costmap_2d_plugin/ElevationPluginConfig.h"
 #include <filters/filter_chain.h>
 #include <grid_map_ros/GridMapRosConverter.hpp>
 #include <message_filters/subscriber.h>
 
-namespace elevation_layer {
+namespace elevation_mapping_costmap_2d_plugin {
 
 /*!
  * Method to update the cost of a portion of map
@@ -118,7 +118,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   std::string globalFrame_;
 
   //! dynamic reconfigure server
-  std::unique_ptr<dynamic_reconfigure::Server<elevation_layer::ElevationPluginConfig> > dsrv_;
+  std::unique_ptr<dynamic_reconfigure::Server<elevation_mapping_costmap_2d_plugin::ElevationPluginConfig> > dsrv_;
 
   //! combination method to use to update the cost of a portion of map
   CombinationMethod combinationMethod_;
@@ -144,7 +144,7 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
    * @param config
    * @param level
    */
-  void reconfigureCB(elevation_layer::ElevationPluginConfig& config, uint32_t level);
+  void reconfigureCB(elevation_mapping_costmap_2d_plugin::ElevationPluginConfig& config, uint32_t level);
 
   ros::NodeHandle nodeHandle_;
 
@@ -185,4 +185,4 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
   std::string edgesLayerName_;
 };
 
-}  // namespace elevation_layer
+}  // namespace elevation_mapping_costmap_2d_plugin
