@@ -6,5 +6,5 @@ elevation_filters:
      output_layer: edges
      expression: 'sumOfFinites([0,1,0;1,-4,1;0,1,0].*elevation)' # Edge detection.
      compute_empty_cells: false
-     edge_handling: mean # options: inside, crop, empty, mean
+     edge_handling: mean
      window_size: 3 # Make sure to make this compatible with the kernel matrix.
