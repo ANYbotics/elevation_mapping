@@ -20,8 +20,7 @@ using costmap_2d::ObservationBuffer;
 
 namespace elevation_mapping_costmap_2d_plugin {
 
-ElevationLayer::ElevationLayer()
-    : filterChain_("grid_map::GridMap"), elevationMapReceived_(false), filtersConfigurationLoaded_(false) {
+ElevationLayer::ElevationLayer() : filterChain_("grid_map::GridMap"), elevationMapReceived_(false), filtersConfigurationLoaded_(false) {
   costmap_ = nullptr;  // this is the unsigned char* member of parent class Costmap2D.
 }
 
@@ -84,13 +83,8 @@ void ElevationLayer::onInitialize() {
   }
 }
 
-void ElevationLayer::updateBounds(double robot_x,
-                                  double robot_y,
-                                  double robot_yaw,
-                                  double *min_x,
-                                  double *min_y,
-                                  double *max_x,
-                                  double *max_y) {
+void ElevationLayer::updateBounds(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x,
+                                  double* max_y) {
   std::lock_guard<std::mutex> lock(elevationMapMutex_);
   if (rollingWindow_) {
     updateOrigin(robot_x - getSizeInMetersX() / 2, robot_y - getSizeInMetersY() / 2);
@@ -112,37 +106,32 @@ void ElevationLayer::updateBounds(double robot_x,
   updateFootprint(robot_x, robot_y, robot_yaw, min_x, min_y, max_x, max_y);
 }
 
-void ElevationLayer::updateFootprint(double robot_x,
-                                     double robot_y,
-                                     double robot_yaw,
-                                     double *min_x,
-                                     double *min_y,
-                                     double *max_x,
-                                     double *max_y) {
+void ElevationLayer::updateFootprint(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x,
+                                     double* max_y) {
   if (!footprintClearingEnabled_) {
     return;
   }
   costmap_2d::transformFootprint(robot_x, robot_y, robot_yaw, getFootprint(), transformedFootprint_);
 
-  for (auto &i : transformedFootprint_) {
+  for (auto& i : transformedFootprint_) {
     touch(i.x, i.y, min_x, min_y, max_x, max_y);
   }
 }
 
-void ElevationLayer::updateCosts(costmap_2d::Costmap2D &master_grid, int min_i, int min_j, int max_i, int max_j) {
+void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j) {
   std::lock_guard<std::mutex> lock(elevationMapMutex_);
   if (!enabled_ || !elevationMapReceived_) {
     return;
   }
   const bool hasEdgesLayer = elevationMap_.exists(edgesLayerName_);
   if (!hasEdgesLayer) {
-    ROS_WARN_THROTTLE(0.2, "No edges layer found !!");
+    ROS_WARN_STREAM_THROTTLE(0.5, edgesLayerName_ << " layer not found !!");
   }
   ros::Duration timeSinceElevationMapReceived = ros::Time::now() - lastElevationMapUpdate_;
   if (timeSinceElevationMapReceived > ros::Duration(maxAllowedBlindTime_)) {
     current_ = false;
   }
-  const grid_map::Matrix &elevationData = elevationMap_[elevationLayerName_];
+  const grid_map::Matrix& elevationData = elevationMap_[elevationLayerName_];
   for (grid_map::GridMapIterator iterator(elevationMap_); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index gridmapIndex(*iterator);
     grid_map::Position vertexPositionXY;
@@ -155,13 +144,11 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D &master_grid, int min_i, 
     {
       continue;
     }
-    if (elevationData(gridmapIndex(0), gridmapIndex(1))
-        > heightThreshold_)  // If point too high, it could be an obstacle
+    if (elevationData(gridmapIndex(0), gridmapIndex(1)) > heightThreshold_)  // If point too high, it could be an obstacle
     {
       if (hasEdgesLayer) {
-        const grid_map::Matrix &edgesData = elevationMap_[edgesLayerName_];
-        if (edgesData(gridmapIndex(0), gridmapIndex(1))
-            < edgesSharpnessThreshold_)  // if area not sharp, dont label as obstacle
+        const grid_map::Matrix& edgesData = elevationMap_[edgesLayerName_];
+        if (edgesData(gridmapIndex(0), gridmapIndex(1)) < edgesSharpnessThreshold_)  // if area not sharp, dont label as obstacle
         {
           setCost(mx, my, FREE_SPACE);
           continue;
@@ -178,37 +165,39 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D &master_grid, int min_i, 
   }
 
   switch (combinationMethod_) {
-    case Overwrite:updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
+    case Overwrite:
+      updateWithOverwrite(master_grid, min_i, min_j, max_i, max_j);
       break;
-    case Maximum:updateWithMax(master_grid, min_i, min_j, max_i, max_j);
+    case Maximum:
+      updateWithMax(master_grid, min_i, min_j, max_i, max_j);
       break;
     default:  // Do Nothing
       break;
   }
 }
 
-CombinationMethod convertCombinationMethod(const std::string &str) {
-  if (boost::iequals(str, "Overwrite")) {   // Case insensitive comparison
+CombinationMethod convertCombinationMethod(const std::string& str) {
+  if (boost::iequals(str, "Overwrite")) {  // Case insensitive comparison
     return Overwrite;
   } else if (boost::iequals(str, "Maximum")) {  // Case insensitive comparison
     return Maximum;
   } else {
-    ROS_WARN_THROTTLE(0.2, "Unknow combination method !");
+    ROS_WARN_THROTTLE(0.5, "Unknow combination method !");
     return Unknown;
   }
 }
 
-void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr &elevation) {
+void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& elevation) {
   grid_map::GridMap incomingMap;
   grid_map::GridMap filteredMap;
   if (!grid_map::GridMapRosConverter::fromMessage(*elevation, incomingMap)) {
-    ROS_WARN_THROTTLE(0.2, "Grid Map msg Conversion failed !");
+    ROS_WARN_THROTTLE(0.5, "Grid Map msg Conversion failed !");
     return;
   }
   lastElevationMapUpdate_ = ros::Time::now();
   incomingMap.convertToDefaultStartIndex();
   if (!(globalFrame_ == incomingMap.getFrameId())) {
-    ROS_WARN_THROTTLE(0.2, "Incoming elevation_map frame different than expected! ");
+    ROS_WARN_THROTTLE(0.5, "Incoming elevation_map frame different than expected! ");
   }
   // Apply filter chain.
   if (filtersConfigurationLoaded_ && filterChain_.update(incomingMap, filteredMap)) {
@@ -217,7 +206,7 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr &
     heightThreshold_ /= 2.0;  // Half the threshold since the highest sharpness is at midheigth of the obstacles
   } else {
     std::lock_guard<std::mutex> lock(elevationMapMutex_);
-    ROS_WARN_THROTTLE(0.2, "Could not use the filter chain!");
+    ROS_WARN_THROTTLE(0.5, "Could not use the filter chain!");
     elevationMap_ = incomingMap;
   }
   if (!elevationMapReceived_) {
@@ -225,14 +214,14 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr &
   }
 }
 
-void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle &nodeHandle_) {
+void ElevationLayer::setupDynamicReconfigure(ros::NodeHandle& nodeHandle_) {
   dsrv_.reset(new dynamic_reconfigure::Server<elevation_mapping_costmap_2d_plugin::ElevationPluginConfig>(nodeHandle_));
   dynamic_reconfigure::Server<elevation_mapping_costmap_2d_plugin::ElevationPluginConfig>::CallbackType cb =
       boost::bind(&ElevationLayer::reconfigureCB, this, _1, _2);
   dsrv_->setCallback(cb);
 }
 
-void ElevationLayer::reconfigureCB(elevation_mapping_costmap_2d_plugin::ElevationPluginConfig &config, uint32_t level) {
+void ElevationLayer::reconfigureCB(elevation_mapping_costmap_2d_plugin::ElevationPluginConfig& config, uint32_t level) {
   enabled_ = config.enabled;
 }
 

@@ -14,9 +14,9 @@
 #include <mutex>
 
 // Ros headers
-#include <ros/ros.h>
 #include <dynamic_reconfigure/server.h>
 #include <nav_msgs/OccupancyGrid.h>
+#include <ros/ros.h>
 
 // Costmap2d headers
 #include <costmap_2d/costmap_layer.h>
@@ -25,10 +25,10 @@
 #include <costmap_2d/observation_buffer.h>
 
 // Package related headers
-#include "elevation_mapping_costmap_2d_plugin/ElevationPluginConfig.h"
 #include <filters/filter_chain.h>
-#include <grid_map_ros/GridMapRosConverter.hpp>
 #include <message_filters/subscriber.h>
+#include <grid_map_ros/GridMapRosConverter.hpp>
+#include "elevation_mapping_costmap_2d_plugin/ElevationPluginConfig.h"
 
 namespace elevation_mapping_costmap_2d_plugin {
 
