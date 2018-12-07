@@ -61,7 +61,7 @@ void ElevationLayer::onInitialize() {
     ROS_WARN("did not find max_allowed_blind_time, using default");
   }
   bool trackUnknownSpace = layered_costmap_->isTrackingUnknown();
-  if (!nodeHandle_.param("trackUnknownSpace", trackUnknownSpace, false)) {
+  if (!nodeHandle_.param("track_unknown_space", trackUnknownSpace, false)) {
     ROS_WARN("did not find trackUnknownSpace, using default");
   }
   default_value_ = trackUnknownSpace ? NO_INFORMATION : FREE_SPACE;
