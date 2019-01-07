@@ -102,10 +102,10 @@ class ElevationMap
   bool clear();
 
   /*!
-  * Clears cells at specified indices.
-  * @param indices vector of indices.
+  * Clears cells that are set to 1.0 in the layer "clear".
+  * @param subMap the grid map containing the data which cells are cleared.
   */
-  bool clearMapAtIndices(const std::vector<grid_map::Index>& indices);
+  bool clearSubMap(const grid_map::GridMap& subMap);
 
   /*!
    * Removes parts of the map based on visibility criterion with ray tracing.
