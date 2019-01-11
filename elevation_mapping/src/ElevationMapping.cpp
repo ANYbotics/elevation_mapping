@@ -99,7 +99,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
-  clearSubMapService_ = nodeHandle_.advertiseService("clear_sub_map", &ElevationMapping::clearSubMap, this);
+  setMapService_ = nodeHandle_.advertiseService("set_map", &ElevationMapping::setGridMap, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
 
   initialize();
@@ -442,12 +442,51 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
   return map_.clear();
 }
 
-bool ElevationMapping::clearSubMap(grid_map_msgs::ClearSubGridMap::Request& request, grid_map_msgs::ClearSubGridMap::Response& response)
-{
-  ROS_INFO("Clearing sub map.");
-  GridMap subMap;
-  GridMapRosConverter::fromMessage(request.map, subMap);
-  return map_.clearSubMap(subMap);
+bool ElevationMapping::setGridMap(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response) {
+  ROS_INFO("Setting map.");
+  GridMap map;
+  GridMapRosConverter::fromMessage(request.map, map);
+
+  // use the supplied mask or do not use a mask
+  grid_map::Matrix mask;
+  if (map.exists("mask")) {
+    mask = map["mask"];
+  } else {
+    mask = Eigen::MatrixXf::Ones(map.getSize()(0),map.getSize()(1));
+  }
+
+  boost::recursive_mutex::scoped_lock scopedLockFusedData(map_.getFusedDataMutex());
+  boost::recursive_mutex::scoped_lock scopedLockRawData(map_.getRawDataMutex());
+
+  //maps that will changed
+  std::vector<std::reference_wrapper<grid_map::GridMap>> destinationMaps = {map_.getRawGridMap(), map_.getFusedGridMap()};
+
+  // loop over raw and fused elevation map
+  for (auto destinationMap : destinationMaps) {
+    // loop over all layers that should be set
+    for (auto layerIterator = map.getLayers().begin(); layerIterator != map.getLayers().end(); layerIterator++) {
+      grid_map::Matrix &source = map[*layerIterator];
+      // check if the layer exists in the elevation map
+      if (destinationMap.get().exists(*layerIterator)) {
+        grid_map::Matrix &destination = destinationMap.get()[*layerIterator];
+        for (GridMapIterator iterator(destinationMap.get()); !iterator.isPastEnd(); ++iterator) {
+          // use the position to find corresponding indices in source and destination
+          const grid_map::Index destinationIndex(*iterator);
+          grid_map::Position position;
+          destinationMap.get().getPosition(*iterator, position);
+          if (!map.isInside(position)) continue;
+          grid_map::Index sourceIndex;
+          map.getIndex(position, sourceIndex);
+          // If the mask allows it, set the value from source to destination
+          if (!std::isnan(mask(sourceIndex(0), sourceIndex(1)))) {
+            destination(destinationIndex(0), destinationIndex(1)) = source(sourceIndex(0), sourceIndex(1));
+          }
+        }
+      }
+    }
+  }
+
+  return true;
 }
 
 bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)

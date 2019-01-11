@@ -102,12 +102,6 @@ class ElevationMap
   bool clear();
 
   /*!
-  * Clears cells that are set to 1.0 in the layer "clear".
-  * @param subMap the grid map containing the data which cells are cleared.
-  */
-  bool clearSubMap(const grid_map::GridMap& subMap);
-
-  /*!
    * Removes parts of the map based on visibility criterion with ray tracing.
    * @param transformationSensorToMap
    * @param updatedTime
