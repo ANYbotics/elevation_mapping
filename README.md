@@ -144,6 +144,11 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
         rosservice call /elevation_mapping/clear_map
 
+* **`save_map`** ([grid_map_msgs/ProcessFile])
+
+    Saves the current fused grid map and raw grid map to a rosbag file. Field `topic_name` must be a base name, i.e. no leading slash character (/). If field `topic_name` is empty, then `elevation_map` is used per default.
+
+        rosservice call /elevation_mapping/clear_map
 
 #### Parameters
 
@@ -207,9 +212,9 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     Each cell in the elevation map has an uncertainty for its height value. Depending on the Mahalonobis distance of the existing height distribution and the new measurements, the incoming data is fused with the existing estimate, overwritten, or ignored. This parameter determines the threshold on the Mahalanobis distance which determines how the incoming measurements are processed.
 
-* **`sensor_processor/ignore_points_above`** (double, default: 0.4) 
+* **`sensor_processor/ignore_points_above`** (double, default: 0.4)
     A hard threshold on the height of points introduced by the depth sensor. Points with a height over this threshold will not be considered valid during the data collection step.
-    
+
 * **`multi_height_noise`** (double, default: 9.0e-7)
 
     Noise added to measurements that are higher than the current elevation map at that particular position. This noise-adding process is only performed if a point falls over the Mahalanobis distance threshold. A higher value is useful to adapt faster to dynamic environments (e.g., moving objects), but might cause more noise in the height estimation.
@@ -252,3 +257,4 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [tf/tfMessage]: http://docs.ros.org/kinetic/api/tf/html/msg/tfMessage.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
 [grid_map_msg/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
+[grid_map_msgs/ProcessFile]: https://github.com/ANYbotics/grid_map/blob/master/grid_map_msgs/srv/ProcessFile.srv
