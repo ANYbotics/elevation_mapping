@@ -148,7 +148,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     Saves the current fused grid map and raw grid map to a rosbag file. Field `topic_name` must be a base name, i.e. no leading slash character (/). If field `topic_name` is empty, then `elevation_map` is used per default.
 
-        rosservice call /elevation_mapping/clear_map
+        rosservice call /elevation_mapping/save_map
 
 #### Parameters
 
