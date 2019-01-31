@@ -447,6 +447,9 @@ bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, gri
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
   std::string topic = nodeHandle_.getNamespace() + "/elevation_map";
+  if (!request.topic_name.empty()) {
+    topic = nodeHandle_.getNamespace() + "/" + request.topic_name;
+  }
   response.success = GridMapRosConverter::saveToBag(map_.getFusedGridMap(), request.file_path, topic);
   response.success = GridMapRosConverter::saveToBag(map_.getRawGridMap(), request.file_path + "_raw", topic + "_raw");
   return response.success;
