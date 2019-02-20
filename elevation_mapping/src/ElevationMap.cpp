@@ -374,13 +374,10 @@ bool ElevationMap::clear()
 {
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
-  boost::recursive_mutex::scoped_lock scopedLockForVisibilityCleanupData(visibilityCleanupMapMutex_);
   rawMap_.clearAll();
   rawMap_.resetTimestamp();
   fusedMap_.clearAll();
   fusedMap_.resetTimestamp();
-  visibilityCleanupMap_.clearAll();
-  visibilityCleanupMap_.resetTimestamp();
   return true;
 }
 
