@@ -206,6 +206,7 @@ bool ElevationMapping::readParameters()
 bool ElevationMapping::initialize()
 {
   ROS_INFO("Elevation mapping node initializing ... ");
+  initialized_ = false;
   fusionServiceThread_ = boost::thread(boost::bind(&ElevationMapping::runFusionServiceThread, this));
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
@@ -237,6 +238,20 @@ void ElevationMapping::visibilityCleanupThread()
 void ElevationMapping::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
+  // Check if point cloud has corresponding robot pose at the beginning
+  if(not initialized_) {
+    double oldest_pose_time = robotPoseCache_.getOldestTime().toSec();
+    double current_pcl_time = rawPointCloud.header.stamp.toSec();
+
+    if(current_pcl_time < oldest_pose_time) {
+      ROS_WARN("No corresponding point cloud and pose are found. Waiting for first match.");
+      return;
+    } else {
+      ROS_WARN("First corresponding point cloud and pose found, initialized. ");
+      initialized_ = true;
+    }
+  }
+
   stopMapUpdateTimer();
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
@@ -268,8 +283,13 @@ void ElevationMapping::pointCloudCallback(
   if (!ignoreRobotMotionUpdates_) {
     boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(lastPointCloudUpdateTime_);
     if (!poseMessage) {
-      ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
-      return;
+      if(robotPoseCache_.getOldestTime().toSec() > lastPointCloudUpdateTime_.toSec()) {
+        ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(), lastPointCloudUpdateTime_.toSec());
+        return;
+      } else {
+        ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
+        return;
+      }
     }
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
@@ -368,8 +388,13 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   // Get robot pose at requested time.
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
   if (!poseMessage) {
-    ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", time.toSec());
-    return false;
+      if(robotPoseCache_.getOldestTime().toSec() > lastPointCloudUpdateTime_.toSec()) {
+        ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(), lastPointCloudUpdateTime_.toSec());
+        return false;
+      } else {
+        ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
+        return false;
+      }
   }
 
   HomTransformQuatD robotPose;
