@@ -44,6 +44,7 @@ bool StructuredLightSensorProcessor::readParameters()
   nodeHandle_.param("sensor_processor/normal_factor_d", sensorParameters_["normal_factor_d"], 0.0);
   nodeHandle_.param("sensor_processor/normal_factor_e", sensorParameters_["normal_factor_e"], 0.0);
   nodeHandle_.param("sensor_processor/lateral_factor", sensorParameters_["lateral_factor"], 0.0);
+  nodeHandle_.param("sensor_processor/use_voxelgrid_filter", sensorParameters_["use_voxelgrid_filter"], 1.0);
   return true;
 }
 
@@ -59,7 +60,13 @@ bool StructuredLightSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::
 	passThroughFilter.filter(tempPointCloud);
 	tempPointCloud.is_dense = true;
 	pointCloud->swap(tempPointCloud);
-
+  if(sensorParameters_["use_voxelgrid_filter"] > 0) {
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+    sor.setInputCloud (pointCloud);
+    sor.setLeafSize (0.01f, 0.01f, 0.01f);
+    sor.filter (tempPointCloud);
+    pointCloud->swap(tempPointCloud);
+  }
 	ROS_DEBUG("cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
 	return true;
 }
