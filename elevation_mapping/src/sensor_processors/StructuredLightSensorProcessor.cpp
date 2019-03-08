@@ -45,6 +45,7 @@ bool StructuredLightSensorProcessor::readParameters()
   nodeHandle_.param("sensor_processor/normal_factor_e", sensorParameters_["normal_factor_e"], 0.0);
   nodeHandle_.param("sensor_processor/lateral_factor", sensorParameters_["lateral_factor"], 0.0);
   nodeHandle_.param("sensor_processor/use_voxelgrid_filter", sensorParameters_["use_voxelgrid_filter"], 1.0);
+  nodeHandle_.param("sensor_processor/voxelgrid_filter_size", sensorParameters_["voxelgrid_filter_size"], 0.005);
   return true;
 }
 
@@ -63,7 +64,8 @@ bool StructuredLightSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::
   if(sensorParameters_["use_voxelgrid_filter"] > 0) {
     pcl::VoxelGrid<pcl::PointXYZRGB> sor;
     sor.setInputCloud (pointCloud);
-    sor.setLeafSize (0.01f, 0.01f, 0.01f);
+    double filter_size = sensorParameters_["voxelgrid_filter_size"];
+    sor.setLeafSize (filter_size, filter_size, filter_size);
     sor.filter (tempPointCloud);
     pointCloud->swap(tempPointCloud);
   }
