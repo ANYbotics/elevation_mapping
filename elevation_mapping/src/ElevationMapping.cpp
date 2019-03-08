@@ -54,7 +54,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
       isContinouslyFusing_(false),
-      ignoreRobotMotionUpdates_(false)
+      ignoreRobotMotionUpdates_(false),
+      receivedFirstMatchingPointcloudAndPose_(false)
 {
   ROS_INFO("Elevation mapping node started.");
 
@@ -206,7 +207,6 @@ bool ElevationMapping::readParameters()
 bool ElevationMapping::initialize()
 {
   ROS_INFO("Elevation mapping node initializing ... ");
-  initialized_ = false;
   fusionServiceThread_ = boost::thread(boost::bind(&ElevationMapping::runFusionServiceThread, this));
   Duration(1.0).sleep(); // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
@@ -239,16 +239,16 @@ void ElevationMapping::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
   // Check if point cloud has corresponding robot pose at the beginning
-  if(not initialized_) {
-    double oldest_pose_time = robotPoseCache_.getOldestTime().toSec();
-    double current_pcl_time = rawPointCloud.header.stamp.toSec();
+  if(not receivedFirstMatchingPointcloudAndPose_) {
+    const double oldestPoseTime = robotPoseCache_.getOldestTime().toSec();
+    const double currentPclTime = rawPointCloud.header.stamp.toSec();
 
-    if(current_pcl_time < oldest_pose_time) {
-      ROS_WARN("No corresponding point cloud and pose are found. Waiting for first match.");
+    if(currentPclTime < oldestPoseTime) {
+      ROS_WARN_THROTTLE(5, "No corresponding point cloud and pose are found. Waiting for first match.");
       return;
     } else {
       ROS_WARN("First corresponding point cloud and pose found, initialized. ");
-      initialized_ = true;
+      receivedFirstMatchingPointcloudAndPose_ = true;
     }
   }
 
@@ -283,13 +283,13 @@ void ElevationMapping::pointCloudCallback(
   if (!ignoreRobotMotionUpdates_) {
     boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(lastPointCloudUpdateTime_);
     if (!poseMessage) {
+      // Tell the user that either for the timestamp no pose is available or that the buffer is possibly empty 
       if(robotPoseCache_.getOldestTime().toSec() > lastPointCloudUpdateTime_.toSec()) {
         ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(), lastPointCloudUpdateTime_.toSec());
-        return;
       } else {
         ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
-        return;
       }
+      return;
     }
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
@@ -388,13 +388,13 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   // Get robot pose at requested time.
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
   if (!poseMessage) {
+      // Tell the user that either for the timestamp no pose is available or that the buffer is possibly empty 
       if(robotPoseCache_.getOldestTime().toSec() > lastPointCloudUpdateTime_.toSec()) {
         ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(), lastPointCloudUpdateTime_.toSec());
-        return false;
       } else {
         ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
-        return false;
       }
+      return false;
   }
 
   HomTransformQuatD robotPose;

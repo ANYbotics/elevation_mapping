@@ -258,7 +258,7 @@ class ElevationMapping
   boost::thread visibilityCleanupThread_;
 
   //! Becomes true when corresponding poses and point clouds can be found
-  bool initialized_; 
+  bool receivedFirstMatchingPointcloudAndPose_;
 };
 
 } /* namespace */
