@@ -247,7 +247,7 @@ void ElevationMapping::pointCloudCallback(
       ROS_WARN_THROTTLE(5, "No corresponding point cloud and pose are found. Waiting for first match.");
       return;
     } else {
-      ROS_WARN("First corresponding point cloud and pose found, initialized. ");
+      ROS_INFO("First corresponding point cloud and pose found, initialized. ");
       receivedFirstMatchingPointcloudAndPose_ = true;
     }
   }
