@@ -239,11 +239,11 @@ void ElevationMapping::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
   // Check if point cloud has corresponding robot pose at the beginning
-  if(not receivedFirstMatchingPointcloudAndPose_) {
+  if(!receivedFirstMatchingPointcloudAndPose_) {
     const double oldestPoseTime = robotPoseCache_.getOldestTime().toSec();
-    const double currentPclTime = rawPointCloud.header.stamp.toSec();
+    const double currentPointCloudTime = rawPointCloud.header.stamp.toSec();
 
-    if(currentPclTime < oldestPoseTime) {
+    if(currentPointCloudTime < oldestPoseTime) {
       ROS_WARN_THROTTLE(5, "No corresponding point cloud and pose are found. Waiting for first match.");
       return;
     } else {
@@ -388,13 +388,13 @@ bool ElevationMapping::updatePrediction(const ros::Time& time)
   // Get robot pose at requested time.
   boost::shared_ptr<geometry_msgs::PoseWithCovarianceStamped const> poseMessage = robotPoseCache_.getElemBeforeTime(time);
   if (!poseMessage) {
-      // Tell the user that either for the timestamp no pose is available or that the buffer is possibly empty 
-      if(robotPoseCache_.getOldestTime().toSec() > lastPointCloudUpdateTime_.toSec()) {
-        ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(), lastPointCloudUpdateTime_.toSec());
-      } else {
-        ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
-      }
-      return false;
+    // Tell the user that either for the timestamp no pose is available or that the buffer is possibly empty 
+    if(robotPoseCache_.getOldestTime().toSec() > lastPointCloudUpdateTime_.toSec()) {
+      ROS_ERROR("The oldest pose available is at %f, requested pose at %f", robotPoseCache_.getOldestTime().toSec(), lastPointCloudUpdateTime_.toSec());
+    } else {
+      ROS_ERROR("Could not get pose information from robot for time %f. Buffer empty?", lastPointCloudUpdateTime_.toSec());
+    }
+    return false;
   }
 
   HomTransformQuatD robotPose;
