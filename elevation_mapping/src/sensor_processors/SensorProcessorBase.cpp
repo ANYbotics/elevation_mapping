@@ -14,6 +14,7 @@
 #include <pcl/common/io.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
+#include <pcl/filters/voxel_grid.h>
 
 //TF
 #include <tf_conversions/tf_eigen.h>
@@ -51,6 +52,9 @@ bool SensorProcessorBase::readParameters()
 
   nodeHandle_.param("sensor_processor/ignore_points_above", ignorePointsUpperThreshold_, std::numeric_limits<double>::infinity());
   nodeHandle_.param("sensor_processor/ignore_points_below", ignorePointsLowerThreshold_, -std::numeric_limits<double>::infinity());
+  nodeHandle_.param("sensor_processor/cutoff_min_depth", sensorParameters_["cutoff_min_depth"], std::numeric_limits<double>::min());
+  nodeHandle_.param("sensor_processor/cutoff_max_depth", sensorParameters_["cutoff_max_depth"], std::numeric_limits<double>::max());
+  nodeHandle_.param("sensor_processor/voxelgrid_filter_size", sensorParameters_["voxelgrid_filter_size"], 0.0);
   return true;
 }
 
@@ -156,6 +160,38 @@ void SensorProcessorBase::removePointsOutsideLimits(
   }
 
   ROS_DEBUG("removePointsOutsideLimits() reduced point cloud to %i points.", (int) pointClouds[0]->size());
+}
+
+bool SensorProcessorBase::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+{
+	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
+	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+
+  // remove nan points
+  std::vector<int> indices;
+  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
+  tempPointCloud.is_dense = true;
+  pointCloud->swap(tempPointCloud);
+
+  // cutoff points with z values
+	passThroughFilter.setInputCloud(pointCloud);
+	passThroughFilter.setFilterFieldName("z");
+	passThroughFilter.setFilterLimits(sensorParameters_.at("cutoff_min_depth"),
+                                    sensorParameters_.at("cutoff_max_depth"));
+	passThroughFilter.filter(tempPointCloud);
+	pointCloud->swap(tempPointCloud);
+
+  // reduce points using VoxelGrid filter
+  double filter_size = sensorParameters_["voxelgrid_filter_size"];
+  if(filter_size > 0) {
+    pcl::VoxelGrid<pcl::PointXYZRGB> sor;
+    sor.setInputCloud (pointCloud);
+    sor.setLeafSize (filter_size, filter_size, filter_size);
+    sor.filter (tempPointCloud);
+    pointCloud->swap(tempPointCloud);
+  }
+	ROS_DEBUG("cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+	return true;
 }
 
 } /* namespace elevation_mapping */

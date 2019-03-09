@@ -82,7 +82,7 @@ public:
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
-  virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud) = 0;
+  virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
