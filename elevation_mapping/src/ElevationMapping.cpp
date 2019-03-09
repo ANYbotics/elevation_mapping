@@ -132,7 +132,12 @@ bool ElevationMapping::readParameters()
 
   double minUpdateRate;
   nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
-  maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+  if (minUpdateRate == 0.0) {
+    maxNoUpdateDuration_.fromSec(0.0);
+    ROS_WARN("Rate for publishing the map is zero.");
+  } else {
+    maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+  }
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
   double timeTolerance;
