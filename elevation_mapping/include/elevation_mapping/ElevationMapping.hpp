@@ -256,6 +256,9 @@ class ElevationMapping
 
   //! Callback thread for raytracing cleanup.
   boost::thread visibilityCleanupThread_;
+
+  //! Becomes true when corresponding poses and point clouds can be found
+  bool receivedFirstMatchingPointcloudAndPose_;
 };
 
 } /* namespace */
