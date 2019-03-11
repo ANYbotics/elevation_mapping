@@ -91,9 +91,9 @@ Run the unit tests with
 In order to get the Robot-Centric Elevation Mapping to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change from the `elevation_mapping_demos` package (e.g. the `simple_demo` example). These are specifically the parameter files in `config` and the launch file from the `launch` folder.
 
 
-## Nodes
+## Packages
 
-### Node: elevation_mapping
+### elevation_mapping
 
 This is the main Robot-Centric Elevation Mapping node. It uses the distance sensor measurements and the pose and covariance of the robot to generate an elevation map with variance estimates.
 
@@ -235,11 +235,11 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     The data for the sensor noise model.
 
-## Costmap_2d plug-in
+### elevation_mapping_costmap_2d_plugin
 
-**elevation_mapping_costmap_2d_plugin** is a plugin for Costmap_2d (http://wiki.ros.org/costmap_2d). Costmap_2d is part fo the ros navigation stack and it provides an implementation of a 2d costmap. Thanks to the elevation_mapping_costmap_2d_plugin, the elevation mapping from this package can be used to build a costmap_2d to fit in the ros navigation stack. It takes the elevation map as input and generates a layer of obstacles in the local costmap_2d.
+This is a plugin for [costmap_2d] and provides an implementation of a 2d costmap. With the `elevation_mapping_costmap_2d_plugin` package, the generated elevation map can be used to build a costmap_2d to work with the [ROS] [navigation] stack. It takes the elevation map as input and generates a layer of obstacles in the local costmap_2d.
 
-The layer applies two filters to the incoming data: a height filter and a sharpness filter. The behaviour can be adjusted tuning the relative parameters **`heightThreshold_`** and **`edgesSharpnessThreshold_`**. The former labels as obstacles all data above a certain height, while the latter labels as obstacles data above a certain edge sharpness, where a sharp edge is defined as a sudden change in height; this is used to avoid labeling slopes as obstacle. 
+The layer applies a height and a sharpness filter to the incoming data. The behaviour can be adjusted tuning the parameters `heightThreshold_` and `edgesSharpnessThreshold_`. The former labels as obstacles all data above a certain height, while the latter labels as obstacles data above a certain edge sharpness, where a sharp edge is defined as a sudden change in height; this is used to avoid labeling slopes as obstacle. 
 
 ## Bugs & Feature Requests
 
@@ -254,3 +254,5 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [tf/tfMessage]: http://docs.ros.org/kinetic/api/tf/html/msg/tfMessage.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
 [grid_map_msg/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
+[costmap_2d]: http://wiki.ros.org/costmap_2d
+[navigation]: http://wiki.ros.org/navigation
