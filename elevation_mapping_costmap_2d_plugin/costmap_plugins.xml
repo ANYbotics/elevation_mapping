@@ -1,7 +1,7 @@
 <class_libraries>
   <library path="lib/libelevation_mapping_costmap_2d_plugin">
     <class type="elevation_mapping_costmap_2d_plugin::ElevationLayer" base_class_type="costmap_2d::Layer">
-      <description>adds elevation map info to costmap_2d.</description>
+      <description>Adds elevation map info to costmap_2d.</description>
     </class>
   </library>
 </class_libraries>
