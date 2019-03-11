@@ -70,7 +70,7 @@ void ElevationLayer::onInitialize() {
   }
   combinationMethod_ = convertCombinationMethod(combinationMethod);
 
-  // Subscribe to topic
+  // Subscribe to topic.
   elevationSubscriber_ = nodeHandle_.subscribe(elevationTopic_, 1, &ElevationLayer::elevationMapCallback, this);
   dsrv_ = nullptr;
   setupDynamicReconfigure(nodeHandle_);
@@ -138,17 +138,17 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
     elevationMap_.getPosition(gridmapIndex, vertexPositionXY);
     double px = vertexPositionXY.x();
     double py = vertexPositionXY.y();
-    // now we need to compute the map coordinates for the observation
+    // Now we need to compute the map coordinates for the observation.
     unsigned int mx, my;
-    if (!worldToMap(px, py, mx, my))  // if point outside of local costmap, ignore
+    if (!worldToMap(px, py, mx, my))  // If point outside of local costmap, ignore.
     {
       continue;
     }
-    if (elevationData(gridmapIndex(0), gridmapIndex(1)) > heightThreshold_)  // If point too high, it could be an obstacle
+    if (elevationData(gridmapIndex(0), gridmapIndex(1)) > heightThreshold_)  // If point too high, it could be an obstacle.
     {
       if (hasEdgesLayer) {
         const grid_map::Matrix& edgesData = elevationMap_[edgesLayerName_];
-        if (edgesData(gridmapIndex(0), gridmapIndex(1)) < edgesSharpnessThreshold_)  // if area not sharp, dont label as obstacle
+        if (edgesData(gridmapIndex(0), gridmapIndex(1)) < edgesSharpnessThreshold_)  // If area not sharp, dont label as obstacle.
         {
           setCost(mx, my, FREE_SPACE);
           continue;
@@ -171,15 +171,15 @@ void ElevationLayer::updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, 
     case Maximum:
       updateWithMax(master_grid, min_i, min_j, max_i, max_j);
       break;
-    default:  // Do Nothing
+    default:  // Do Nothing.
       break;
   }
 }
 
 CombinationMethod convertCombinationMethod(const std::string& str) {
-  if (boost::iequals(str, "Overwrite")) {  // Case insensitive comparison
+  if (boost::iequals(str, "Overwrite")) {  // Case insensitive comparison.
     return Overwrite;
-  } else if (boost::iequals(str, "Maximum")) {  // Case insensitive comparison
+  } else if (boost::iequals(str, "Maximum")) {  // Case insensitive comparison.
     return Maximum;
   } else {
     ROS_WARN_THROTTLE(0.5, "Unknow combination method !");
@@ -203,7 +203,7 @@ void ElevationLayer::elevationMapCallback(const grid_map_msgs::GridMapConstPtr& 
   if (filtersConfigurationLoaded_ && filterChain_.update(incomingMap, filteredMap)) {
     std::lock_guard<std::mutex> lock(elevationMapMutex_);
     elevationMap_ = filteredMap;
-    heightThreshold_ /= 2.0;  // Half the threshold since the highest sharpness is at midheigth of the obstacles
+    heightThreshold_ /= 2.0;  // Half the threshold since the highest sharpness is at midheigth of the obstacles.
   } else {
     std::lock_guard<std::mutex> lock(elevationMapMutex_);
     ROS_WARN_THROTTLE(0.5, "Could not use the filter chain!");

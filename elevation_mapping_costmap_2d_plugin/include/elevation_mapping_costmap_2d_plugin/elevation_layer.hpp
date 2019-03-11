@@ -8,23 +8,23 @@
 
 #pragma once
 
-// C++ Libraries
+// C++ Libraries.
 #include <atomic>
 #include <boost/algorithm/string/predicate.hpp>
 #include <mutex>
 
-// Ros headers
+// Ros headers.
 #include <dynamic_reconfigure/server.h>
 #include <nav_msgs/OccupancyGrid.h>
 #include <ros/ros.h>
 
-// Costmap2d headers
+// Costmap2d headers.
 #include <costmap_2d/costmap_layer.h>
 #include <costmap_2d/footprint.h>
 #include <costmap_2d/layered_costmap.h>
 #include <costmap_2d/observation_buffer.h>
 
-// Package related headers
+// Package related headers.
 #include <filters/filter_chain.h>
 #include <message_filters/subscriber.h>
 #include <grid_map_ros/GridMapRosConverter.hpp>
@@ -33,34 +33,34 @@
 namespace elevation_mapping_costmap_2d_plugin {
 
 /*!
- * Method to update the cost of a portion of map
+ * Method to update the cost of a portion of map.
  */
 enum CombinationMethod { Overwrite, Maximum, Unknown };
 
 /*!
- * converts the string from the yaml file to the proper CombinationMethod enum
- * @param str input string from yaml file
- * @return CombinationMethod enum equivalent
+ * Converts the string from the yaml file to the proper CombinationMethod enum.
+ * @param str Input string from yaml file.
+ * @return CombinationMethod Enum equivalent.
  */
 CombinationMethod convertCombinationMethod(const std::string& str);
 
 /*!
- * Plug-in layer of a costmap_2d derived from elevation_map information
+ * Plug-in layer of a costmap_2d derived from elevation_map information.
  */
 class ElevationLayer : public costmap_2d::CostmapLayer {
  public:
   /*!
-   * Constructor
+   * Constructor.
    */
   ElevationLayer();
 
   /*!
-   * Destructor
+   * Destructor.
    */
   ~ElevationLayer() override = default;
 
   /*!
-   * Function called from parent class at initialization
+   * Function called from parent class at initialization.
    */
   void onInitialize() override;
 
@@ -80,30 +80,36 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
    */
   void updateCosts(costmap_2d::Costmap2D& master_grid, int min_i, int min_j, int max_i, int max_j) override;
 
-  /*! @brief Restart publishers if they've been stopped. */
+  /*! 
+   * @brief Restart publishers if they've been stopped. 
+   */
   void activate() override;
 
-  /*! @brief Stop publishers. */
+  /*!
+   * @brief Stop publishers. 
+   */
   void deactivate() override;
 
-  /*! @brief Deactivate, reset the map and then reactivate*/
+  /*! 
+   * @brief Deactivate, reset the map and then reactivate
+   */
   void reset() override;
 
   /*!
-   * Callback to receive the grid_map msg from elevation_map
-   * @param occupancy_grid GridMap msg from elevation_map
+   * Callback to receive the grid_map msg from elevation_map.
+   * @param occupancy_grid GridMap msg from elevation_map.
    */
   void elevationMapCallback(const grid_map_msgs::GridMapConstPtr& occupancy_grid);
 
  protected:
   /*!
-   * set up the dynamic reconfigure
+   * Set up the dynamic reconfigure.
    * @param nh
    */
   virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
 
   /*!
-   * clear obstacles inside the footprint of the robort if the flag footprintClearingEnabled_ is true
+   * Clear obstacles inside the footprint of the robort if the flag footprintClearingEnabled_ is true.
    * @param robot_x
    * @param robot_y
    * @param robot_yaw
@@ -114,33 +120,33 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
    */
   void updateFootprint(double robot_x, double robot_y, double robot_yaw, double* min_x, double* min_y, double* max_x, double* max_y);
 
-  //! The global frame for the costmap
+  //! The global frame for the costmap.
   std::string globalFrame_;
 
-  //! dynamic reconfigure server
+  //! Dynamic reconfigure server.
   std::unique_ptr<dynamic_reconfigure::Server<elevation_mapping_costmap_2d_plugin::ElevationPluginConfig> > dsrv_;
 
-  //! combination method to use to update the cost of a portion of map
+  //! Combination method to use to update the cost of a portion of map.
   CombinationMethod combinationMethod_;
 
-  //! polygon describing the form of the footprint of the robot
+  //! Polygon describing the form of the footprint of the robot.
   std::vector<geometry_msgs::Point> transformedFootprint_;
 
-  //! whether the local costmap should move together with the robot
+  //! Whether the local costmap should move together with the robot.
   bool rollingWindow_;
 
-  //! whether to clean the obstacles inside the robot footprint
+  //! Whether to clean the obstacles inside the robot footprint.
   bool footprintClearingEnabled_;
 
-  //! whether the elevation_map msg was received
+  //! Whether the elevation_map msg was received.
   std::atomic_bool elevationMapReceived_;
 
-  //! after this time [seconds] without receiving any elevation_map, the robot will have to stop
+  //! After this time [seconds] without receiving any elevation_map, the robot will have to stop.
   double maxAllowedBlindTime_;
 
  private:
   /*!
-   * dynamic reconfiguration of the parameters
+   * Dynamic reconfiguration of the parameters.
    * @param config
    * @param level
    */
@@ -148,40 +154,40 @@ class ElevationLayer : public costmap_2d::CostmapLayer {
 
   ros::NodeHandle nodeHandle_;
 
-  //! the elevation_map from which to take the information abut the environment (filtered or not)
+  //! The elevation_map from which to take the information abut the environment (filtered or not).
   grid_map::GridMap elevationMap_;
 
-  //! lock_guard mutex to make elevation_map setting thread safe
+  //! lock_guard mutex to make elevation_map setting thread safe.
   std::mutex elevationMapMutex_;
 
-  //! Ros subscriber to grid_map msgs
+  //! Ros subscriber to grid_map msgs.
   ros::Subscriber elevationSubscriber_;
 
-  //! last time an elevation_map was received
+  //! Last time an elevation_map was received.
   ros::Time lastElevationMapUpdate_;
 
-  //! height threshold below which nothing is considered obstacle
+  //! Height threshold below which nothing is considered obstacle.
   double heightThreshold_;
 
-  //! sharpness threshold above which an object is considered an obstacle
+  //! Sharpness threshold above which an object is considered an obstacle.
   double edgesSharpnessThreshold_;
 
-  //! topic_name of the elevation_map incoming msg
+  //! Topic_name of the elevation_map incoming msg.
   std::string elevationTopic_;
 
-  //! Filter chain used to filter the incoming elevation_map
+  //! Filter chain used to filter the incoming elevation_map.
   filters::FilterChain<grid_map::GridMap> filterChain_;
 
-  //! Filter chain parameters name to use
+  //! Filter chain parameters name to use.
   std::string filterChainParametersName_;
 
-  //! whether filters configuration parameters was found
+  //! Whether filters configuration parameters was found.
   bool filtersConfigurationLoaded_;
 
-  //! name of the layer of the incoming map to use
+  //! Name of the layer of the incoming map to use.
   std::string elevationLayerName_;
 
-  //! name to give to the filtered layer
+  //! Name to give to the filtered layer.
   std::string edgesLayerName_;
 };
 
