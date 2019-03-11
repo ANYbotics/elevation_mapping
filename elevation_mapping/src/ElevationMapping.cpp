@@ -466,8 +466,6 @@ bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request,
     }
     GridMapRosConverter::toMessage(subMap, layers, response.map);
   }
-
-  ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
   return isSuccess;
 }
 

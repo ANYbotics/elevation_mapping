@@ -106,9 +106,9 @@ class ElevationMapping
   bool getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
-   * ROS service callback function to return a submap of the elevation map.
-   * @param request the ROS service request defining the location and size of the submap.
-   * @param response the ROS service response containing the requested submap.
+   * ROS service callback function to return a submap of the raw elevation map.
+   * @param request the ROS service request defining the location and size of the raw submap.
+   * @param response the ROS service response containing the requested raw submap.
    * @return true if successful.
    */
   bool getRawSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);

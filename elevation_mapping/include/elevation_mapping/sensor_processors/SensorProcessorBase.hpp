@@ -162,6 +162,9 @@ public:
 
   //! Sensor parameters.
   std::unordered_map<std::string, double> sensorParameters_;
+
+  //! Use VoxelGrid filter to cleanup pointcloud if true.
+  bool useVoxelGridFilter_;
 };
 
 } /* namespace elevation_mapping */
