@@ -3,7 +3,7 @@
  *
  *  Created on: Nov 12, 2013
  *      Author: Péter Fankhauser
- *	 Institute: ETH Zurich, ANYbotics
+ *   Institute: ETH Zurich, ANYbotics
  */
 #include "elevation_mapping/ElevationMapping.hpp"
 
@@ -449,7 +449,7 @@ bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request,
 {
   grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
   Length requestedSubmapLength(request.length_x, request.length_y);
-  ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
+  ROS_DEBUG("Elevation raw submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
   bool isSuccess;
