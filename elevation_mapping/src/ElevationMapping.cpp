@@ -82,6 +82,11 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       &fusionServiceQueue_);
   submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
 
+  AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
+      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmap, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
+  rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
+
   if (!fusedMapPublishTimerDuration_.isZero()) {
     TimerOptions timerOptions = TimerOptions(
         fusedMapPublishTimerDuration_,
@@ -128,7 +133,12 @@ bool ElevationMapping::readParameters()
 
   double minUpdateRate;
   nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
-  maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+  if (minUpdateRate == 0.0) {
+    maxNoUpdateDuration_.fromSec(0.0);
+    ROS_WARN("Rate for publishing the map is zero.");
+  } else {
+    maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
+  }
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
   double timeTolerance;
@@ -457,6 +467,30 @@ bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, gr
   }
 
   ROS_DEBUG("Elevation submap responded with timestamp %f.", map_.getTimeOfLastFusion().toSec());
+  return isSuccess;
+}
+
+bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response)
+{
+  grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
+  Length requestedSubmapLength(request.length_x, request.length_y);
+  ROS_DEBUG("Elevation raw submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
+
+  bool isSuccess;
+  Index index;
+  GridMap subMap = map_.getRawGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
+  scopedLock.unlock();
+
+  if (request.layers.empty()) {
+    GridMapRosConverter::toMessage(subMap, response.map);
+  } else {
+    vector<string> layers;
+    for (const auto& layer : request.layers) {
+      layers.push_back(layer);
+    }
+    GridMapRosConverter::toMessage(subMap, layers, response.map);
+  }
   return isSuccess;
 }
 
