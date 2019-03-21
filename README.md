@@ -182,7 +182,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 * **`min_update_rate`** (double, default: 2.0)
 
-    The mininum update rate (in Hz) at which the elevation map is updated either from new measurements or the robot pose estimates. If this rate is 0.0, the elevation map is only published with new measurements.
+    The mininum update rate (in Hz) at which the (raw and fused) elevation map is updated either from new measurements or the robot pose estimates. If this rate is 0.0, the (raw) elevation map is only published with new measurements and (fused) elevation map is only published at `fused_map_publishing_rate`.
 
 * **`fused_map_publishing_rate`** (double, default: 1.0)
 
