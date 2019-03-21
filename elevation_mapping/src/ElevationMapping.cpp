@@ -135,11 +135,10 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
   if (minUpdateRate == 0.0) {
     maxNoUpdateDuration_.fromSec(0.0);
-    ROS_WARN("Rate for publishing the map is zero.");
+    ROS_INFO("Rate for publishing the map is zero.");
   } else {
     maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   }
-  ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
   double timeTolerance;
   nodeHandle_.param("time_tolerance", timeTolerance, 0.0);
@@ -149,7 +148,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("fused_map_publishing_rate", fusedMapPublishingRate, 1.0);
   if (fusedMapPublishingRate == 0.0) {
     fusedMapPublishTimerDuration_.fromSec(0.0);
-    ROS_WARN("Rate for publishing the fused map is zero. The fused elevation map will not be published unless the service `triggerFusion` is called.");
+    ROS_INFO("Rate for publishing the fused map is zero. The fused elevation map will not be published unless the service `triggerFusion` is called.");
   } else if (std::isinf(fusedMapPublishingRate)){
     isContinouslyFusing_ = true;
     fusedMapPublishTimerDuration_.fromSec(0.0);
@@ -161,7 +160,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 1.0);
   if (visibilityCleanupRate == 0.0) {
     visibilityCleanupTimerDuration_.fromSec(0.0);
-    ROS_WARN("Rate for visibility cleanup is zero and therefore disabled.");
+    ROS_INFO("Rate for visibility cleanup is zero and therefore disabled.");
   }
   else {
     visibilityCleanupTimerDuration_.fromSec(1.0 / visibilityCleanupRate);
