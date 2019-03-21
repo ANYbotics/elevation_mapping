@@ -183,6 +183,12 @@ class ElevationMapping
    */
   void stopMapUpdateTimer();
 
+  /*!
+   * Get a gridMapMessage of a Submap or rawSubmap
+   */
+  grid_map_msgs::GridMap getSubmapMessage(grid_map::Position position, grid_map::Length length,
+                                          std::vector<std::string>& layers, bool useRaw, bool& isSuccess);
+
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
 
