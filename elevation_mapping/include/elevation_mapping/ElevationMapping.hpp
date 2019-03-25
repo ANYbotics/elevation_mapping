@@ -185,6 +185,12 @@ class ElevationMapping
 
   /*!
    * Get a gridMapMessage of a Submap or rawSubmap
+   * @param position requested position of the submap.
+   * @param length requested length of the submap.
+   * @param layers requested layers of the submap.
+   * @param useRaw if true, returns submap of rawMap, if false, returns submap of fusedMap.
+   * @param isSuccess set true if successful.
+   * @return submap message.
    */
   grid_map_msgs::GridMap getSubmapMessage(grid_map::Position position, grid_map::Length length,
                                           std::vector<std::string>& layers, bool useRaw, bool& isSuccess);
