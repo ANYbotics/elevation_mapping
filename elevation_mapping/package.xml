@@ -11,6 +11,7 @@
   <buildtool_depend>catkin</buildtool_depend>
   <depend>roscpp</depend>
   <depend>message_filters</depend>
+  <depend>node_manager_msgs</depend>
   <depend>pcl_ros</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>

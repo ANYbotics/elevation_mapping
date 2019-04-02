@@ -69,6 +69,9 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     ignoreRobotMotionUpdates_ = true;
   }
 
+  // TODO parameterize this
+  nodeManagerResetSubscriber_ = nodeHandle_.subscribe("reset_in", 5, &ElevationMapping::resetCb, this);
+
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
   // Multi-threading for fusion.
@@ -240,6 +243,7 @@ void ElevationMapping::pointCloudCallback(
 {
   // Check if point cloud has corresponding robot pose at the beginning
   if(!receivedFirstMatchingPointcloudAndPose_) {
+    robotPoseCache_.setCacheSize(robotPoseCacheSize_);
     const double oldestPoseTime = robotPoseCache_.getOldestTime().toSec();
     const double currentPointCloudTime = rawPointCloud.header.stamp.toSec();
 
@@ -492,6 +496,23 @@ void ElevationMapping::resetMapUpdateTimer()
 void ElevationMapping::stopMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
+}
+
+// Simply clear the map when a Node Manager Reset signal is received
+void ElevationMapping::resetCb(const node_manager_msgs::Reset& msg) {
+  map_.clear();
+  fusionServiceQueue_.clear();
+  visibilityCleanupQueue_.clear();
+  resetMapUpdateTimer();
+  receivedFirstMatchingPointcloudAndPose_ = false;
+
+  // Clear the cache (no function to directly clear the cache)
+  robotPoseCache_.setCacheSize(1);
+  Duration(1.0).sleep();
+  robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+
+
+  map_.clear();
 }
 
 } /* namespace */

@@ -34,9 +34,13 @@
 #include <tf/transform_listener.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <std_srvs/Empty.h>
+#include <node_manager_msgs/Reset.h>
 
 // Boost
 #include <boost/thread.hpp>
+
+// C++
+#include <atomic>
 
 
 namespace elevation_mapping {
@@ -175,12 +179,18 @@ class ElevationMapping
    */
   void stopMapUpdateTimer();
 
+  /*!
+   * Callback when Node Manager Reset signal is received
+   */
+  void resetCb(const node_manager_msgs::Reset& msg);
+
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
 
   //! ROS subscribers.
   ros::Subscriber pointCloudSubscriber_;
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
+  ros::Subscriber nodeManagerResetSubscriber_;
 
   //! ROS service servers.
   ros::ServiceServer fusionTriggerService_;
@@ -258,7 +268,7 @@ class ElevationMapping
   boost::thread visibilityCleanupThread_;
 
   //! Becomes true when corresponding poses and point clouds can be found
-  bool receivedFirstMatchingPointcloudAndPose_;
+  std::atomic<bool> receivedFirstMatchingPointcloudAndPose_;
 };
 
 } /* namespace */
