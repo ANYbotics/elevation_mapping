@@ -33,11 +33,6 @@ PerfectSensorProcessor::~PerfectSensorProcessor()
 
 }
 
-bool PerfectSensorProcessor::readParameters()
-{
-  return true;
-}
-
 bool PerfectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
   pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;

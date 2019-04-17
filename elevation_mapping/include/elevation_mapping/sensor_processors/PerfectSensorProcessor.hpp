@@ -34,12 +34,6 @@ public:
 
 private:
 
-  /*!
-   * Reads and verifies the parameters.
-   * @return true if successful.
-   */
-	bool readParameters();
-
 	/*!
 	 * Clean the point cloud. Points below the minimal and above the maximal sensor
 	 * cutoff value are dropped.
