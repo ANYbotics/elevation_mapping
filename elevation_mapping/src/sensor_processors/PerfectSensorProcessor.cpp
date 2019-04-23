@@ -35,6 +35,7 @@ PerfectSensorProcessor::~PerfectSensorProcessor()
 
 bool PerfectSensorProcessor::readParameters()
 {
+  SensorProcessorBase::readParameters();
   return true;
 }
 

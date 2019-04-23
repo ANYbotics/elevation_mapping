@@ -30,7 +30,7 @@ public:
   /*!
    * Destructor.
    */
-	virtual ~PerfectSensorProcessor();
+  virtual ~PerfectSensorProcessor();
 
 private:
 
@@ -38,15 +38,15 @@ private:
    * Reads and verifies the parameters.
    * @return true if successful.
    */
-	bool readParameters();
+  bool readParameters();
 
-	/*!
-	 * Clean the point cloud. Points below the minimal and above the maximal sensor
-	 * cutoff value are dropped.
-	 * @param pointCloud the point cloud to clean.
-	 * @return true if successful.
-	 */
-	virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  /*!
+   * Clean the point cloud. Points below the minimal and above the maximal sensor
+   * cutoff value are dropped.
+   * @param pointCloud the point cloud to clean.
+   * @return true if successful.
+   */
+  virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
@@ -56,11 +56,10 @@ private:
    * @param[out] variances the elevation map height variances.
    * @return true if successful.
    */
-	virtual bool computeVariances(
-			const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-			const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-			Eigen::VectorXf& variances);
+  virtual bool computeVariances(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+      Eigen::VectorXf& variances);
 };
-
 
 } /* namespace elevation_mapping */
