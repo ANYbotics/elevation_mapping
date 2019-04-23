@@ -34,7 +34,7 @@ public:
 
 private:
 
-    /*!
+  /*!
    * Reads and verifies the parameters.
    * @return true if successful.
    */
