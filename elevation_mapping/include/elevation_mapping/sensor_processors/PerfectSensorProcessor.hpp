@@ -57,9 +57,9 @@ private:
    * @return true if successful.
    */
   virtual bool computeVariances(
-    const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-    const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-    Eigen::VectorXf& variances);
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+      Eigen::VectorXf& variances);
 };
 
 } /* namespace elevation_mapping */
