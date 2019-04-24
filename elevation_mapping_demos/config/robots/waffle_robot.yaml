@@ -1,0 +1,10 @@
+point_cloud_topic: "/camera/depth/points"
+map_frame_id: "odom"
+robot_base_frame_id: "base_footprint"
+robot_pose_with_covariance_topic: "/base_footprint_pose"
+robot_pose_cache_size: 200
+track_point_frame_id: "base_footprint"
+track_point_x: 0.0
+track_point_y: 0.0
+track_point_z: 0.0
+sensor_frame_id: "camera_depth_optical_frame"

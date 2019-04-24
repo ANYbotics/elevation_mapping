@@ -90,6 +90,22 @@ Run the unit tests with
 
 In order to get the Robot-Centric Elevation Mapping to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change from the `elevation_mapping_demos` package (e.g. the `simple_demo` example). These are specifically the parameter files in `config` and the launch file from the `launch` folder.
 
+### Turtlebot3 waffle simulation
+
+A full running pipeline is available together with the turtlebot3 simulation. It can be used to test the elevation mapping on a computer without access to a real robot platform or as a starting point for further integration. The turtlebot3 simulation needs to be downloaded first and can be easily done with
+
+    sudo apt install ros-melodic-turtlebot3*
+
+The elevation mapping demo together with the turtlebot3 simulation can be started with
+
+    roslaunch elevation_mapping_demos turtlesim3_waffle_demo.launch
+
+To control the robot, a new shell needs to be opened and the ros environment sourced. Velocity input can be given with
+
+    export TURTLEBOT3_MODEL=waffle
+    roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+
+With a, w, d, x the robot moves around. With s the robot immediately stops.
 
 ## Nodes
 
