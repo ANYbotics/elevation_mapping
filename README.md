@@ -92,7 +92,9 @@ In order to get the Robot-Centric Elevation Mapping to run with your robot, you 
 
 ### Turtlebot3 waffle simulation
 
-A full running pipeline is available together with the turtlebot3 simulation. It can be used to test the elevation mapping on a computer without access to a real robot platform or as a starting point for further integration. The turtlebot3 simulation needs to be downloaded first and can be easily done with
+A running example is provided, making use of the Turtlebot3 simulation environment. This example can be used to test elevation mapping, or as a starting point for further integration
+
+To start with, the Turtlebot3 simulation dependencies need to be installed:
 
     sudo apt install ros-melodic-turtlebot3*
 
@@ -100,12 +102,12 @@ The elevation mapping demo together with the turtlebot3 simulation can be starte
 
     roslaunch elevation_mapping_demos turtlesim3_waffle_demo.launch
 
-To control the robot, a new shell needs to be opened and the ros environment sourced. Velocity input can be given with
+To control the robot with a keyboard, a new terminal window needs to be opened (remember to source your ROS environment). Then run
 
     export TURTLEBOT3_MODEL=waffle
     roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
 
-With a, w, d, x the robot moves around. With s the robot immediately stops.
+Velocity inputs can be sent to the robot by pressing the keys `a`, `w`,`d`, `x`. To stop the robot completely, press `s`.
 
 ## Nodes
 

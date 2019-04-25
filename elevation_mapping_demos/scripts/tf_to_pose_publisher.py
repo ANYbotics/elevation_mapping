@@ -5,13 +5,16 @@ import std_msgs
 import tf
 
 def callback(newPose):
+    """Listens to a transform between from_frame and to to_frame and publishes it as a pose with a zero covariance"""
     global publisher, tfListener, from_frame, to_frame
 
+    # Listen to transform and throw exception if the transform is not available
     try:
         (trans, rot) = tfListener.lookupTransform(from_frame, to_frame, rospy.Time(0))
     except (tf.LookupException, tf.ConnectivityException, tf.ExtrapolationException):
         return
 
+    # Create and fill pose message for publishing
     pose = geometry_msgs.msg.PoseWithCovarianceStamped()
     pose.header.stamp = rospy.Time(0)
     pose.header.frame_id = from_frame
@@ -23,27 +26,30 @@ def callback(newPose):
     pose.pose.pose.orientation.z = rot[2]
     pose.pose.pose.orientation.w = rot[3]
 
+    # Since tf transforms do not have a covariance, pose is filled with a zero covariance
     pose.pose.covariance = [0, 0, 0, 0, 0, 0, 
-                  0, 0, 0, 0, 0, 0, 
-                  0, 0, 0, 0, 0, 0, 
-                  0, 0, 0, 0, 0, 0, 
-                  0, 0, 0, 0, 0, 0, 
-                  0, 0, 0, 0, 0, 0]
+                            0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0,
+                            0, 0, 0, 0, 0, 0]
     
     publisher.publish(pose)
 
-    
-#Main function initializes node and subscribers and starts the ROS loop
+# Main function initializes node and subscribers and starts the ROS loop
 def main_program():
     global publisher, tfListener, from_frame, to_frame
     rospy.init_node('tf_to_pose_publisher')
 
+    # Read frame id's for tf listener
     from_frame = rospy.get_param("waffle_pose_publisher/from_frame")
     to_frame = rospy.get_param("waffle_pose_publisher/to_frame")
     pose_name = str(to_frame) + "_pose"
 
     tfListener = tf.TransformListener()
     publisher = rospy.Publisher(pose_name, geometry_msgs.msg.PoseWithCovarianceStamped, queue_size=10)
+
+    # Set callback and start spinning
     rospy.Timer(rospy.Duration(0.05), callback)
     rospy.spin()
         
