@@ -7,8 +7,9 @@ This is a [ROS] package developed for elevation mapping with a mobile robot. The
 The Robot-Centric Elevation Mapping packages have been tested under ROS Melodic and Ubuntu 18.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
 **Author: Péter Fankhauser<br />
+Co-Author: Maximilian Wulf<br />
 Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
-Maintainer: Péter Fankhauser, pfankhauser@anybotics.com<br />**
+Maintainer: Maximilian Wulf, mwulf@anybotics.com<br />**
 
 This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
 
@@ -90,7 +91,7 @@ Run the unit tests with
 
 In order to get the Robot-Centric Elevation Mapping to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change from the `elevation_mapping_demos` package (e.g. the `simple_demo` example). These are specifically the parameter files in `config` and the launch file from the `launch` folder.
 
-### Turtlebot3 waffle simulation
+### TurtleBot3 Waffle Simulation
 
 A running example is provided, making use of the Turtlebot3 simulation environment. This example can be used to test elevation mapping, or as a starting point for further integration
 
