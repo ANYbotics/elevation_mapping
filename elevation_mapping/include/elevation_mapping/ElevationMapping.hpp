@@ -98,12 +98,12 @@ class ElevationMapping
   bool fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-   * ROS service callback function to return a submap of the elevation map.
+   * ROS service callback function to return a submap of the fused elevation map.
    * @param request the ROS service request defining the location and size of the submap.
    * @param response the ROS service response containing the requested submap.
    * @return true if successful.
    */
-  bool getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
+  bool getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
    * ROS service callback function to return a submap of the raw elevation map.
@@ -184,16 +184,18 @@ class ElevationMapping
   void stopMapUpdateTimer();
 
   /*!
-   * Get a gridMapMessage of a Submap or rawSubmap
-   * @param position requested position of the submap.
-   * @param length requested length of the submap.
-   * @param layers requested layers of the submap.
-   * @param useRaw if true, returns submap of rawMap, if false, returns submap of fusedMap.
+   * Get a Grid Map ROS message of a submap of the raw or fused submap.
+   * @param position the requested position of the submap.
+   * @param length the requested length of the submap.
+   * @param layers the requested layers of the submap.
+   * @param useRaw if true, returns submap of the raw map, if false, returns submap of fused map.
    * @param isSuccess set true if successful.
    * @return submap message.
    */
-  grid_map_msgs::GridMap getSubmapMessage(grid_map::Position position, grid_map::Length length,
-                                          std::vector<std::string>& layers, bool useRaw, bool& isSuccess);
+  grid_map_msgs::GridMap getSubmapMessage(const grid_map::Position& position,
+                                          const grid_map::Length& length,
+                                          const std::vector<std::string>& layers,
+                                          const bool useRaw, bool& isSuccess);
 
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
@@ -204,7 +206,7 @@ class ElevationMapping
 
   //! ROS service servers.
   ros::ServiceServer fusionTriggerService_;
-  ros::ServiceServer submapService_;
+  ros::ServiceServer fusedSubmapService_;
   ros::ServiceServer rawSubmapService_;
   ros::ServiceServer clearMapService_;
   ros::ServiceServer saveMapService_;

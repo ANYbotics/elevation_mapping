@@ -78,14 +78,9 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
   AdvertiseServiceOptions advertiseServiceOptionsForGetSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_submap", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
+      "get_fused_submap", boost::bind(&ElevationMapping::getFusedSubmap, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
-  submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
-
-  AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmap, this, _1, _2), ros::VoidConstPtr(),
-      &fusionServiceQueue_);
-  rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
+  fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
 
   if (!fusedMapPublishTimerDuration_.isZero()) {
     TimerOptions timerOptions = TimerOptions(
@@ -103,6 +98,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
         false, false);
     visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
   }
+  rawSubmapService_ = nodeHandle_.advertiseService("get_raw_submap", &ElevationMapping::getRawSubmap, this);
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
@@ -135,7 +131,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
   if (minUpdateRate == 0.0) {
     maxNoUpdateDuration_.fromSec(0.0);
-    ROS_INFO("Rate for publishing the map is zero.");
+    ROS_WARN("The parameter `min_update_rate` is zero, which can lead to corrupt data.");
   } else {
     maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   }
@@ -442,8 +438,10 @@ bool ElevationMapping::updateMapLocation()
   return true;
 }
 
-grid_map_msgs::GridMap ElevationMapping::getSubmapMessage(grid_map::Position position, grid_map::Length length,
-                                          std::vector<std::string>& layers, bool useRaw, bool& isSuccess)
+grid_map_msgs::GridMap ElevationMapping::getSubmapMessage(const grid_map::Position& position,
+                                                          const grid_map::Length& length,
+                                                          const std::vector<std::string>& layers,
+                                                          const bool useRaw, bool& isSuccess)
 {
   Index index;
   GridMap subMap;
@@ -466,7 +464,7 @@ grid_map_msgs::GridMap ElevationMapping::getSubmapMessage(grid_map::Position pos
   return message;
 }
 
-bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response)
+bool ElevationMapping::getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response)
 {
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.",
       request.position_x, request.position_y, request.length_x, request.length_y);
