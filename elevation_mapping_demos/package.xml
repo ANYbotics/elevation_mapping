@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>elevation_mapping_demos</name>
-  <version>0.6.0</version>
+  <version>0.7.0</version>
   <description>Demonstrations for the elevation mapping framework.</description>
   <maintainer email="pfankhauser@anybotics.com">Péter Fankhauser</maintainer>
   <license>BSD</license>
