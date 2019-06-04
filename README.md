@@ -6,6 +6,8 @@ This is a [ROS] package developed for elevation mapping with a mobile robot. The
 
 The Robot-Centric Elevation Mapping packages have been tested under ROS Melodic and Ubuntu 18.04. This is research code, expect that it changes often and any fitness for a particular purpose is disclaimed.
 
+The source code is released under a [BSD 3-Clause license](LICENSE).
+
 **Author: Péter Fankhauser<br />
 Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
 Maintainer: Péter Fankhauser, pfankhauser@anybotics.com<br />**
