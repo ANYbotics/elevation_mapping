@@ -16,8 +16,6 @@ This projected was initially developed at ETH Zurich (Autonomous Systems Lab & R
 
 [This work is conducted as part of ANYmal Research, a community to advance legged robotics.](https://www.anymal-research.org/)
 
-[![Build Status](https://ci.leggedrobotics.com/buildStatus/icon?job=github_anybotics/elevation_mapping/master)](https://ci.leggedrobotics.com/job/github_anybotics/job/elevation_mapping/job/master/)
-
 <img alt="Elevation Map Example" src="elevation_mapping_demos/doc/elevation_map.jpg" width="700">
 
 
