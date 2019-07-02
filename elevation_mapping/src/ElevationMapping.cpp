@@ -77,10 +77,10 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       &fusionServiceQueue_);
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
-  AdvertiseServiceOptions advertiseServiceOptionsForGetSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_submap", boost::bind(&ElevationMapping::getSubmap, this, _1, _2), ros::VoidConstPtr(),
+  AdvertiseServiceOptions advertiseServiceOptionsForGetFusedSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
+      "get_submap", boost::bind(&ElevationMapping::getFusedSubmap, this, _1, _2), ros::VoidConstPtr(),
       &fusionServiceQueue_);
-  submapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetSubmap);
+  fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetFusedSubmap);
 
   AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
       "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmap, this, _1, _2), ros::VoidConstPtr(),
@@ -443,7 +443,7 @@ bool ElevationMapping::updateMapLocation()
   return true;
 }
 
-bool ElevationMapping::getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response)
+bool ElevationMapping::getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response)
 {
   grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
   Length requestedSubmapLength(request.length_x, request.length_y);

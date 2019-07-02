@@ -34,16 +34,9 @@ bool StereoSensorProcessor::readParameters()
 }
 
 
-bool StereoSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+bool StereoSensorProcessor::cleanPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
-
-  originalWidth_ = pointCloud->width;
-  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices_);
-  tempPointCloud.is_dense = true;
-  pointCloud->swap(tempPointCloud);
-
-  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  // Sensor specific cleaning
   return true;
 }
 

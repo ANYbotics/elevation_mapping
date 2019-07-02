@@ -35,19 +35,14 @@ PerfectSensorProcessor::~PerfectSensorProcessor()
 
 bool PerfectSensorProcessor::readParameters()
 {
-  SensorProcessorBase::readParameters();
-  return true;
+    SensorProcessorBase::readParameters();
+    return true;
 }
 
-bool PerfectSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+bool PerfectSensorProcessor::cleanPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
-  std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
-  tempPointCloud.is_dense = true;
-  pointCloud->swap(tempPointCloud);
-  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
-  return true;
+    // Sensor specific cleaning
+    return true;
 }
 
 bool PerfectSensorProcessor::computeVariances(

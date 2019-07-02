@@ -72,6 +72,7 @@ bool SensorProcessorBase::process(
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudSensorFrame(new pcl::PointCloud<pcl::PointXYZRGB>);
   transformPointCloud(pointCloudInput, pointCloudSensorFrame, sensorFrameId_);
   cleanPointCloud(pointCloudSensorFrame);
+  cleanPointCloudSensorType(pointCloudSensorFrame);
 
   if (!transformPointCloud(pointCloudSensorFrame, pointCloudMapFrame, mapFrameId_)) return false;
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pointClouds({pointCloudMapFrame, pointCloudSensorFrame});

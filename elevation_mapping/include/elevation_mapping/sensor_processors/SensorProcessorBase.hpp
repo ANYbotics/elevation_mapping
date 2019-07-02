@@ -78,11 +78,19 @@ public:
   virtual bool readParameters();
 
   /*!
-   * Cleans the point cloud.
+   * Cleans the point cloud regardless of the sensor type. Removes NaN, points below the minimal and above
+   * the maximal sensor cutoff value are dropped. Optionally, the
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
-  virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+
+  /*!
+   * Cleans the point cloud regardless of the sensor type.
+   * @param pointCloud the point cloud to clean.
+   * @return true if successful.
+   */
+   virtual bool cleanPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud) = 0;
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the

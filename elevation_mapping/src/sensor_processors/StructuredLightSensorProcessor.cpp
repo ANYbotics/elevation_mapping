@@ -45,10 +45,10 @@ bool StructuredLightSensorProcessor::readParameters()
   return true;
 }
 
-bool StructuredLightSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
+bool StructuredLightSensorProcessor::cleanPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-  SensorProcessorBase::cleanPointCloud(pointCloud);
-	return true;
+    // Sensor specific cleaning
+    return true;
 }
 
 bool StructuredLightSensorProcessor::computeVariances(
