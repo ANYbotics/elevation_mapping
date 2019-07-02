@@ -78,15 +78,16 @@ public:
   virtual bool readParameters();
 
   /*!
-   * Cleans the point cloud regardless of the sensor type. Removes NaN, points below the minimal and above
-   * the maximal sensor cutoff value are dropped. Optionally, the
+   * Cleans the point cloud regardless of the sensor type. Removes NaN values, points below the minimal and above
+   * the maximal sensor cutoff value are dropped. Optionally, applies voxelGridFilter to reduce number of points in
+   * the point cloud.
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
   bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
   /*!
-   * Cleans the point cloud regardless of the sensor type.
+   * Sensor specific point cloud cleaning.
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
