@@ -36,8 +36,6 @@ StructuredLightSensorProcessor::~StructuredLightSensorProcessor()
 bool StructuredLightSensorProcessor::readParameters()
 {
   SensorProcessorBase::readParameters();
-  nodeHandle_.param("sensor_processor/cutoff_min_depth", sensorParameters_["cutoff_min_depth"], std::numeric_limits<double>::min());
-  nodeHandle_.param("sensor_processor/cutoff_max_depth", sensorParameters_["cutoff_max_depth"], std::numeric_limits<double>::max());
   nodeHandle_.param("sensor_processor/normal_factor_a", sensorParameters_["normal_factor_a"], 0.0);
   nodeHandle_.param("sensor_processor/normal_factor_b", sensorParameters_["normal_factor_b"], 0.0);
   nodeHandle_.param("sensor_processor/normal_factor_c", sensorParameters_["normal_factor_c"], 0.0);
@@ -49,18 +47,7 @@ bool StructuredLightSensorProcessor::readParameters()
 
 bool StructuredLightSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
 {
-	pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
-	pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
-
-	passThroughFilter.setInputCloud(pointCloud);
-	passThroughFilter.setFilterFieldName("z");
-	passThroughFilter.setFilterLimits(sensorParameters_.at("cutoff_min_depth"), sensorParameters_.at("cutoff_max_depth"));
-	// This makes the point cloud also dense (no NaN points).
-	passThroughFilter.filter(tempPointCloud);
-	tempPointCloud.is_dense = true;
-	pointCloud->swap(tempPointCloud);
-
-	ROS_DEBUG("cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  SensorProcessorBase::cleanPointCloud(pointCloud);
 	return true;
 }
 
