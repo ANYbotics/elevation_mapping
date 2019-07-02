@@ -99,8 +99,8 @@ class ElevationMapping
 
   /*!
    * ROS service callback function to return a submap of the fused elevation map.
-   * @param request the ROS service request defining the location and size of the submap.
-   * @param response the ROS service response containing the requested submap.
+   * @param request the ROS service request defining the location and size of the fused submap.
+   * @param response the ROS service response containing the requested fused submap.
    * @return true if successful.
    */
   bool getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
