@@ -63,7 +63,8 @@ void ElevationMap::setGeometry(const grid_map::Length& length, const double& res
   ROS_INFO_STREAM("Elevation map grid resized to " << rawMap_.getSize()(0) << " rows and "  << rawMap_.getSize()(1) << " columns.");
 }
 
-bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timestamp, const Eigen::Affine3d& transformationSensorToMap)
+bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances,
+                       const ros::Time& timestamp, const Transform& transformationSensorToMap)
 {
   if (pointCloud->size() != pointCloudVariances.size()) {
     ROS_ERROR("ElevationMap::add: Size of point cloud (%i) and variances (%i) do not agree.",
@@ -84,7 +85,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
     Index index;
-    Position position(point.x, point.y);
+    Position2 position(point.x, point.y);
     if (!rawMap_.getIndex(position, index)) continue; // Skip this point if it does not lie within the elevation map.
 
     auto& elevation = rawMap_.at("elevation", index);
@@ -133,7 +134,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     const float pointHeightPlusUncertainty = point.z + 3.0 * sqrt(pointVariance); // 3 sigma.
     if (std::isnan(lowestScanPoint) || pointHeightPlusUncertainty < lowestScanPoint){
       lowestScanPoint = pointHeightPlusUncertainty;
-      const Position3 sensorTranslation(transformationSensorToMap.translation());
+      const Position3 sensorTranslation(transformationSensorToMap.getPosition());
       sensorXatLowestScan = sensorTranslation.x();
       sensorYatLowestScan = sensorTranslation.y();
       sensorZatLowestScan = sensorTranslation.z();
@@ -202,7 +203,7 @@ bool ElevationMap::fuseArea(const Eigen::Vector2d& position, const Eigen::Array2
   Index submapBufferSize;
 
   // These parameters are not used in this function.
-  Position submapPosition;
+  Position2 submapPosition;
   Length submapLength;
   Index requestedIndexInSubmap;
 
@@ -277,7 +278,7 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     const double ellipseRotation(atan2(solver.eigenvectors().col(maxEigenvalueIndex).real()(1), solver.eigenvectors().col(maxEigenvalueIndex).real()(0)));
 
     // Requested length and position (center) of submap in map.
-    Position requestedSubmapPosition;
+    Position2 requestedSubmapPosition;
     rawMapCopy.getPosition(*areaIterator, requestedSubmapPosition);
     EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation);
 
@@ -312,7 +313,7 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
       means[i] = rawMapCopy.at("elevation", *ellipseIterator);
 
       // Compute weight from probability.
-      Position absolutePosition;
+      Position2 absolutePosition;
       rawMapCopy.getPosition(*ellipseIterator, absolutePosition);
       Eigen::Vector2d distanceToCenter = (rotationMatrix * (absolutePosition - requestedSubmapPosition)).cwiseAbs();
 
@@ -407,8 +408,8 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
     const auto& sensorZatLowestScan = visibilityCleanupMap_.at("sensor_z_at_lowest_scan", *iterator);
     if (std::isnan(lowestScanPoint)) continue;
     Index indexAtSensor;
-    if(!visibilityCleanupMap_.getIndex(Position(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) continue;
-    Position point;
+    if(!visibilityCleanupMap_.getIndex(Position2(sensorXatLowestScan, sensorYatLowestScan), indexAtSensor)) continue;
+    Position2 point;
     visibilityCleanupMap_.getPosition(*iterator, point);
     float pointDiffX = point.x() - sensorXatLowestScan;
     float pointDiffY = point.y() - sensorYatLowestScan;

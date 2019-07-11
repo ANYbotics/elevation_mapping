@@ -8,32 +8,28 @@
 
 #include <elevation_mapping/sensor_processors/SensorProcessorBase.hpp>
 
-//PCL
+#include <kindr_ros/kindr_ros.hpp>
 #include <pcl/pcl_base.h>
 #include <pcl/common/transforms.h>
 #include <pcl/common/io.h>
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/extract_indices.h>
 
-//TF
-#include <tf_conversions/tf_eigen.h>
-
-// STL
 #include <limits>
 #include <math.h>
 #include <vector>
 
 namespace elevation_mapping {
 
-SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
+SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf2_ros::Buffer& tfBuffer)
     : nodeHandle_(nodeHandle),
-      transformListener_(transformListener),
+      tfBuffer_(tfBuffer),
       ignorePointsUpperThreshold_(std::numeric_limits<double>::infinity()),
       ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity())
 {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
+  tfBuffer_.setUsingDedicatedThread(true);
 	transformationSensorToMap_.setIdentity();
-	transformListenerTimeout_.fromSec(1.0);
 }
 
 SensorProcessorBase::~SensorProcessorBase() {}
@@ -43,12 +39,6 @@ bool SensorProcessorBase::readParameters()
   nodeHandle_.param("sensor_frame_id", sensorFrameId_, std::string("/sensor")); // TODO Fail if parameters are not found.
   nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
-
-  double minUpdateRate;
-  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
-  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
-  ROS_ASSERT(!transformListenerTimeout_.isZero());
-
   nodeHandle_.param("sensor_processor/ignore_points_above", ignorePointsUpperThreshold_, std::numeric_limits<double>::infinity());
   nodeHandle_.param("sensor_processor/ignore_points_below", ignorePointsLowerThreshold_, -std::numeric_limits<double>::infinity());
   return true;
@@ -79,28 +69,36 @@ bool SensorProcessorBase::process(
 bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp)
 {
   try {
-    transformListener_.waitForTransform(sensorFrameId_, mapFrameId_, timeStamp, ros::Duration(1.0));
+    std::string errorMessage;
+    if (!tfBuffer_.canTransform(sensorFrameId_, mapFrameId_, timeStamp, &errorMessage)) {
+      ROS_WARN("Could not lookup TF transform from %s to %s.", mapFrameId_.c_str(), sensorFrameId_.c_str());
+      return false;
+    }
 
-    tf::StampedTransform transformTf;
-    transformListener_.lookupTransform(mapFrameId_, sensorFrameId_, timeStamp, transformTf);
-    poseTFToEigen(transformTf, transformationSensorToMap_);
+    // Sensor to base.
+    geometry_msgs::TransformStamped transformStamped;
+    transformStamped = tfBuffer_.lookupTransform(robotBaseFrameId_, sensorFrameId_, timeStamp);
+    Transform transform;
+    kindr_ros::convertFromRosGeometryMsg(transformStamped.transform, transform);
+    translationBaseToSensorInBaseFrame_ = transform.getPosition();
+    rotationSensorToBase_ = transform.getRotation();
 
-    transformListener_.lookupTransform(robotBaseFrameId_, sensorFrameId_, timeStamp, transformTf);  // TODO Why wrong direction?
-    Eigen::Affine3d transform;
-    poseTFToEigen(transformTf, transform);
-    rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
-    translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
+    // Base to map.
+    transformStamped = tfBuffer_.lookupTransform(mapFrameId_, robotBaseFrameId_, timeStamp);
+    kindr_ros::convertFromRosGeometryMsg(transformStamped.transform, transform);
+    translationMapToBaseInMapFrame_ = transform.getPosition();
+    rotationBaseToMap_ = transform.getRotation();
 
-    transformListener_.lookupTransform(mapFrameId_, robotBaseFrameId_, timeStamp, transformTf);  // TODO Why wrong direction?
-    poseTFToEigen(transformTf, transform);
-    rotationMapToBase_.setMatrix(transform.rotation().matrix());
-    translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
+    // Map to sensor.
+    transformStamped = tfBuffer_.lookupTransform(mapFrameId_, sensorFrameId_, timeStamp);
+    kindr_ros::convertFromRosGeometryMsg(transformStamped.transform, transformationSensorToMap_);
 
-    return true;
-  } catch (tf::TransformException &ex) {
-    ROS_ERROR("%s", ex.what());
+  } catch (tf2::TransformException &errorMessage) {
+    ROS_ERROR("%s", errorMessage.what());
     return false;
   }
+
+  return true;
 }
 
 bool SensorProcessorBase::transformPointCloud(
@@ -112,18 +110,22 @@ bool SensorProcessorBase::transformPointCloud(
   timeStamp.fromNSec(1000 * pointCloud->header.stamp);
   const std::string inputFrameId(pointCloud->header.frame_id);
 
-  tf::StampedTransform transformTf;
+  geometry_msgs::TransformStamped transformStamped;
   try {
-    transformListener_.waitForTransform(targetFrame, inputFrameId, timeStamp, ros::Duration(1.0));
-    transformListener_.lookupTransform(targetFrame, inputFrameId, timeStamp, transformTf);
-  } catch (tf::TransformException &ex) {
-    ROS_ERROR("%s", ex.what());
+    std::string errorMessage;
+    if (!tfBuffer_.canTransform(targetFrame, inputFrameId, timeStamp, &errorMessage)) {
+      ROS_WARN("Could not lookup TF transform from %s to %s.", inputFrameId.c_str(), targetFrame.c_str());
+      return false;
+    }
+    transformStamped = tfBuffer_.lookupTransform(targetFrame, inputFrameId, timeStamp);
+  } catch (tf2::TransformException &errorMessage) {
+    ROS_ERROR("%s", errorMessage.what());
     return false;
   }
 
-  Eigen::Affine3d transform;
-  poseTFToEigen(transformTf, transform);
-  pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.cast<float>());
+  Transform transform;
+  kindr_ros::convertFromRosGeometryMsg(transformStamped.transform, transform);
+  pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.getTransformationMatrix().cast<float>());
   pointCloudTransformed->header.frame_id = targetFrame;
 
 	ROS_DEBUG("Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),

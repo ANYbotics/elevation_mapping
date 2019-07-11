@@ -10,6 +10,7 @@
 
 // Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
+#include "elevation_mapping/typedefs.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
@@ -200,11 +201,12 @@ class ElevationMapping
   //! Size of the cache for the robot pose messages.
   int robotPoseCacheSize_;
 
-  //! TF listener and broadcaster.
-  tf::TransformListener transformListener_;
+  //! TF listener and buffer.
+  tf2_ros::TransformListener tfListener_;
+  tf2_ros::Buffer tfBuffer_;
 
   //! Point which the elevation map follows.
-  kindr::Position3D trackPoint_;
+  Position3 trackPoint_;
   std::string trackPointFrameId_;
 
   //! ROS topics for subscriptions.
@@ -231,6 +233,9 @@ class ElevationMapping
 
   //! Maximum time that the map will not be updated.
   ros::Duration maxNoUpdateDuration_;
+
+  //! Time offset between pose and range measurements.
+  ros::Duration timeOffsetForPointCloud_;
 
   //! Time tolerance for updating the map with data before the last update.
   //! This is useful when having multiple sensors adding data to the map.

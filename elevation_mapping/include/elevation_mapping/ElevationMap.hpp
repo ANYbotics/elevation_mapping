@@ -8,24 +8,16 @@
 
 #pragma once
 
-// Grid Map
-#include <grid_map_ros/grid_map_ros.hpp>
+#include "elevation_mapping/typedefs.hpp"
 
-// Eigen
+#include <grid_map_ros/grid_map_ros.hpp>
 #include <Eigen/Core>
 #include <Eigen/Geometry>
-
-// PCL
+#include <kindr/Core>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 
-// Kindr
-#include <kindr/Core>
-
-// Boost
 #include <boost/thread/recursive_mutex.hpp>
-
-// ROS
 #include <ros/ros.h>
 
 namespace elevation_mapping {
@@ -65,7 +57,7 @@ class ElevationMap
    * @return true if successful.
    */
   bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances,
-           const ros::Time& timeStamp, const Eigen::Affine3d& transformationSensorToMap);
+           const ros::Time& timeStamp, const Transform& transformationSensorToMap);
 
   /*!
    * Update the elevation map with variance update data.

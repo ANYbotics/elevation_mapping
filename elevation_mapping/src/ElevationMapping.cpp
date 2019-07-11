@@ -6,35 +6,26 @@
  *	 Institute: ETH Zurich, ANYbotics
  */
 #include "elevation_mapping/ElevationMapping.hpp"
-
-// Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
 
-// Grid Map
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <grid_map_msgs/GridMap.h>
-
-// PCL
 #include <pcl/conversions.h>
 #include <pcl/point_cloud.h>
 #include <pcl/point_types.h>
 #include <pcl/PCLPointCloud2.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <pcl/filters/voxel_grid.h>
-
-// Kindr
 #include <kindr/Core>
 #include <kindr_ros/kindr_ros.hpp>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
-// Boost
 #include <boost/bind.hpp>
 #include <boost/thread/recursive_mutex.hpp>
-
-// STL
 #include <string>
 #include <math.h>
 #include <limits>
@@ -53,6 +44,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
+      tfListener_(tfBuffer_),
       isContinouslyFusing_(false),
       ignoreRobotMotionUpdates_(false),
       receivedFirstMatchingPointcloudAndPose_(false)
@@ -131,6 +123,10 @@ bool ElevationMapping::readParameters()
   maxNoUpdateDuration_.fromSec(1.0 / minUpdateRate);
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
+  double timeOffset;
+  nodeHandle_.param("time_offset_for_point_cloud", timeOffset, 0.0);
+  timeOffsetForPointCloud_.fromSec(timeOffset);
+
   double timeTolerance;
   nodeHandle_.param("time_tolerance", timeTolerance, 0.0);
   timeTolerance_.fromSec(timeTolerance);
@@ -188,13 +184,13 @@ bool ElevationMapping::readParameters()
   string sensorType;
   nodeHandle_.param("sensor_processor/type", sensorType, string("structured_light"));
   if (sensorType == "structured_light") {
-    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, tfBuffer_));
   } else if (sensorType == "stereo") {
-    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, tfBuffer_));
   } else if (sensorType == "laser") {
-    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, tfBuffer_));
   } else if (sensorType == "perfect") {
-    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, tfBuffer_));
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
   }
@@ -264,6 +260,8 @@ void ElevationMapping::pointCloudCallback(
   PointCloud<PointXYZRGB>::Ptr pointCloud(new PointCloud<PointXYZRGB>);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
+  lastPointCloudUpdateTime_ += timeOffsetForPointCloud_;
+  pointCloud->header.stamp = lastPointCloudUpdateTime_.toNSec() / 1000;
 
   ROS_INFO("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
@@ -291,6 +289,7 @@ void ElevationMapping::pointCloudCallback(
       }
       return;
     }
+    ROS_DEBUG_STREAM("Time error for robot pose from buffer: " << (lastPointCloudUpdateTime_ - poseMessage->header.stamp).toSec() << " s.");
     robotPoseCovariance = Eigen::Map<const Eigen::MatrixXd>(poseMessage->pose.covariance.data(), 6, 6);
   }
 
@@ -305,7 +304,7 @@ void ElevationMapping::pointCloudCallback(
   }
 
   // Add point cloud to elevation map.
-  if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_, Eigen::Affine3d(sensorProcessor_->transformationSensorToMap_))) {
+  if (!map_.add(pointCloudProcessed, measurementVariances, lastPointCloudUpdateTime_, sensorProcessor_->transformationSensorToMap_)) {
     ROS_ERROR("Adding point cloud to elevation map failed.");
     resetMapUpdateTimer();
     return;
@@ -419,10 +418,15 @@ bool ElevationMapping::updateMapLocation()
   convertToRosGeometryMsg(trackPoint_, trackPoint.point);
   geometry_msgs::PointStamped trackPointTransformed;
 
+  std::string errorMessage;
   try {
-    transformListener_.transformPoint(map_.getFrameId(), trackPoint, trackPointTransformed);
-  } catch (TransformException &ex) {
-    ROS_ERROR("%s", ex.what());
+    if (!tfBuffer_.canTransform(map_.getFrameId(), trackPoint.header.frame_id, trackPoint.header.stamp, &errorMessage)) {
+      ROS_WARN("Could not lookup TF transform from %s to %s.", trackPoint.header.frame_id.c_str(), map_.getFrameId().c_str());
+      return false;
+    }
+    tfBuffer_.transform(trackPoint, trackPointTransformed, map_.getFrameId());
+  } catch (tf2::TransformException &errorMessage) {
+    ROS_ERROR("%s", errorMessage.what());
     return false;
   }
 

@@ -13,9 +13,8 @@ find_package(catkin REQUIRED COMPONENTS
   message_filters
   sensor_msgs
   std_msgs
-  tf
-  tf_conversions
-  eigen_conversions
+  tf2_ros
+  tf2_geometry_msgs
   kindr
   kindr_ros
 )
@@ -48,9 +47,8 @@ catkin_package(
     message_filters
     sensor_msgs
     std_msgs
-    tf
-    tf_conversions
-    eigen_conversions
+    tf2_ros
+    tf2_geometry_msgs
     kindr
     kindr_ros
   DEPENDS
