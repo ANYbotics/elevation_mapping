@@ -30,7 +30,7 @@ public:
   /*!
    * Destructor.
    */
-	virtual ~StructuredLightSensorProcessor();
+  virtual ~StructuredLightSensorProcessor();
 
 private:
 
@@ -38,15 +38,7 @@ private:
    * Reads and verifies the parameters.
    * @return true if successful.
    */
-	bool readParameters();
-
-	/*!
-	 * Clean the point cloud. Points below the minimal and above the maximal sensor
-	 * cutoff value are dropped.
-	 * @param pointCloud the point cloud to clean.
-	 * @return true if successful.
-	 */
-	virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  bool readParameters();
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
@@ -56,11 +48,16 @@ private:
    * @param[out] variances the elevation map height variances.
    * @return true if successful.
    */
-	virtual bool computeVariances(
-			const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-			const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-			Eigen::VectorXf& variances);
+  virtual bool computeVariances(
+      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+	  const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+	  Eigen::VectorXf& variances);
+
+    /*!
+   * Cuts off points that are not within the cutoff interval
+   * @param pointCloud the point cloud to filter.
+   * @return true if successful.
+  */
+    bool filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 };
-
-
 } /* namespace elevation_mapping */

@@ -7,7 +7,11 @@
 
 #include <elevation_mapping/sensor_processors/StereoSensorProcessor.hpp>
 
+// PCL
 #include <pcl/filters/filter.h>
+#include <pcl/filters/passthrough.h>
+
+// STD
 #include <vector>
 
 namespace elevation_mapping {
@@ -30,20 +34,8 @@ bool StereoSensorProcessor::readParameters()
   nodeHandle_.param("sensor_processor/p_5", sensorParameters_["p_5"], 0.0);
   nodeHandle_.param("sensor_processor/lateral_factor", sensorParameters_["lateral_factor"], 0.0);
   nodeHandle_.param("sensor_processor/depth_to_disparity_factor", sensorParameters_["depth_to_disparity_factor"], 0.0);
-  return true;
-}
-
-
-bool StereoSensorProcessor::cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud)
-{
-  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
-
-  originalWidth_ = pointCloud->width;
-  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices_);
-  tempPointCloud.is_dense = true;
-  pointCloud->swap(tempPointCloud);
-
-  ROS_DEBUG("ElevationMap: cleanPointCloud() reduced point cloud to %i points.", static_cast<int>(pointCloud->size()));
+  nodeHandle_.param("sensor_processor/cutoff_min_depth", sensorParameters_["cutoff_min_depth"], std::numeric_limits<double>::min());
+  nodeHandle_.param("sensor_processor/cutoff_max_depth", sensorParameters_["cutoff_max_depth"], std::numeric_limits<double>::max());
   return true;
 }
 
@@ -104,6 +96,21 @@ bool StereoSensorProcessor::computeVariances(
   }
 
   return true;
+}
+
+bool StereoSensorProcessor::filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud){
+    pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
+    pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+
+    // cutoff points with z values
+    passThroughFilter.setInputCloud(pointCloud);
+    passThroughFilter.setFilterFieldName("z");
+    passThroughFilter.setFilterLimits(sensorParameters_.at("cutoff_min_depth"),
+                                      sensorParameters_.at("cutoff_max_depth"));
+    passThroughFilter.filter(tempPointCloud);
+    pointCloud->swap(tempPointCloud);
+
+    return true;
 }
 
 int StereoSensorProcessor::getI(int index)

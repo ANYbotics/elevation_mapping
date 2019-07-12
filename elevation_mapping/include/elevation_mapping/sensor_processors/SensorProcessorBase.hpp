@@ -78,11 +78,20 @@ public:
   virtual bool readParameters();
 
   /*!
-   * Cleans the point cloud.
+   * Filters the point cloud regardless of the sensor type. Removes NaN values.
+   * Optionally, applies voxelGridFilter to reduce number of points in
+   * the point cloud.
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
-  virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud) = 0;
+  bool filterPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+
+  /*!
+   * Sensor specific point cloud cleaning.
+   * @param pointCloud the point cloud to clean.
+   * @return true if successful.
+   */
+  virtual bool filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
@@ -162,6 +171,9 @@ public:
 
   //! Sensor parameters.
   std::unordered_map<std::string, double> sensorParameters_;
+
+  //! Use VoxelGrid filter to cleanup pointcloud if true.
+  bool applyVoxelGridFilter_;
 };
 
 } /* namespace elevation_mapping */

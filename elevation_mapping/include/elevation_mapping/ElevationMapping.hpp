@@ -98,12 +98,20 @@ class ElevationMapping
   bool fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-   * ROS service callback function to return a submap of the elevation map.
-   * @param request the ROS service request defining the location and size of the submap.
-   * @param response the ROS service response containing the requested submap.
+   * ROS service callback function to return a submap of the fused elevation map.
+   * @param request the ROS service request defining the location and size of the fused submap.
+   * @param response the ROS service response containing the requested fused submap.
    * @return true if successful.
    */
-  bool getSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
+  bool getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
+
+  /*!
+   * ROS service callback function to return a submap of the raw elevation map.
+   * @param request the ROS service request defining the location and size of the raw submap.
+   * @param response the ROS service response containing the requested raw submap.
+   * @return true if successful.
+   */
+  bool getRawSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
    * Clears all data of the elevation map.
@@ -184,7 +192,8 @@ class ElevationMapping
 
   //! ROS service servers.
   ros::ServiceServer fusionTriggerService_;
-  ros::ServiceServer submapService_;
+  ros::ServiceServer fusedSubmapService_;
+  ros::ServiceServer rawSubmapService_;
   ros::ServiceServer clearMapService_;
   ros::ServiceServer saveMapService_;
 

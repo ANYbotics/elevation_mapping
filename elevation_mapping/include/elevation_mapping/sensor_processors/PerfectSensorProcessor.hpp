@@ -41,14 +41,6 @@ private:
   bool readParameters();
 
   /*!
-   * Clean the point cloud. Points below the minimal and above the maximal sensor
-   * cutoff value are dropped.
-   * @param pointCloud the point cloud to clean.
-   * @return true if successful.
-   */
-  virtual bool cleanPointCloud(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
-
-  /*!
    * Computes the elevation map height variances for each point in a point cloud with the
    * sensor model and the robot pose covariance.
    * @param[in] pointCloud the point cloud for which the variances are computed.
