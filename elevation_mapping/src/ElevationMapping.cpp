@@ -105,6 +105,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
+  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplace, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
 
   initialize();
@@ -193,6 +194,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
   nodeHandle_.param("scanning_duration", map_.scanningDuration_, 1.0);
+  nodeHandle_.param("masked_replace_service_mask_layer_name", maskedReplaceServiceMaskLayerName_, string("mask"));
 
   // SensorProcessor parameters.
   string sensorType;
@@ -498,6 +500,52 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Emp
 {
   ROS_INFO("Clearing map.");
   return map_.clear();
+}
+
+bool ElevationMapping::maskedReplace(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response) {
+  ROS_INFO("Masked replacing of map.");
+  GridMap sourceMap;
+  GridMapRosConverter::fromMessage(request.map, sourceMap);
+
+  // Use the supplied mask or do not use a mask
+  grid_map::Matrix mask;
+  if (sourceMap.exists(maskedReplaceServiceMaskLayerName_)) {
+    mask = sourceMap[maskedReplaceServiceMaskLayerName_];
+  } else {
+    mask = Eigen::MatrixXf::Ones(sourceMap.getSize()(0),sourceMap.getSize()(1));
+  }
+
+  boost::recursive_mutex::scoped_lock scopedLockRawData(map_.getRawDataMutex());
+
+  // Loop over all layers that should be set
+  for (auto sourceLayerIterator = sourceMap.getLayers().begin(); sourceLayerIterator != sourceMap.getLayers().end(); sourceLayerIterator++) {
+    //skip "mask" layer
+    if (*sourceLayerIterator == maskedReplaceServiceMaskLayerName_) continue;
+    grid_map::Matrix &sourceLayer = sourceMap[*sourceLayerIterator];
+    // Check if the layer exists in the elevation map
+    if (map_.getRawGridMap().exists(*sourceLayerIterator)) {
+      grid_map::Matrix &destinationLayer = map_.getRawGridMap()[*sourceLayerIterator];
+      for (GridMapIterator destinationIterator(map_.getRawGridMap()); !destinationIterator.isPastEnd(); ++destinationIterator) {
+        // Use the position to find corresponding indices in source and destination
+        const grid_map::Index destinationIndex(*destinationIterator);
+        grid_map::Position position;
+        map_.getRawGridMap().getPosition(*destinationIterator, position);
+
+        if (!sourceMap.isInside(position)) continue;
+
+        grid_map::Index sourceIndex;
+        sourceMap.getIndex(position, sourceIndex);
+        // If the mask allows it, set the value from source to destination
+        if (!std::isnan(mask(sourceIndex(0), sourceIndex(1)))) {
+          destinationLayer(destinationIndex(0), destinationIndex(1)) = sourceLayer(sourceIndex(0), sourceIndex(1));
+        }
+      }
+    } else {
+      ROS_ERROR("Masked replace service: Layer %s does not exist!", sourceLayerIterator->c_str());
+    }
+  }
+
+  return true;
 }
 
 bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)

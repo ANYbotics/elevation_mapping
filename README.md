@@ -150,6 +150,40 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
         rosservice call /elevation_mapping/clear_map
 
+* **`masked_replace`** ([grid_map_msgs/SetGridMap])
+
+    Allows for setting the individual layers of the elevation map through a service call. The layer mask can be used to only set certain cells and not the entire map. Cells containing NAN in the mask are not set, all the others are set. If the layer mask is not supplied, the entire map will be set in the intersection of both maps. The provided map can be of different size and position than the map that will be altered. An example service call to set some cells marked with a mask in the elevation layer to 0.5 is
+
+        rosservice call /elevation_mapping/masked_replace "map:
+          info:
+            header:
+              seq: 3
+              stamp: {secs: 3, nsecs: 80000000}
+              frame_id: 'odom'
+            resolution: 0.1
+            length_x: 0.3
+            length_y: 0.3
+            pose:
+              position: {x: 5.0, y: 0.0, z: 0.0}
+              orientation: {x: 0.0, y: 0.0, z: 0.0, w: 0.0}
+          layers: [elevation,mask]
+          basic_layers: [elevation]
+          data:
+          - layout:
+              dim:
+              - {label: 'column_index', size: 3, stride: 9}
+              - {label: 'row_index', size: 3, stride: 3}
+              data_offset: 0
+            data: [0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
+          - layout:
+              dim:
+              - {label: 'column_index', size: 3, stride: 9}
+              - {label: 'row_index', size: 3, stride: 3}
+              data_offset: 0
+            data: [0, 0, 0, .NAN, .NAN, .NAN, 0, 0, 0]
+          outer_start_index: 0
+          inner_start_index: 0"
+
 * **`save_map`** ([grid_map_msgs/ProcessFile])
 
     Saves the current fused grid map and raw grid map to rosbag files. Field `topic_name` must be a base name, i.e. no leading slash character (/). If field `topic_name` is empty, then `elevation_map` is used per default. Example with default topic name

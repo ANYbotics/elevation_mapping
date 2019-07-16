@@ -15,6 +15,7 @@
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 
 // Grid Map
+#include <grid_map_msgs/SetGridMap.h>
 #include <grid_map_msgs/GetGridMap.h>
 #include <grid_map_msgs/ProcessFile.h>
 
@@ -122,6 +123,18 @@ class ElevationMapping
   bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
+  * Allows for setting the individual layers of the elevation map through a service call. 
+  * The layer mask can be used to only set certain cells and not the entire map. Cells
+  * containing NAN in the mask are not set, all the others are set. If the layer mask is
+  * not supplied, the entire map will be set in the intersection of both maps. The
+  * provided map can be of different size and position than the map that will be altered.
+  * @param request the ROS service request.
+  * @param response the ROS service response.
+  * @return true if successful.
+  */
+  bool maskedReplace(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response);
+
+  /*!
    * Saves the grid map with all layers to a ROS bag file.
    * @param request the ROS service request.
    * @param response the ROS service response.
@@ -195,6 +208,7 @@ class ElevationMapping
   ros::ServiceServer fusedSubmapService_;
   ros::ServiceServer rawSubmapService_;
   ros::ServiceServer clearMapService_;
+  ros::ServiceServer maskedReplaceService_;
   ros::ServiceServer saveMapService_;
 
   //! Callback thread for the fusion services.
@@ -268,6 +282,9 @@ class ElevationMapping
 
   //! Becomes true when corresponding poses and point clouds can be found
   bool receivedFirstMatchingPointcloudAndPose_;
+
+  //! Name of the mask layer used in the masked replace service
+  std::string maskedReplaceServiceMaskLayerName_;
 };
 
 } /* namespace */
