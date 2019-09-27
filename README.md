@@ -115,11 +115,11 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 #### Published Topics
 
-* **`elevation_map`** ([grid_map_msg/GridMap])
+* **`elevation_map`** ([grid_map_msgs/GridMap])
 
     The entire (fused) elevation map. It is published periodically (see `fused_map_publishing_rate` parameter) or after the `trigger_fusion` service is called.
 
-* **`elevation_map_raw`** ([grid_map_msg/GridMap])
+* **`elevation_map_raw`** ([grid_map_msgs/GridMap])
 
     The entire (raw) elevation map before the fusion step.
 
@@ -132,13 +132,13 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
         rosservice call /elevation_mapping/trigger_fusion
 
-* **`get_submap`** ([grid_map_msg/GetGridMap])
+* **`get_submap`** ([grid_map_msgs/GetGridMap])
 
     Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and safe it to a text file form the console with
 
         rosservice call -- /elevation_mapping/get_submap odom -0.5 0.0 0.5 1.2 []
 
-* **`get_raw_submap`** ([grid_map_msg/GetGridMap])
+* **`get_raw_submap`** ([grid_map_msgs/GetGridMap])
 
     Get a raw elevation submap for a requested position and size. For example, you can get the raw elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and safe it to a text file form the console with
 
@@ -291,10 +291,10 @@ Please report bugs and request features using the [Issue Tracker](https://github
 
 [ROS]: http://www.ros.org
 [rviz]: http://wiki.ros.org/rviz
-[grid_map_msg/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/msg/GridMap.msg
+[grid_map_msgs/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/msg/GridMap.msg
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
 [tf/tfMessage]: http://docs.ros.org/kinetic/api/tf/html/msg/tfMessage.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
-[grid_map_msg/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msg/srv/GetGridMap.srv
+[grid_map_msgs/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/srv/GetGridMap.srv
 [grid_map_msgs/ProcessFile]: https://github.com/ANYbotics/grid_map/blob/master/grid_map_msgs/srv/ProcessFile.srv
