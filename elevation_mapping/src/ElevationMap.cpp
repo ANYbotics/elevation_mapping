@@ -638,6 +638,32 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
   rawMap_.addDataFrom(underlyingMap_, false, false, true);
 }
 
+void ElevationMap::setRawSubmapHeight(float mapHeight, double lengthInXSubmap, double lengthInYSubmap, double margin) {
+  // Set a submap area (lengthInYSubmap + margin, lengthInXSubmap + margin) with a constant height (mapHeight)
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+
+  const int rowsMap = rawMap_.getSize()(0);
+  const int columnsMap = rawMap_.getSize()(1);
+
+  // Calculate submap area
+  const double resolution = rawMap_.getResolution();
+  const int lengthInXSubmapI = static_cast<int>(lengthInXSubmap / resolution + 2 *margin);
+  const int lengthInYSubmapI = static_cast<int>(lengthInYSubmap / resolution + 2 *margin);
+
+  // Create submap iterator indices
+  const Eigen::Array2i submapTopLeftIndex(rowsMap/2 - lengthInYSubmapI/2, columnsMap/2 - lengthInXSubmapI/2);
+  const Eigen::Array2i submapBufferSize(lengthInYSubmapI, lengthInXSubmapI);
+
+  // Iterate through submap and fill height values
+  grid_map::Matrix& elevationData = rawMap_["elevation"];
+  grid_map::Matrix& varianceData = rawMap_["variance"];
+  for (SubmapIterator iterator(rawMap_, submapTopLeftIndex, submapBufferSize); !iterator.isPastEnd(); ++iterator) {
+    const Index index(*iterator);
+    elevationData(index(0), index(1)) = mapHeight;
+    varianceData(index(0), index(1)) = 0.0;
+  }
+}
+
 float ElevationMap::cumulativeDistributionFunction(float x, float mean, float standardDeviation)
 {
   return 0.5 * erfc(-(x - mean) / (standardDeviation * sqrt(2.0)));

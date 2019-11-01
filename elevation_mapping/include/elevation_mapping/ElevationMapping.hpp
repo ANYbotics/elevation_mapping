@@ -42,6 +42,8 @@
 
 namespace elevation_mapping {
 
+enum class InitializationMethods {PlanarFloorInitializer};
+
 /*!
  * The elevation mapping main class. Coordinates the ROS interfaces, the timing,
  * and the data handling between the other classes.
@@ -195,6 +197,11 @@ class ElevationMapping
    * Stop the map update timer.
    */
   void stopMapUpdateTimer();
+  
+  /*!
+   * Initializes a submap around the robot of the elevation map with a constant height
+   */
+  bool initializeElevationMap();
 
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
@@ -222,6 +229,9 @@ class ElevationMapping
 
   //! Size of the cache for the robot pose messages.
   int robotPoseCacheSize_;
+
+  //! Frame ID of the elevation map
+  std::string mapFrameId_;
 
   //! TF listener and broadcaster.
   tf::TransformListener transformListener_;
@@ -285,6 +295,27 @@ class ElevationMapping
 
   //! Name of the mask layer used in the masked replace service
   std::string maskedReplaceServiceMaskLayerName_;
+
+  //! Enables initialization of the elevation map
+  bool initializeElevationMap_;
+
+  //! Enum to choose the initialization method
+  int initializationMethod_;
+
+  //! Width of submap of the elevation map with a constant height
+  double lengthInXInitSubmap_;
+  
+  //! Height of submap of the elevation map with a constant height
+  double lengthInYInitSubmap_;
+  
+  //! Margin of submap of the elevation map with a constant height
+  double marginInitSubmap_;
+
+  //! Targe frame to get the init height of the elevation map
+  std::string targetFrameInitSubmap_;
+
+  //! Additional offset of the height value
+  double initSubmapHeightOffset_;
 };
 
 } /* namespace */
