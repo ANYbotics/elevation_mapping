@@ -532,9 +532,11 @@ bool ElevationMapping::initializeElevationMap() {
 
 bool ElevationMapping::clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response)
 {
-  ROS_INFO("Clearing map.");
+  ROS_INFO("Clearing map...");
   bool success = map_.clear();
   success &= initializeElevationMap();
+  ROS_INFO("Map cleared.");
+
   return success;
 }
 
