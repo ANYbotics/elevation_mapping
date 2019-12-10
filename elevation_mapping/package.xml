@@ -3,7 +3,8 @@
   <name>elevation_mapping</name>
   <version>0.7.0</version>
   <description>Generates an elevation map from distance measurements and robot pose information.</description>
-  <maintainer email="pfankhauser@anybotics.com">Péter Fankhauser</maintainer>
+  <maintainer email="mwulf@anybotics.com">Maximilian Wulf</maintainer>
+  <maintainer email="ynava@anybotics.com">Yoshua Nava</maintainer>
   <license>BSD</license>
   <url type="website">http://github.com/anybotics/elevation_mapping</url>
   <url type="bugtracker">http://github.com/anybotics/elevation_mapping/issues</url>
