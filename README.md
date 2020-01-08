@@ -134,13 +134,13 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 * **`get_submap`** ([grid_map_msgs/GetGridMap])
 
-    Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and safe it to a text file form the console with
+    Get a fused elevation submap for a requested position and size. For example, you can get the fused elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and save it to a text file form the console with
 
         rosservice call -- /elevation_mapping/get_submap odom -0.5 0.0 0.5 1.2 []
 
 * **`get_raw_submap`** ([grid_map_msgs/GetGridMap])
 
-    Get a raw elevation submap for a requested position and size. For example, you can get the raw elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and safe it to a text file form the console with
+    Get a raw elevation submap for a requested position and size. For example, you can get the raw elevation submap at position (-0.5, 0.0) and size (0.5, 1.2) described in the odom frame and save it to a text file form the console with
 
         rosservice call -- /elevation_mapping/get_raw_submap odom -0.5 0.0 0.5 1.2 []
 
