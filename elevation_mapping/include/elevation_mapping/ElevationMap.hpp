@@ -313,6 +313,7 @@ class ElevationMap
   double maxHorizontalVariance_;
   std::string underlyingMapTopic_;
   bool enableVisibilityCleanup_;
+  bool enableContinuousCleanup_;
   double visibilityCleanupDuration_;
   double scanningDuration_;
 };

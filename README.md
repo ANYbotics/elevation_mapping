@@ -288,7 +288,11 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 * **`visibility_cleanup_rate`** (double, default: 1.0)
 
-    The rate (in Hz) at which the visibility constraint is performed.
+    The rate (in Hz) at which the visibility clean-up is performed.
+
+* **`enable_continuous_cleanup`** (bool, default: false)
+
+    Enable/disable a continuous clean-up of the elevation map. If enabled, on arrival of each new sensor data the elevation map will be cleared and filled up only with the latest data from the sensor. When continuous clean-up is enabled, visibility clean-up will automatically be disabled since it is not needed in this case.
 
 * **`scanning_duration`** (double, default: 1.0)
 

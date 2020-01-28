@@ -95,8 +95,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 
-  // Multi-threading for visibility cleanup.
-  if (map_.enableVisibilityCleanup_ && !visibilityCleanupTimerDuration_.isZero()){
+  // Multi-threading for visibility cleanup. Visibility clean-up does not help when continuous clean-up is enabled.
+  if (map_.enableVisibilityCleanup_ && !visibilityCleanupTimerDuration_.isZero() && !map_.enableContinuousCleanup_){
     TimerOptions timerOptions = TimerOptions(
         visibilityCleanupTimerDuration_,
         boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1), &visibilityCleanupQueue_,
@@ -192,6 +192,7 @@ bool ElevationMapping::readParameters()
   nodeHandle_.param("max_horizontal_variance", map_.maxHorizontalVariance_, 0.5);
   nodeHandle_.param("underlying_map_topic", map_.underlyingMapTopic_, string());
   nodeHandle_.param("enable_visibility_cleanup", map_.enableVisibilityCleanup_, true);
+  nodeHandle_.param("enable_continuous_cleanup", map_.enableContinuousCleanup_, false);
   nodeHandle_.param("scanning_duration", map_.scanningDuration_, 1.0);
   nodeHandle_.param("masked_replace_service_mask_layer_name", maskedReplaceServiceMaskLayerName_, string("mask"));
   
@@ -323,6 +324,12 @@ void ElevationMapping::pointCloudCallback(
     ROS_ERROR("Point cloud could not be processed.");
     resetMapUpdateTimer();
     return;
+  }
+
+  // Clear the map if continuous clean-up was enabled.
+  if (map_.enableContinuousCleanup_) {
+    ROS_DEBUG("Clearing elevation map before adding new point cloud.");
+    map_.clear();
   }
 
   // Add point cloud to elevation map.
