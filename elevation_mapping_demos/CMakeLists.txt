@@ -36,6 +36,6 @@ install(DIRECTORY config doc launch rviz
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
-install(PROGRAMS scripts/ground_truth_pose_publisher.py
+install(PROGRAMS scripts/tf_to_pose_publisher.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )

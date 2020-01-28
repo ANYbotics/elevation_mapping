@@ -9,8 +9,9 @@ The Robot-Centric Elevation Mapping packages have been tested under ROS Melodic 
 The source code is released under a [BSD 3-Clause license](LICENSE).
 
 **Author: Péter Fankhauser<br />
+Co-Author: Maximilian Wulf<br />
 Affiliation: [ANYbotics](https://www.anybotics.com/)<br />
-Maintainer: Péter Fankhauser, pfankhauser@anybotics.com<br />**
+Maintainer: Maximilian Wulf, mwulf@anybotics.com<br />**
 
 This projected was initially developed at ETH Zurich (Autonomous Systems Lab & Robotic Systems Lab).
 
@@ -90,6 +91,24 @@ Run the unit tests with
 
 In order to get the Robot-Centric Elevation Mapping to run with your robot, you will need to adapt a few parameters. It is the easiest if duplicate and adapt all the parameter files that you need to change from the `elevation_mapping_demos` package (e.g. the `simple_demo` example). These are specifically the parameter files in `config` and the launch file from the `launch` folder.
 
+### TurtleBot3 Waffle Simulation
+
+A running example is provided, making use of the Turtlebot3 simulation environment. This example can be used to test elevation mapping, as a starting point for further integration.
+
+To start with, the Turtlebot3 simulation dependencies need to be installed:
+
+    sudo apt install ros-melodic-turtlebot3*
+
+The elevation mapping demo together with the turtlebot3 simulation can be started with
+
+    roslaunch elevation_mapping_demos turtlesim3_waffle_demo.launch
+
+To control the robot with a keyboard, a new terminal window needs to be opened (remember to source your ROS environment). Then run
+
+    export TURTLEBOT3_MODEL=waffle
+    roslaunch turtlebot3_teleop turtlebot3_teleop_key.launch
+
+Velocity inputs can be sent to the robot by pressing the keys `a`, `w`,`d`, `x`. To stop the robot completely, press `s`.
 
 ## Nodes
 
