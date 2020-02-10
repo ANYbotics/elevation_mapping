@@ -54,6 +54,7 @@ class ElevationMapping
 
   /*!
    * Constructor.
+   *
    * @param nodeHandle the ROS node handle.
    */
   ElevationMapping(ros::NodeHandle& nodeHandle);
@@ -65,7 +66,8 @@ class ElevationMapping
 
   /*!
    * Callback function for new data to be added to the elevation map.
-   * @param pointCloud the point cloud to be fused with the existing data.
+   * 
+   * @param pointCloud    The point cloud to be fused with the existing data.
    */
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
 
@@ -73,53 +75,78 @@ class ElevationMapping
    * Callback function for the update timer. Forces an update of the map from
    * the robot's motion if no new measurements are received for a certain time
    * period.
-   * @param timerEvent the timer event.
+   *
+   * @param timerEvent    The timer event.
    */
   void mapUpdateTimerCallback(const ros::TimerEvent& timerEvent);
 
   /*!
    * Callback function for the fused map publish timer. Publishes the fused map
    * based on configurable duration.
-   * @param timerEvent the timer event.
+   * 
+   * @param timerEvent    The timer event.
    */
   void publishFusedMapCallback(const ros::TimerEvent& timerEvent);
 
 
   /*!
    * Callback function for cleaning map based on visibility ray tracing.
-   * @param timerEvent the timer event.
+   *
+   * @param timerEvent  The timer event.
    */
   void visibilityCleanupCallback(const ros::TimerEvent& timerEvent);
 
   /*!
    * ROS service callback function to trigger the fusion of the entire
    * elevation map.
-   * @param request the ROS service request.
-   * @param response the ROS service response.
+   *
+   * @param request     The ROS service request.
+   * @param response    The ROS service response.
    * @return true if successful.
    */
   bool fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
    * ROS service callback function to return a submap of the fused elevation map.
-   * @param request the ROS service request defining the location and size of the fused submap.
-   * @param response the ROS service response containing the requested fused submap.
+   *
+   * @param request     The ROS service request defining the location and size of the fused submap.
+   * @param response    The ROS service response containing the requested fused submap.
    * @return true if successful.
    */
   bool getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
    * ROS service callback function to return a submap of the raw elevation map.
-   * @param request the ROS service request defining the location and size of the raw submap.
-   * @param response the ROS service response containing the requested raw submap.
+   *
+   * @param request     The ROS service request defining the location and size of the raw submap.
+   * @param response    The ROS service response containing the requested raw submap.
    * @return true if successful.
    */
   bool getRawSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
+   * Enables updates of the elevation map.
+   * 
+   * @param request     The ROS service request.
+   * @param response    The ROS service response.
+   * @return true if successful.
+   */
+  bool enableUpdates(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+
+  /*!
+   * Disables updates of the elevation map.
+   * 
+   * @param request     The ROS service request.
+   * @param response    The ROS service response.
+   * @return true if successful.
+   */
+  bool disableUpdates(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+
+  /*!
    * Clears all data of the elevation map.
-   * @param request the ROS service request.
-   * @param response the ROS service response.
+   *
+   * @param request     The ROS service request.
+   * @param response    The ROS service response.
    * @return true if successful.
    */
   bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
@@ -130,30 +157,43 @@ class ElevationMapping
   * containing NAN in the mask are not set, all the others are set. If the layer mask is
   * not supplied, the entire map will be set in the intersection of both maps. The
   * provided map can be of different size and position than the map that will be altered.
-  * @param request the ROS service request.
-  * @param response the ROS service response.
+  *
+  * @param request    The ROS service request.
+  * @param response   The ROS service response.
   * @return true if successful.
   */
   bool maskedReplace(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response);
 
   /*!
    * Saves the grid map with all layers to a ROS bag file.
-   * @param request the ROS service request.
-   * @param response the ROS service response.
+   *
+   * @param request   The ROS service request.
+   * @param response  The ROS service response.
    * @return true if successful.
    */
   bool saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
+
+  /*!
+   * Loads the grid map with all layers from a ROS bag file.
+   *
+   * @param request     The ROS service request.
+   * @param response    The ROS service response.
+   * @return true if successful.
+   */
+  bool loadMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
 
  private:
 
   /*!
    * Reads and verifies the ROS parameters.
+   *
    * @return true if successful.
    */
   bool readParameters();
 
   /*!
    * Performs the initialization procedure.
+   *
    * @return true if successful.
    */
   bool initialize();
@@ -170,20 +210,23 @@ class ElevationMapping
 
   /*!
    * Update the elevation map from the robot motion up to a certain time.
-   * @param time to which the map is updated to.
+   *
+   * @param time    Time to which the map is updated to.
    * @return true if successful.
    */
   bool updatePrediction(const ros::Time& time);
 
   /*!
    * Fills a elevation map message with the appropriate header information.
-   * @param gridMapMessage the elevation massage to be filled with header information.
+   *
+   * @param gridMapMessage    The elevation massage to be filled with header information.
    */
   void addHeaderDataToElevationMessage(grid_map_msgs::GridMap& gridMapMessage);
 
   /*!
    * Updates the location of the map to follow the tracking point. Takes care
    * of the data handling the goes along with the relocalization.
+   *
    * @return true if successful.
    */
   bool updateMapLocation();
@@ -214,9 +257,12 @@ class ElevationMapping
   ros::ServiceServer fusionTriggerService_;
   ros::ServiceServer fusedSubmapService_;
   ros::ServiceServer rawSubmapService_;
+  ros::ServiceServer enableUpdatesService_;
+  ros::ServiceServer disableUpdatesService_;
   ros::ServiceServer clearMapService_;
   ros::ServiceServer maskedReplaceService_;
   ros::ServiceServer saveMapService_;
+  ros::ServiceServer loadMapService_;
 
   //! Callback thread for the fusion services.
   boost::thread fusionServiceThread_;
@@ -255,6 +301,9 @@ class ElevationMapping
 
   //! If true, robot motion updates are ignored.
   bool ignoreRobotMotionUpdates_;
+
+  //! If false, elevation mapping stops updating
+  bool updatesEnabled_;
 
   //! Time of the last point cloud update.
   ros::Time lastPointCloudUpdateTime_;

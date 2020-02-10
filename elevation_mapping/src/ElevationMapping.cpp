@@ -55,7 +55,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       robotMotionMapUpdater_(nodeHandle),
       isContinouslyFusing_(false),
       ignoreRobotMotionUpdates_(false),
-      receivedFirstMatchingPointcloudAndPose_(false)
+      receivedFirstMatchingPointcloudAndPose_(false),
+      updatesEnabled_(true)
 {
   ROS_INFO("Elevation mapping node started.");
 
@@ -105,8 +106,11 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   }
 
   clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
+  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdates, this);
+  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdates, this);
   maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplace, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
+  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMap, this);
 
   initialize();
 }
@@ -260,13 +264,20 @@ void ElevationMapping::visibilityCleanupThread()
 void ElevationMapping::pointCloudCallback(
     const sensor_msgs::PointCloud2& rawPointCloud)
 {
+  if(!updatesEnabled_){
+    ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");
+    map_.setTimestamp(ros::Time::now());
+    map_.publishRawElevationMap();
+    return;
+  } 
+
   // Check if point cloud has corresponding robot pose at the beginning
   if(!receivedFirstMatchingPointcloudAndPose_) {
     const double oldestPoseTime = robotPoseCache_.getOldestTime().toSec();
     const double currentPointCloudTime = rawPointCloud.header.stamp.toSec();
 
     if(currentPointCloudTime < oldestPoseTime) {
-      ROS_WARN_THROTTLE(5, "No corresponding point cloud and pose are found. Waiting for first match.");
+      ROS_WARN_THROTTLE(5, "No corresponding point cloud and pose are found. Waiting for first match. (Warning message is throttled, 5s.)");
       return;
     } else {
       ROS_INFO("First corresponding point cloud and pose found, elevation mapping started. ");
@@ -351,7 +362,14 @@ void ElevationMapping::pointCloudCallback(
 
 void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&)
 {
-  ROS_WARN_THROTTLE(5, "Elevation map is updated without data from the sensor.");
+  if(!updatesEnabled_){
+    ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");
+    map_.setTimestamp(ros::Time::now());
+    map_.publishRawElevationMap();
+    return;
+  } 
+
+  ROS_WARN_THROTTLE(5, "Elevation map is updated without data from the sensor. (Warning message is throttled, 5s.)");
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
@@ -512,6 +530,20 @@ bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request,
   return isSuccess;
 }
 
+bool ElevationMapping::disableUpdates(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/)
+{
+  ROS_INFO("Disabling updates.");
+  updatesEnabled_ = false;
+  return true;
+}
+
+bool ElevationMapping::enableUpdates(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/)
+{
+  ROS_INFO("Enabling updates.");
+  updatesEnabled_ = true;
+  return true;
+}
+
 bool ElevationMapping::initializeElevationMap() {
   if(initializeElevationMap_) {
     if(static_cast<elevation_mapping::InitializationMethods>(initializationMethod_) == elevation_mapping::InitializationMethods::PlanarFloorInitializer){
@@ -603,7 +635,29 @@ bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, gri
     topic = nodeHandle_.getNamespace() + "/" + request.topic_name;
   }
   response.success = GridMapRosConverter::saveToBag(map_.getFusedGridMap(), request.file_path, topic);
-  response.success = GridMapRosConverter::saveToBag(map_.getRawGridMap(), request.file_path + "_raw", topic + "_raw");
+  response.success &= GridMapRosConverter::saveToBag(map_.getRawGridMap(), request.file_path + "_raw", topic + "_raw");
+  return response.success;
+}
+
+bool ElevationMapping::loadMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response)
+{
+  ROS_WARN("Loading from bag file.");
+  boost::recursive_mutex::scoped_lock scopedLockFused(map_.getFusedDataMutex());
+  boost::recursive_mutex::scoped_lock scopedLockRaw(map_.getRawDataMutex());
+
+  std::string topic = nodeHandle_.getNamespace();  
+  if (!request.topic_name.empty()) {
+    topic += "/" + request.topic_name;
+  } else {
+    topic += "/elevation_map";
+  }
+
+  response.success = GridMapRosConverter::loadFromBag(request.file_path, topic, map_.getFusedGridMap());
+  response.success = GridMapRosConverter::loadFromBag(request.file_path + "_raw", topic + "_raw", map_.getRawGridMap()) && response.success;
+  
+  // Update timestamp for visualization in ROS
+  map_.setTimestamp(ros::Time::now());
+  map_.publishRawElevationMap();
   return response.success;
 }
 

@@ -535,12 +535,25 @@ bool ElevationMap::publishVisibilityCleanupMap()
 
 grid_map::GridMap& ElevationMap::getRawGridMap()
 {
+
   return rawMap_;
+}
+
+void ElevationMap::setRawGridMap(const grid_map::GridMap& map)
+{
+  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+  rawMap_ = map;
 }
 
 grid_map::GridMap& ElevationMap::getFusedGridMap()
 {
   return fusedMap_;
+}
+
+void ElevationMap::setFusedGridMap(const grid_map::GridMap& map)
+{
+  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
+  fusedMap_ = map;
 }
 
 ros::Time ElevationMap::getTimeOfLastUpdate()
@@ -597,6 +610,12 @@ void ElevationMap::setFrameId(const std::string& frameId)
 {
   rawMap_.setFrameId(frameId);
   fusedMap_.setFrameId(frameId);
+}
+
+void ElevationMap::setTimestamp(ros::Time timestamp)
+{
+  rawMap_.setTimestamp(timestamp.toNSec());
+  fusedMap_.setTimestamp(timestamp.toNSec());
 }
 
 const std::string& ElevationMap::getFrameId()

@@ -209,6 +209,24 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
         rosservice call /elevation_mapping/save_map "file_path: '/home/integration/elevation_map.bag' topic_name: ''"
 
+* **`load_map`** ([grid_map_msgs/ProcessFile])
+
+    Loads the fused grid map and raw grid map from rosbag files. Field `topic_name` must be a base name, i.e. no leading slash character (/). If field `topic_name` is empty, then `elevation_map` is used per default. Example with default topic name
+
+        rosservice call /elevation_mapping/load_map "file_path: '/home/integration/elevation_map.bag' topic_name: ''"
+
+* **`disable_updates`** ([std_srvs/Empty])
+
+    Stops updating the elevation map with sensor input. Trigger the update stopping with
+
+        rosservice call /elevation_mapping/disable_updates {}
+
+* **`enable_updates`** ([std_srvs/Empty])
+
+    Start updating the elevation map with sensor input. Trigger the update starting with
+
+        rosservice call /elevation_mapping/enable_updates {}
+
 #### Parameters
 
 * **`point_cloud_topic`** (string, default: "/points")

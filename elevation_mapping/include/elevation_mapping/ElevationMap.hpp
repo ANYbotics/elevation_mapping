@@ -140,10 +140,22 @@ class ElevationMap
   grid_map::GridMap& getRawGridMap();
 
   /*!
+   * Sets a raw grid map.
+   * @param map The input raw grid map to set.
+   */
+  void setRawGridMap(const grid_map::GridMap& map);
+
+  /*!
    * Gets a reference to the fused grid map.
    * @return the fused grid map.
    */
   grid_map::GridMap& getFusedGridMap();
+
+  /*!
+   * Sets a fused grid map.
+   * @param map The input fused grid map to set.
+   */
+  void setFusedGridMap(const grid_map::GridMap& map);
 
   /*!
    * Gets the time of last map update.
@@ -195,6 +207,12 @@ class ElevationMap
    * @return the frameId.
    */
   const std::string& getFrameId();
+
+  /*!
+   * Set the timestamp of the raw and fused elevation map.
+   * @param timestmap to set.
+   */
+  void setTimestamp(ros::Time timestamp);
 
   /*!
    * If the raw elevation map has subscribers.
