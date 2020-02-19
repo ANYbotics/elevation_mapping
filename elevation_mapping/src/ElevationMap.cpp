@@ -225,12 +225,13 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
 
   // Initializations.
   const ros::WallTime methodStartTime(ros::WallTime::now());
-  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   // Copy raw elevation map data for safe multi-threading.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
   auto rawMapCopy = rawMap_;
   scopedLockForRawData.unlock();
+  
+  boost::recursive_mutex::scoped_lock scopedLock(fusedMapMutex_);
 
   // More initializations.
   const double halfResolution = fusedMap_.getResolution() / 2.0;
@@ -372,12 +373,17 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
 
 bool ElevationMap::clear()
 {
-  boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
-  boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
-  rawMap_.clearAll();
-  rawMap_.resetTimestamp();
-  fusedMap_.clearAll();
-  fusedMap_.resetTimestamp();
+  // Lock raw and fused map object in different scopes to prevent deadlock. 
+  {
+    boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
+    rawMap_.clearAll();
+    rawMap_.resetTimestamp();
+  }
+  {
+    boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
+    fusedMap_.clearAll();
+    fusedMap_.resetTimestamp();    
+  }
   return true;
 }
 
