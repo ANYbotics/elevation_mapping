@@ -332,6 +332,10 @@ void ElevationMapping::pointCloudCallback(
   Eigen::VectorXf measurementVariances;
   if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed,
                                  measurementVariances)) {
+    if (!sensorProcessor_->isTfAvailableInBuffer()) {
+      ROS_INFO_THROTTLE(10, "Waiting for tf transformation to be available. (Message is throttled, 10s.)");
+      return;
+    }
     ROS_ERROR("Point cloud could not be processed.");
     resetMapUpdateTimer();
     return;

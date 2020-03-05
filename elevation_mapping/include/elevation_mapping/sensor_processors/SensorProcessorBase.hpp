@@ -65,6 +65,12 @@ public:
                const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
                const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudOutput, Eigen::VectorXf& variances);
 
+  /*!
+   * Checks if a valid tf transformation was received since startup.
+   * @return True if there was one valid tf transformation.
+   */ 
+  bool isTfAvailableInBuffer() { return firstTfAvailable_; }
+
   typedef std::unique_ptr<SensorProcessorBase> Ptr;
 
 	friend class ElevationMapping;
@@ -174,6 +180,9 @@ public:
 
   //! Use VoxelGrid filter to cleanup pointcloud if true.
   bool applyVoxelGridFilter_;
+
+  //! Indicates if the requested tf transformation was available.
+  bool firstTfAvailable_;
 };
 
 } /* namespace elevation_mapping */

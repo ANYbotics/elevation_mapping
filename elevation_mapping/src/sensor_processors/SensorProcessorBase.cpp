@@ -30,7 +30,8 @@ SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::Transf
     : nodeHandle_(nodeHandle),
       transformListener_(transformListener),
       ignorePointsUpperThreshold_(std::numeric_limits<double>::infinity()),
-      ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity())
+      ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity()),
+      firstTfAvailable_(false)
 {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
   transformationSensorToMap_.setIdentity();
@@ -101,8 +102,15 @@ bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp)
     rotationMapToBase_.setMatrix(transform.rotation().matrix());
     translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
 
+    if(!firstTfAvailable_) {
+      firstTfAvailable_ = true;
+    }
+
     return true;
   } catch (tf::TransformException &ex) {
+    if(!firstTfAvailable_){
+      return false;
+    }
     ROS_ERROR("%s", ex.what());
     return false;
   }
