@@ -11,13 +11,13 @@
 // Elevation Mapping
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
-#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
+#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
 // Grid Map
-#include <grid_map_msgs/SetGridMap.h>
 #include <grid_map_msgs/GetGridMap.h>
 #include <grid_map_msgs/ProcessFile.h>
+#include <grid_map_msgs/SetGridMap.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -28,36 +28,33 @@
 #include <pcl/point_types.h>
 
 // ROS
-#include <ros/ros.h>
-#include <sensor_msgs/PointCloud2.h>
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <message_filters/cache.h>
 #include <message_filters/subscriber.h>
-#include <tf/transform_listener.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <ros/ros.h>
+#include <sensor_msgs/PointCloud2.h>
 #include <std_srvs/Empty.h>
+#include <tf/transform_listener.h>
 
 // Boost
 #include <boost/thread.hpp>
 
-
 namespace elevation_mapping {
 
-enum class InitializationMethods {PlanarFloorInitializer};
+enum class InitializationMethods { PlanarFloorInitializer };
 
 /*!
  * The elevation mapping main class. Coordinates the ROS interfaces, the timing,
  * and the data handling between the other classes.
  */
-class ElevationMapping
-{
+class ElevationMapping {
  public:
-
   /*!
    * Constructor.
    *
    * @param nodeHandle the ROS node handle.
    */
-  ElevationMapping(ros::NodeHandle& nodeHandle);
+  explicit ElevationMapping(ros::NodeHandle& nodeHandle);
 
   /*!
    * Destructor.
@@ -66,7 +63,7 @@ class ElevationMapping
 
   /*!
    * Callback function for new data to be added to the elevation map.
-   * 
+   *
    * @param pointCloud    The point cloud to be fused with the existing data.
    */
   void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
@@ -83,11 +80,10 @@ class ElevationMapping
   /*!
    * Callback function for the fused map publish timer. Publishes the fused map
    * based on configurable duration.
-   * 
+   *
    * @param timerEvent    The timer event.
    */
   void publishFusedMapCallback(const ros::TimerEvent& timerEvent);
-
 
   /*!
    * Callback function for cleaning map based on visibility ray tracing.
@@ -126,7 +122,7 @@ class ElevationMapping
 
   /*!
    * Enables updates of the elevation map.
-   * 
+   *
    * @param request     The ROS service request.
    * @param response    The ROS service response.
    * @return true if successful.
@@ -135,7 +131,7 @@ class ElevationMapping
 
   /*!
    * Disables updates of the elevation map.
-   * 
+   *
    * @param request     The ROS service request.
    * @param response    The ROS service response.
    * @return true if successful.
@@ -152,16 +148,16 @@ class ElevationMapping
   bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-  * Allows for setting the individual layers of the elevation map through a service call. 
-  * The layer mask can be used to only set certain cells and not the entire map. Cells
-  * containing NAN in the mask are not set, all the others are set. If the layer mask is
-  * not supplied, the entire map will be set in the intersection of both maps. The
-  * provided map can be of different size and position than the map that will be altered.
-  *
-  * @param request    The ROS service request.
-  * @param response   The ROS service response.
-  * @return true if successful.
-  */
+   * Allows for setting the individual layers of the elevation map through a service call.
+   * The layer mask can be used to only set certain cells and not the entire map. Cells
+   * containing NAN in the mask are not set, all the others are set. If the layer mask is
+   * not supplied, the entire map will be set in the intersection of both maps. The
+   * provided map can be of different size and position than the map that will be altered.
+   *
+   * @param request    The ROS service request.
+   * @param response   The ROS service response.
+   * @return true if successful.
+   */
   bool maskedReplace(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response);
 
   /*!
@@ -183,7 +179,6 @@ class ElevationMapping
   bool loadMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
 
  private:
-
   /*!
    * Reads and verifies the ROS parameters.
    *
@@ -240,7 +235,7 @@ class ElevationMapping
    * Stop the map update timer.
    */
   void stopMapUpdateTimer();
-  
+
   /*!
    * Initializes a submap around the robot of the elevation map with a constant height
    */
@@ -353,10 +348,10 @@ class ElevationMapping
 
   //! Width of submap of the elevation map with a constant height
   double lengthInXInitSubmap_;
-  
+
   //! Height of submap of the elevation map with a constant height
   double lengthInYInitSubmap_;
-  
+
   //! Margin of submap of the elevation map with a constant height
   double marginInitSubmap_;
 
@@ -367,4 +362,4 @@ class ElevationMapping
   double initSubmapHeightOffset_;
 };
 
-} /* namespace */
+}  // namespace elevation_mapping

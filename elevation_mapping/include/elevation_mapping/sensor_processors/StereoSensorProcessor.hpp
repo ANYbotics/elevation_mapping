@@ -20,10 +20,8 @@ namespace elevation_mapping {
  * "Localization and Path Planning of a Climbing Robot for Corrosion Monitoring", Hannes Keller, Semester Project, ETH Zurich, 2014.
  */
 
-class StereoSensorProcessor: public SensorProcessorBase
-{
-public:
-
+class StereoSensorProcessor : public SensorProcessorBase {
+ public:
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
@@ -34,15 +32,14 @@ public:
   /*!
    * Destructor.
    */
-  virtual ~StereoSensorProcessor();
+  ~StereoSensorProcessor() override;
 
-private:
-
+ private:
   /*!
    * Reads and verifies the parameters.
    * @return true if successful.
    */
-  bool readParameters();
+  bool readParameters() override;
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
@@ -52,17 +49,15 @@ private:
    * @param[out] variances the elevation map height variances.
    * @return true if successful.
    */
-  virtual bool computeVariances(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-      Eigen::VectorXf& variances);
+  bool computeVariances(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+                        const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) override;
 
-   /*!
-    * Cuts off points that are not within the cutoff interval
-    * @param pointCloud the point cloud to filter.
-    * @return true if successful.
+  /*!
+   * Cuts off points that are not within the cutoff interval
+   * @param pointCloud the point cloud to filter.
+   * @return true if successful.
    */
-   bool filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud);
+  bool filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud) override;
 
   //! Helper functions to get i-j indices out of a single index.
   int getI(int index);
@@ -73,4 +68,4 @@ private:
   int originalWidth_;
 };
 
-} /* namespace */
+}  // namespace elevation_mapping

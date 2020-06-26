@@ -25,20 +25,18 @@ namespace elevation_mapping {
 /*!
  * Computes the map variance update from the pose covariance of the robot.
  */
-class RobotMotionMapUpdater
-{
+class RobotMotionMapUpdater {
  public:
-
-  typedef kindr::HomogeneousTransformationPosition3RotationQuaternionD Pose;
-  typedef Eigen::Matrix<double, 3, 3> Covariance;
-  typedef Eigen::Matrix<double, 6, 6> PoseCovariance;
-  typedef Eigen::Matrix<double, 4, 4> ReducedCovariance;
-  typedef Eigen::Matrix<double, 4, 4> Jacobian;
+  using Pose = kindr::HomogeneousTransformationPosition3RotationQuaternionD;
+  using Covariance = Eigen::Matrix<double, 3, 3>;
+  using PoseCovariance = Eigen::Matrix<double, 6, 6>;
+  using ReducedCovariance = Eigen::Matrix<double, 4, 4>;
+  using Jacobian = Eigen::Matrix<double, 4, 4>;
 
   /*!
    * Constructor.
    */
-  RobotMotionMapUpdater(ros::NodeHandle nodeHandle);
+  explicit RobotMotionMapUpdater(ros::NodeHandle nodeHandle);
 
   /*!
    * Destructor.
@@ -60,11 +58,9 @@ class RobotMotionMapUpdater
    * @param[in] time the time of the current update.
    * @return true if successful.
    */
-  bool update(ElevationMap& map, const Pose& robotPose,
-              const PoseCovariance& robotPoseCovariance, const ros::Time& time);
+  bool update(ElevationMap& map, const Pose& robotPose, const PoseCovariance& robotPoseCovariance, const ros::Time& time);
 
  private:
-
   /*!
    * Computes the reduced covariance (4x4: x, y, z, yaw) from the full pose covariance (6x6: x, y, z, roll, pitch, yaw).
    * @param[in] robotPose the robot pose.
@@ -72,8 +68,7 @@ class RobotMotionMapUpdater
    * @param[out] reducedCovariance the reduced covariance matrix (4x4);
    * @return true if successful.
    */
-  bool computeReducedCovariance(const Pose& robotPose, const PoseCovariance& robotPoseCovariance,
-                                ReducedCovariance& reducedCovariance);
+  bool computeReducedCovariance(const Pose& robotPose, const PoseCovariance& robotPoseCovariance, ReducedCovariance& reducedCovariance);
 
   /*!
    * Computes the covariance between the new and the previous pose.
@@ -82,8 +77,7 @@ class RobotMotionMapUpdater
    * @param[out] relativeRobotPoseCovariance the relative covariance between the current and the previous robot pose (reduced form).
    * @return true if successful.
    */
-  bool computeRelativeCovariance(const Pose& robotPose, const ReducedCovariance& reducedCovariance,
-                                 ReducedCovariance& relativeCovariance);
+  bool computeRelativeCovariance(const Pose& robotPose, const ReducedCovariance& reducedCovariance, ReducedCovariance& relativeCovariance);
 
   //! ROS nodehandle.
   ros::NodeHandle nodeHandle_;
@@ -101,4 +95,4 @@ class RobotMotionMapUpdater
   double covarianceScale_;
 };
 
-} /* namespace */
+}  // namespace elevation_mapping

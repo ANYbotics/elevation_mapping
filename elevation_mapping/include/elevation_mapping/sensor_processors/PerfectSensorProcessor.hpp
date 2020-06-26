@@ -15,11 +15,8 @@ namespace elevation_mapping {
 /*!
  * Sensor processor for laser range sensors.
  */
-class PerfectSensorProcessor : public SensorProcessorBase
-{
-
-public:
-
+class PerfectSensorProcessor : public SensorProcessorBase {
+ public:
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
@@ -30,15 +27,14 @@ public:
   /*!
    * Destructor.
    */
-  virtual ~PerfectSensorProcessor();
+  ~PerfectSensorProcessor() override;
 
-private:
-
+ private:
   /*!
    * Reads and verifies the parameters.
    * @return true if successful.
    */
-  bool readParameters();
+  bool readParameters() override;
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
@@ -48,10 +44,8 @@ private:
    * @param[out] variances the elevation map height variances.
    * @return true if successful.
    */
-  virtual bool computeVariances(
-      const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-      const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-      Eigen::VectorXf& variances);
+  bool computeVariances(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+                        const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) override;
 };
 
 } /* namespace elevation_mapping */

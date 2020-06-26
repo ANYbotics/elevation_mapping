@@ -9,20 +9,28 @@
   <url type="website">http://github.com/anybotics/elevation_mapping</url>
   <url type="bugtracker">http://github.com/anybotics/elevation_mapping/issues</url>
   <author email="pfankhauser@anybotics.com">Péter Fankhauser</author>
+
   <buildtool_depend>catkin</buildtool_depend>
-  <depend>roscpp</depend>
-  <depend>message_filters</depend>
-  <depend>pcl_ros</depend>
-  <depend>sensor_msgs</depend>
-  <depend>std_msgs</depend>
+
+  <build_depend>cmake_clang_tools</build_depend>
+
+  <depend>boost</depend>
+  <depend>eigen</depend>
+  <depend>eigen_conversions</depend>
   <depend>grid_map_core</depend>
   <depend>grid_map_ros</depend>
   <depend>grid_map_msgs</depend>
   <depend>kindr</depend>
   <depend>kindr_ros</depend>
+  <depend>message_filters</depend>
+  <depend>pcl_ros</depend>
+  <depend>roscpp</depend>
+  <depend>sensor_msgs</depend>
+  <depend>std_msgs</depend>
   <depend>tf</depend>
   <depend>tf_conversions</depend>
-  <depend>eigen_conversions</depend>
-  <depend>boost</depend>
-  <depend>eigen</depend>
+
+  <test_depend>gtest</test_depend>
+  <test_depend>cmake_code_coverage</test_depend>
+
 </package>
