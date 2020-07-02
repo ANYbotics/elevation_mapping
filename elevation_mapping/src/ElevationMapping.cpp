@@ -539,9 +539,17 @@ bool ElevationMapping::initializeElevationMap() {
       try {
         transformListener_.waitForTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), ros::Duration(5.0));
         transformListener_.lookupTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), transform);
-        ROS_INFO_STREAM("Initializing with " << transform.getOrigin().z());
-        map_.setRawSubmapHeight(transform.getOrigin().z() + initSubmapHeightOffset_, lengthInXInitSubmap_, lengthInYInitSubmap_,
-                                marginInitSubmap_);
+        ROS_DEBUG_STREAM("Initializing with x: " << transform.getOrigin().x() << " y: " << transform.getOrigin().y()
+                                                 << " z: " << transform.getOrigin().z());
+
+        const grid_map::Position positionRobot(transform.getOrigin().x(), transform.getOrigin().y());
+
+        // Move map before we apply the height values. This prevents unwanted behavior from intermediate move() calls in
+        // updateMapLocation().
+        map_.move(positionRobot);
+
+        map_.setRawSubmapHeight(positionRobot, transform.getOrigin().z() + initSubmapHeightOffset_, lengthInXInitSubmap_,
+                                lengthInYInitSubmap_, marginInitSubmap_);
         return true;
       } catch (tf::TransformException& ex) {
         ROS_ERROR("%s", ex.what());

@@ -231,12 +231,14 @@ class ElevationMap {
 
   /*!
    * Method to set the height value around the center of the robot, can be used for initialization.
+   * @param initPosition Position to calculate inner rectangle.
    * @param mapHeight The height that gets set uniformly.
    * @param lengthInXSubmap Length of the submap in X direction.
    * @param lengthInYSubmap Length of the submap in Y direction.
    * @param margin Extra margin that gets added to the submap boundaries.
    */
-  void setRawSubmapHeight(float mapHeight, double lengthInXSubmap, double lengthInYSubmap, double margin);
+  void setRawSubmapHeight(const grid_map::Position& initPosition, float mapHeight, double lengthInXSubmap, double lengthInYSubmap,
+                          double margin);
 
   friend class ElevationMapping;
 
