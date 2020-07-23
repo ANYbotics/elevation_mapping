@@ -268,8 +268,6 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2& rawPoi
 
   stopMapUpdateTimer();
 
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
-
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   // TODO(max): Double check with http://wiki.ros.org/hydro/Migration
   pcl::PCLPointCloud2 pcl_pc;
@@ -280,6 +278,8 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2& rawPoi
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
+
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
   // Update map location.
   updateMapLocation();
@@ -355,12 +355,15 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
     return;
   }
 
+  ros::Time time = ros::Time::now();
+  if ((lastPointCloudUpdateTime_ - time) <= maxNoUpdateDuration_) {  // there were updates from sensordata, no need to force an update.
+    return;
+  }
   ROS_WARN_THROTTLE(5, "Elevation map is updated without data from the sensor. (Warning message is throttled, 5s.)");
 
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
   stopMapUpdateTimer();
-  ros::Time time = ros::Time::now();
 
   // Update map from motion prediction.
   if (!updatePrediction(time)) {
