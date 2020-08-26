@@ -13,4 +13,6 @@
   <depend>elevation_mapping</depend>
   <depend>grid_map_rviz_plugin</depend>
   <depend>rviz</depend>
+<!--   <test_depend>cmake_code_coverage</test_depend> -->
+  <test_depend>gtest</test_depend>
 </package>
