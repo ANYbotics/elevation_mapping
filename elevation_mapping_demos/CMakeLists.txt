@@ -69,5 +69,5 @@ if(CATKIN_ENABLE_TESTING)
       TEST_BUILD_TARGETS
         test_${PROJECT_NAME}
     )
-  endif(cmake_code_coverage_FOUND)
+  endif()
 endif()

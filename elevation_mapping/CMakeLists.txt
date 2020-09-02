@@ -142,7 +142,7 @@ if(TARGET test_${PROJECT_NAME})
       add_gtest_coverage(
         TEST_BUILD_TARGETS test_${PROJECT_NAME}
       )
-  endif(cmake_code_coverage_FOUND)
+  endif()
 endif()
 
 ###########
