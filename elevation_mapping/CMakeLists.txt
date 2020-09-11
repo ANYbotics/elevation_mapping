@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.5.1)
 project(elevation_mapping)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 add_compile_options(-Wall -Wextra -Wpedantic)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
