@@ -302,7 +302,7 @@ class ElevationMap {
   //! ROS publishers.
   ros::Publisher elevationMapRawPublisher_;
   ros::Publisher elevationMapFusedPublisher_;
-  ros::Publisher visbilityCleanupMapPublisher_;
+  ros::Publisher visibilityCleanupMapPublisher_;
 
   //! Mutex lock for fused map.
   boost::recursive_mutex fusedMapMutex_;

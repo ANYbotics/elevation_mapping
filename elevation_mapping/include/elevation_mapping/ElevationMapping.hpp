@@ -320,7 +320,7 @@ class ElevationMapping {
   ros::Duration fusedMapPublishTimerDuration_;
 
   //! If map is fused after every change for debugging/analysis purposes.
-  bool isContinouslyFusing_;
+  bool isContinuouslyFusing_;
 
   //! Timer for the raytracing cleanup.
   ros::Timer visibilityCleanupTimer_;

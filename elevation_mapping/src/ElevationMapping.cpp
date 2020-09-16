@@ -7,7 +7,6 @@
  */
 
 #include <cmath>
-#include <limits>
 #include <string>
 
 #include <grid_map_msgs/GridMap.h>
@@ -39,7 +38,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       robotMotionMapUpdater_(nodeHandle),
       ignoreRobotMotionUpdates_(false),
       updatesEnabled_(true),
-      isContinouslyFusing_(false),
+      isContinuouslyFusing_(false),
       receivedFirstMatchingPointcloudAndPose_(false),
       initializeElevationMap_(false),
       initializationMethod_(0),
@@ -140,7 +139,7 @@ bool ElevationMapping::readParameters() {
         "Rate for publishing the fused map is zero. The fused elevation map will not be published unless the service `triggerFusion` is "
         "called.");
   } else if (std::isinf(fusedMapPublishingRate)) {
-    isContinouslyFusing_ = true;
+    isContinuouslyFusing_ = true;
     fusedMapPublishTimerDuration_.fromSec(0.0);
   } else {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
@@ -339,7 +338,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2& rawPoi
 
   // Publish elevation map.
   map_.publishRawElevationMap();
-  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
+  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
     map_.fuseAll();
     map_.publishFusedElevationMap();
   }
@@ -374,7 +373,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
 
   // Publish elevation map.
   map_.publishRawElevationMap();
-  if (isContinouslyFusing_ && map_.hasFusedMapSubscribers()) {
+  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
     map_.fuseAll();
     map_.publishFusedElevationMap();
   }

@@ -44,7 +44,7 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     underlyingMapSubscriber_ = nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
   }
   // TODO(max): if (enableVisibilityCleanup_) when parameter cleanup is ready.
-  visbilityCleanupMapPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("visibility_cleanup_map", 1);
+  visibilityCleanupMapPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("visibility_cleanup_map", 1);
 
   initialTime_ = ros::Time::now();
 }
@@ -538,7 +538,7 @@ bool ElevationMap::publishFusedElevationMap() {
 }
 
 bool ElevationMap::publishVisibilityCleanupMap() {
-  if (visbilityCleanupMapPublisher_.getNumSubscribers() < 1) {
+  if (visibilityCleanupMapPublisher_.getNumSubscribers() < 1) {
     return false;
   }
   boost::recursive_mutex::scoped_lock scopedLock(visibilityCleanupMapMutex_);
@@ -553,7 +553,7 @@ bool ElevationMap::publishVisibilityCleanupMap() {
   visibilityCleanupMapCopy.erase("time");
   grid_map_msgs::GridMap message;
   grid_map::GridMapRosConverter::toMessage(visibilityCleanupMapCopy, message);
-  visbilityCleanupMapPublisher_.publish(message);
+  visibilityCleanupMapPublisher_.publish(message);
   ROS_DEBUG("Visibility cleanup map has been published.");
   return true;
 }
