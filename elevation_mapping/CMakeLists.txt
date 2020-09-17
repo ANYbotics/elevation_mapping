@@ -59,6 +59,8 @@ add_library(${PROJECT_NAME}_library
   src/ElevationMapping.cpp
   src/ElevationMap.cpp
   src/RobotMotionMapUpdater.cpp
+  src/postprocessing/PostprocessorPool.cpp
+  src/postprocessing/PostprocessingPipelineFunctor.cpp
   src/sensor_processors/SensorProcessorBase.cpp
   src/sensor_processors/StructuredLightSensorProcessor.cpp
   src/sensor_processors/StereoSensorProcessor.cpp
@@ -68,6 +70,7 @@ add_library(${PROJECT_NAME}_library
 
 target_link_libraries(${PROJECT_NAME}_library
   ${catkin_LIBRARIES}
+  pthread
 )
 
 ##############

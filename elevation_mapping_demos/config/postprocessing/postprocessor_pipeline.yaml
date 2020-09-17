@@ -1,0 +1,24 @@
+postprocessor_pipeline: # set by postprocessor_pipeline_name
+
+   #  Delete layers that are not needed.
+   #  - name: delete_original_layers
+   #    type: gridMapFilters/DeletionFilter
+   #    params:
+   #      layers: [lowest_scan_point,sensor_x_at_lowest_scan, sensor_y_at_lowest_scan, sensor_z_at_lowest_scan] # List of layers.
+
+  # Fill holes in the map with inpainting.
+   - name: inpaint
+     type: gridMapCv/InpaintFilter
+     params:
+       input_layer: elevation
+       output_layer: elevation_inpainted
+       radius: 0.05
+
+   # Compute Surface normals
+   - name: surface_normals
+     type: gridMapFilters/NormalVectorsFilter
+     params:
+       input_layer: elevation_inpainted
+       output_layers_prefix: normal_vectors_
+       radius: 0.05
+       normal_vector_positive_axis: z

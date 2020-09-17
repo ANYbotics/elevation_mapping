@@ -212,13 +212,6 @@ class ElevationMapping {
   bool updatePrediction(const ros::Time& time);
 
   /*!
-   * Fills a elevation map message with the appropriate header information.
-   *
-   * @param gridMapMessage    The elevation massage to be filled with header information.
-   */
-  void addHeaderDataToElevationMessage(grid_map_msgs::GridMap& gridMapMessage);
-
-  /*!
    * Updates the location of the map to follow the tracking point. Takes care
    * of the data handling the goes along with the relocalization.
    *
@@ -355,7 +348,7 @@ class ElevationMapping {
   //! Margin of submap of the elevation map with a constant height
   double marginInitSubmap_;
 
-  //! Targe frame to get the init height of the elevation map
+  //! Target frame to get the init height of the elevation map
   std::string targetFrameInitSubmap_;
 
   //! Additional offset of the height value

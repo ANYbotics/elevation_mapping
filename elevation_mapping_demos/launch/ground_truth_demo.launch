@@ -3,5 +3,6 @@
     	 <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/ground_truth_demo.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping_demos)/config/elevation_maps/long_range.yaml" />
     	 <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/perfect.yaml" />
+    	 <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" />
     </node>
 </launch>

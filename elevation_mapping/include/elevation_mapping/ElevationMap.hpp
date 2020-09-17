@@ -28,6 +28,9 @@
 // ROS
 #include <ros/ros.h>
 
+// Postprocessing
+#include "elevation_mapping/postprocessing/PostprocessorPool.hpp"
+
 namespace elevation_mapping {
 
 /*!
@@ -111,9 +114,11 @@ class ElevationMap {
   void move(const Eigen::Vector2d& position);
 
   /*!
-   * Publishes the (latest) raw elevation map.
+   * Publishes the (latest) raw elevation map. Optionally, if a postprocessing pipeline was configured,
+   * the map is postprocessed before publishing.
    * @return true if successful.
    */
+  // TODO (magnus) rename? E.g. adapt for postprocessing structure.
   bool publishRawElevationMap();
 
   /*!
@@ -244,12 +249,6 @@ class ElevationMap {
 
  private:
   /*!
-   * Reads and verifies the ROS parameters.
-   * @return true if successful.
-   */
-  bool readParameters();
-
-  /*!
    * Fuses a region of the map.
    * @param topLeftIndex the top left index of the region.
    * @param size the size (in number of cells) of the region.
@@ -293,14 +292,16 @@ class ElevationMap {
   //! Underlying map, used for ground truth maps, multi-robot mapping etc.
   grid_map::GridMap underlyingMap_;
 
+  //! Thread Pool to handle raw map postprocessing filter pipelines.
+  PostprocessorPool postprocessorPool_;
+
   //! True if underlying map has been set, false otherwise.
   bool hasUnderlyingMap_;
 
   //! Pose of the elevation map frame w.r.t. the inertial parent frame of the robot (e.g. world, map etc.).
   kindr::HomTransformQuatD pose_;
 
-  //! ROS publishers.
-  ros::Publisher elevationMapRawPublisher_;
+  //! ROS publishers. Publishing of the raw elevation map is handled by the postprocessing pool.
   ros::Publisher elevationMapFusedPublisher_;
   ros::Publisher visibilityCleanupMapPublisher_;
 
@@ -310,7 +311,7 @@ class ElevationMap {
   //! Mutex lock for raw map.
   boost::recursive_mutex rawMapMutex_;
 
-  //! Mutex lock for vsibility cleanup map.
+  //! Mutex lock for visibility cleanup map.
   boost::recursive_mutex visibilityCleanupMapMutex_;
 
   //! Underlying map subscriber.

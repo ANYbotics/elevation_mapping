@@ -14,7 +14,6 @@
 #include <pcl/conversions.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <boost/bind.hpp>
 #include <boost/thread/recursive_mutex.hpp>

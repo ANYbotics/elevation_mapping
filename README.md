@@ -316,6 +316,22 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     Enable/disable a continuous clean-up of the elevation map. If enabled, on arrival of each new sensor data the elevation map will be cleared and filled up only with the latest data from the sensor. When continuous clean-up is enabled, visibility clean-up will automatically be disabled since it is not needed in this case.
 
+* **`postprocessor_pipeline_name`** (string, default: postprocessor_pipeline)
+
+    The name of the pipeline to execute for postprocessing. It expects a pipeline configuration to be loaded in the private namespace of the node under this name. 
+    E.g.:
+    ```
+      <node pkg="elevation_mapping" type="elevation_mapping" name="elevation_mapping" output="screen">
+          ...
+          <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessor_pipeline.yaml" />
+      </node>
+    ```
+    A pipeline is a grid_map_filter chain, see grid_map_demos/filters_demo.yaml and [ros / filters](http://wiki.ros.org/filters) for more information. 
+
+* **`postprocessor_num_threads`** (int, default: 1, min: 1)
+
+    The number of threads to use for asynchronous postprocessing. More threads results in higher throughput, at cost of more resource usage. 
+
 * **`scanning_duration`** (double, default: 1.0)
 
     The sensor's scanning duration (in s) which is used for the visibility cleanup. Set this roughly to the duration it takes between two consecutive full scans (e.g. 0.033 for a ToF camera with 30 Hz, or 3 s for a rotating laser scanner). Depending on how dense or sparse your scans are, increase or reduce the scanning duration. Smaller values lead to faster dynamic object removal and bigger values help to reduce faulty map cleanups.

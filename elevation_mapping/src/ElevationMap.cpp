@@ -23,6 +23,7 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
                "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
+      postprocessorPool_(nodeHandle.param("postprocessor_num_threads", 1), nodeHandle_),
       hasUnderlyingMap_(false),
       minVariance_(0.000009),
       maxVariance_(0.0009),
@@ -38,7 +39,6 @@ ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
   fusedMap_.setBasicLayers({"elevation", "upper_bound", "lower_bound"});
   clear();
 
-  elevationMapRawPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map_raw", 1);
   elevationMapFusedPublisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>("elevation_map", 1);
   if (!underlyingMapTopic_.empty()) {
     underlyingMapSubscriber_ = nodeHandle_.subscribe(underlyingMapTopic_, 1, &ElevationMap::underlyingMapCallback, this);
@@ -507,6 +507,8 @@ bool ElevationMap::publishRawElevationMap() {
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
+
+  // TODO (magnus) This postprocessing should be moved to the postprocessor pipeline.
   rawMapCopy.erase("lowest_scan_point");
   rawMapCopy.erase("sensor_x_at_lowest_scan");
   rawMapCopy.erase("sensor_y_at_lowest_scan");
@@ -515,11 +517,8 @@ bool ElevationMap::publishRawElevationMap() {
   rawMapCopy.add("horizontal_standard_deviation",
                  (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
   rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
-  grid_map_msgs::GridMap message;
-  grid_map::GridMapRosConverter::toMessage(rawMapCopy, message);
-  elevationMapRawPublisher_.publish(message);
-  ROS_DEBUG("Elevation map raw has been published.");
-  return true;
+
+  return postprocessorPool_.runTask(rawMapCopy);
 }
 
 bool ElevationMap::publishFusedElevationMap() {
@@ -637,7 +636,7 @@ const std::string& ElevationMap::getFrameId() {
 }
 
 bool ElevationMap::hasRawMapSubscribers() const {
-  return elevationMapRawPublisher_.getNumSubscribers() >= 1;
+  return postprocessorPool_.pipelineHasSubscribers();
 }
 
 bool ElevationMap::hasFusedMapSubscribers() const {

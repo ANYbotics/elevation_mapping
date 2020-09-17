@@ -5,6 +5,7 @@
     <rosparam command="load" file="$(find elevation_mapping_demos)/config/robots/simple_demo_robot.yaml" />
     <rosparam command="load" file="$(find elevation_mapping_demos)/config/elevation_maps/simple_demo_map.yaml" />
     <rosparam command="load" file="$(find elevation_mapping)/config/sensor_processors/kinect_nguyen_et_al.yaml" />
+    <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" />
   </node>
 
   <!-- Launch visualizations for the resulting elevation map -->
