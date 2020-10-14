@@ -119,7 +119,9 @@ install(
 if(CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED
     COMPONENTS
-      ${CATKIN_PACKAGE_DEPENDENCIES}
+    ${CATKIN_PACKAGE_DEPENDENCIES}
+    roslaunch
+    rostest
   )
 
   catkin_add_gtest(test_${PROJECT_NAME}
@@ -127,9 +129,7 @@ if(CATKIN_ENABLE_TESTING)
     test/test_elevation_mapping.cpp
     test/WeightedEmpiricalCumulativeDistributionFunctionTest.cpp
   )
-endif()
 
-if(TARGET test_${PROJECT_NAME})
   target_link_libraries(test_${PROJECT_NAME}
     ${PROJECT_NAME}_library
   )
@@ -140,10 +140,33 @@ if(TARGET test_${PROJECT_NAME})
       ${catkin_INCLUDE_DIRS}
   )
 
+  add_rostest_gtest(test_postprocessor
+    test/postprocessing/postprocessor.test
+    test/postprocessing/main.cpp
+    test/postprocessing/PostprocessorTest.cpp
+  )
+  target_include_directories(test_postprocessor PRIVATE
+    include
+  )
+  target_include_directories(test_postprocessor SYSTEM PUBLIC
+    ${catkin_INCLUDE_DIRS}
+  )
+  target_link_libraries(test_postprocessor
+    ${GTEST_LIBRARIES}
+    ${PROJECT_NAME}_library
+    ${catkin_LIBRARIES}
+  )
+
   find_package(cmake_code_coverage QUIET)
   if(cmake_code_coverage_FOUND)
       add_gtest_coverage(
-        TEST_BUILD_TARGETS test_${PROJECT_NAME}
+        TEST_BUILD_TARGETS
+          test_${PROJECT_NAME}
+      )
+
+      add_rostest_coverage(
+        TEST_BUILD_TARGETS
+          test_postprocessor
       )
   endif()
 endif()

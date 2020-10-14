@@ -32,5 +32,7 @@
 
 <!--   <test_depend>cmake_code_coverage</test_depend> -->
   <test_depend>gtest</test_depend>
+  <test_depend>roslaunch</test_depend>
+  <test_depend>rostest</test_depend>
   
 </package>

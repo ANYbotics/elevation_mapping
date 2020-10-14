@@ -1,0 +1,13 @@
+postprocessor_pipeline_name: test_pipeline
+
+test_pipeline:
+  - name: first
+    type: gridMapFilters/MockFilter
+    params:
+      processing_time: 100 # [ms]
+      print_name: true
+  - name: second
+    type: gridMapFilters/MockFilter
+    params:
+      processing_time: 50 # [ms]
+      print_name: true
