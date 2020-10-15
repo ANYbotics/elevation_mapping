@@ -76,6 +76,24 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     initialTime_ = timestamp;
   }
 
+  // Store references for efficient interation.
+  auto& elevationLayer = rawMap_["elevation"];
+  auto& varianceLayer = rawMap_["variance"];
+  auto& horizontalVarianceXLayer = rawMap_["horizontal_variance_x"];
+  auto& horizontalVarianceYLayer = rawMap_["horizontal_variance_y"];
+  auto& horizontalVarianceXYLayer = rawMap_["horizontal_variance_xy"];
+  auto& colorLayer = rawMap_["color"];
+  auto& timeLayer = rawMap_["time"];
+  auto& lowestScanPointLayer = rawMap_["lowest_scan_point"];
+  auto& sensorXatLowestScanLayer = rawMap_["sensor_x_at_lowest_scan"];
+  auto& sensorYatLowestScanLayer = rawMap_["sensor_y_at_lowest_scan"];
+  auto& sensorZatLowestScanLayer = rawMap_["sensor_z_at_lowest_scan"];
+
+  std::vector<Eigen::Ref<const grid_map::Matrix>> basicLayers_;
+  for (const std::string& layer : rawMap_.getBasicLayers()) {
+    basicLayers_.push_back(rawMap_.get(layer));
+  }
+
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
     grid_map::Index index;
@@ -84,22 +102,23 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
       continue;  // Skip this point if it does not lie within the elevation map.
     }
 
-    auto& elevation = rawMap_.at("elevation", index);
-    auto& variance = rawMap_.at("variance", index);
-    auto& horizontalVarianceX = rawMap_.at("horizontal_variance_x", index);
-    auto& horizontalVarianceY = rawMap_.at("horizontal_variance_y", index);
-    auto& horizontalVarianceXY = rawMap_.at("horizontal_variance_xy", index);
-    auto& color = rawMap_.at("color", index);
-    auto& time = rawMap_.at("time", index);
-    auto& lowestScanPoint = rawMap_.at("lowest_scan_point", index);
-    auto& sensorXatLowestScan = rawMap_.at("sensor_x_at_lowest_scan", index);
-    auto& sensorYatLowestScan = rawMap_.at("sensor_y_at_lowest_scan", index);
-    auto& sensorZatLowestScan = rawMap_.at("sensor_z_at_lowest_scan", index);
+    auto& elevation = elevationLayer(index(0), index(1));
+    auto& variance = varianceLayer(index(0), index(1));
+    auto& horizontalVarianceX = horizontalVarianceXLayer(index(0), index(1));
+    auto& horizontalVarianceY = horizontalVarianceYLayer(index(0), index(1));
+    auto& horizontalVarianceXY = horizontalVarianceXYLayer(index(0), index(1));
+    auto& color = colorLayer(index(0), index(1));
+    auto& time = timeLayer(index(0), index(1));
+    auto& lowestScanPoint = lowestScanPointLayer(index(0), index(1));
+    auto& sensorXatLowestScan = sensorXatLowestScanLayer(index(0), index(1));
+    auto& sensorYatLowestScan = sensorYatLowestScanLayer(index(0), index(1));
+    auto& sensorZatLowestScan = sensorZatLowestScanLayer(index(0), index(1));
 
     const float& pointVariance = pointCloudVariances(i);
     const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
-
-    if (!rawMap_.isValid(index)) {
+    bool isValid = std::all_of(basicLayers_.begin(), basicLayers_.end(),
+                               [&](Eigen::Ref<const grid_map::Matrix> layer) { return std::isfinite(layer(index(0), index(1))); });
+    if (!isValid) {
       // No prior information in elevation map, use measurement.
       elevation = point.z;  // NOLINT(cppcoreguidelines-pro-type-union-access)
       variance = pointVariance;

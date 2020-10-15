@@ -72,12 +72,19 @@ bool RobotMotionMapUpdater::update(ElevationMap& map, const Pose& robotPose, con
   const kindr::Position3D positionRobotToMap =
       map.getPose().getRotation().inverseRotate(map.getPose().getPosition() - previousRobotPose_.getPosition());
 
+  auto& heightLayer = map.getRawGridMap()["elevation"];
+
   // For each cell in map. // TODO(max): Change to new iterator.
   for (unsigned int i = 0; i < static_cast<unsigned int>(size(0)); ++i) {
     for (unsigned int j = 0; j < static_cast<unsigned int>(size(1)); ++j) {
       kindr::Position3D cellPosition;  // M_r_MP
 
-      if (map.getRawGridMap().getPosition3("elevation", grid_map::Index(i, j), cellPosition.vector())) {
+      const auto height = heightLayer(i, j);
+      if (std::isfinite(height)) {
+        grid_map::Position position;
+        map.getRawGridMap().getPosition({i, j}, position);
+        cellPosition = {position.x(), position.y(), height};
+
         // Rotation Jacobian J_R (25)
         const Eigen::Matrix3d rotationJacobian =
             -kindr::getSkewMatrixFromVector((positionRobotToMap + cellPosition).vector()) * mapToPreviousRobotRotationInverted.matrix();
