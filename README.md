@@ -82,10 +82,15 @@ In order to install the Robot-Centric Elevation Mapping, clone the latest versio
 
 ### Unit Tests
 
-Run the unit tests with
-
-    catkin_make run_tests_elevation_map_msg run_tests_elevation_mapping
-
+Build tests with
+    
+    roscd elevation_mapping
+    catkin build --catkin-make-args run_tests -- --this
+   
+Run the tests with
+    
+     rostest elevation_mapping elevation_mapping.test -t
+    
 
 ## Basic Usage
 
@@ -229,10 +234,28 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
 #### Parameters
 
-* **`point_cloud_topic`** (string, default: "/points")
+* **`DEPRECATED point_cloud_topic`** (string, default: "/points")
 
-    The name of the distance measurements topic.
+    The name of the distance measurements topic. Use input_sources instead. 
+    
+* **`input_sources`** (list of input sources, default: none)
 
+    Here you specify your inputs to elevation mapping, currently "pointcloud" inputs are supported. 
+    
+    Example configuration:
+    ```
+    input_sources:
+    - name: front # A name to identify the input source
+      type: pointcloud # Supported types: pointcloud
+      topic: /lidar_front/depth/points
+      queue_size: 1
+      publish_on_update: true # Wheter to publish the elevation map after a callback from this source. 
+    - name: rear
+      type: pointcloud
+      topic: /lidar_rear/depth/points
+      queue_size: 5
+      publish_on_update: false
+    ```
 * **`robot_pose_topic`** (string, default: "/robot_state/pose")
 
     The name of the robot pose and covariance topic.
@@ -344,12 +367,15 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     The data for the sensor noise model.
 
+## Changelog
+
+See [Changelog]
 
 ## Bugs & Feature Requests
 
 Please report bugs and request features using the [Issue Tracker](https://github.com/anybotics/elevation_mapping/issues).
 
-
+[Changelog]: CHANGELOG.rst
 [ROS]: http://www.ros.org
 [rviz]: http://wiki.ros.org/rviz
 [grid_map_msgs/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/msg/GridMap.msg

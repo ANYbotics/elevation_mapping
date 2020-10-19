@@ -2,8 +2,7 @@
 
 <launch>
   <!-- Launch the testing counterpart ROS node -->
-  <test pkg="elevation_mapping" type="test_postprocessor" test-name="test_postprocessor" time-limit="100.0">
+  <test pkg="elevation_mapping" type="test_elevation_mapping_postprocessor" test-name="test_postprocessor" time-limit="100.0">
     <rosparam command="load" file="$(find elevation_mapping)/test/postprocessing/postprocessor_pipeline.yaml" />
   </test>
-
 </launch>

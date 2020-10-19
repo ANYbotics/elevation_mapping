@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+  <env name="ROSCONSOLE_CONFIG_FILE" value="$(find elevation_mapping)/test/input_sources/config/rosconsole.config"/>
+  <test pkg="elevation_mapping" type="test_elevation_mapping_input_sources" test-name="test_elevation_mapping_inputs" time-limit="100.0">
+    <rosparam command="load"  file="$(find elevation_mapping)/test/input_sources/config/TestConfigurations.yaml"/>
+  </test>
+</launch>

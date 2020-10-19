@@ -58,9 +58,11 @@ include_directories(
 add_library(${PROJECT_NAME}_library
   src/ElevationMapping.cpp
   src/ElevationMap.cpp
-  src/RobotMotionMapUpdater.cpp
+  src/input_sources/Input.cpp
+  src/input_sources/InputSourceManager.cpp
   src/postprocessing/PostprocessorPool.cpp
   src/postprocessing/PostprocessingPipelineFunctor.cpp
+  src/RobotMotionMapUpdater.cpp
   src/sensor_processors/SensorProcessorBase.cpp
   src/sensor_processors/StructuredLightSensorProcessor.cpp
   src/sensor_processors/StereoSensorProcessor.cpp
@@ -93,9 +95,12 @@ install(
   TARGETS 
     ${PROJECT_NAME}
     ${PROJECT_NAME}_library
-  ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
-  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+  ARCHIVE DESTINATION
+    ${CATKIN_PACKAGE_LIB_DESTINATION}
+  LIBRARY DESTINATION
+    ${CATKIN_PACKAGE_LIB_DESTINATION}
+  RUNTIME DESTINATION
+    ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
 install(
@@ -119,39 +124,66 @@ install(
 if(CATKIN_ENABLE_TESTING)
   find_package(catkin REQUIRED
     COMPONENTS
-    ${CATKIN_PACKAGE_DEPENDENCIES}
-    roslaunch
-    rostest
+      ${CATKIN_PACKAGE_DEPENDENCIES}
+      grid_map_filters
+      roslaunch
+      rostest
   )
 
-  catkin_add_gtest(test_${PROJECT_NAME}
+  # Cummulative distribution
+  catkin_add_gtest(test_${PROJECT_NAME}_cumulative_distribution
     test/ElevationMapTest.cpp
     test/test_elevation_mapping.cpp
     test/WeightedEmpiricalCumulativeDistributionFunctionTest.cpp
   )
 
-  target_link_libraries(test_${PROJECT_NAME}
+  target_link_libraries(test_${PROJECT_NAME}_cumulative_distribution
     ${PROJECT_NAME}_library
   )
 
-  target_include_directories(test_${PROJECT_NAME} PRIVATE
-    include
+  target_include_directories(test_${PROJECT_NAME}_cumulative_distribution
+    PRIVATE
+      include
     SYSTEM
       ${catkin_INCLUDE_DIRS}
   )
 
-  add_rostest_gtest(test_postprocessor
+  # Input sources
+  add_rostest_gtest(test_${PROJECT_NAME}_input_sources
+    test/input_sources/input_sources.test
+    test/input_sources/test_input_sources.cpp
+    test/input_sources/InputSourcesTest.cpp
+    )
+
+  target_link_libraries(test_${PROJECT_NAME}_input_sources
+    ${PROJECT_NAME}_library
+  )
+
+  target_include_directories(test_${PROJECT_NAME}_input_sources
+    PRIVATE
+      include
+    SYSTEM
+      ${Boost_INCLUDE_DIRS}
+      ${catkin_INCLUDE_DIRS}
+      ${Eigen_INCLUDE_DIRS}
+  )
+
+  # Postprocessor
+  add_rostest_gtest(test_${PROJECT_NAME}_postprocessor
     test/postprocessing/postprocessor.test
     test/postprocessing/main.cpp
     test/postprocessing/PostprocessorTest.cpp
   )
-  target_include_directories(test_postprocessor PRIVATE
+
+  target_include_directories(test_${PROJECT_NAME}_postprocessor PRIVATE
     include
   )
-  target_include_directories(test_postprocessor SYSTEM PUBLIC
+
+  target_include_directories(test_${PROJECT_NAME}_postprocessor SYSTEM PUBLIC
     ${catkin_INCLUDE_DIRS}
   )
-  target_link_libraries(test_postprocessor
+
+  target_link_libraries(test_${PROJECT_NAME}_postprocessor
     ${GTEST_LIBRARIES}
     ${PROJECT_NAME}_library
     ${catkin_LIBRARIES}
@@ -159,14 +191,15 @@ if(CATKIN_ENABLE_TESTING)
 
   find_package(cmake_code_coverage QUIET)
   if(cmake_code_coverage_FOUND)
-      add_gtest_coverage(
-        TEST_BUILD_TARGETS
-          test_${PROJECT_NAME}
+      add_gtest_coverage(TEST_BUILD_TARGETS
+        test_${PROJECT_NAME}_cumulative_distribution
+      )
+      add_rostest_coverage(TEST_BUILD_TARGETS
+        test_${PROJECT_NAME}_input_sources
       )
 
-      add_rostest_coverage(
-        TEST_BUILD_TARGETS
-          test_postprocessor
+      add_rostest_coverage(TEST_BUILD_TARGETS
+        test_${PROJECT_NAME}_postprocessor
       )
   endif()
 endif()

@@ -31,8 +31,9 @@
   <depend>tf_conversions</depend>
 
 <!--   <test_depend>cmake_code_coverage</test_depend> -->
+  <test_depend>grid_map_filters</test_depend>
   <test_depend>gtest</test_depend>
   <test_depend>roslaunch</test_depend>
   <test_depend>rostest</test_depend>
-  
+
 </package>

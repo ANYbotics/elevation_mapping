@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+
+<launch>
+  <!-- Test input sources configuration -->
+  <include file="$(find elevation_mapping)/test/input_sources/input_sources.test" />
+
+  <!-- Test postprocessors -->
+  <include file="$(find elevation_mapping)/test/postprocessing/postprocessor.test" />
+
+  <!-- Test cumulative distribution -->
+  <test pkg="elevation_mapping" type="test_elevation_mapping_cumulative_distribution" test-name="cumulative_distribution" time-limit="100.0"/>
+</launch>

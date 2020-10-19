@@ -1,0 +1,93 @@
+# This file defines multiple input source configurations for testing purposes.
+# Note: many of them are not valid.
+
+input_sources:
+  - name: input_1
+    type: pointcloud
+    topic: /lidar_1/depth/points
+    queue_size: 1
+    publish_on_update: true
+  - name: input_3
+    type: pointcloud
+    topic: /lidar_2/depth/points
+    queue_size: 5
+    publish_on_update: true
+single_valid:
+  - name: standard_single_input
+    type: pointcloud
+    topic: /lidar/depth/points
+    queue_size: 1
+    publish_on_update: true
+multiple_valid:
+  - name: input_1
+    type: pointcloud
+    topic: /lidar_1/depth/points
+    queue_size: 1
+    publish_on_update: true
+  - name: input_2
+    type: depthimage
+    topic: /image/depth/image_rect_raw
+    queue_size: 1
+    publish_on_update: false
+  - name: input_3
+    type: pointcloud
+    topic: /lidar_2/depth/points
+    queue_size: 5
+    publish_on_update: false
+no_name:
+  - type: pointcloud
+    topic: /lidar/depth/points
+    queue_size: 1
+    publish_on_update: true
+no_type:
+  - name: standard_single_input
+    topic: /lidar/depth/points
+    queue_size: 1
+    publish_on_update: true
+queue_size_is_string:
+  - name: standard_single_input
+    type: pointcloud
+    topic: /lidar/depth/points
+    queue_size: "1"
+    publish_on_update: true
+negative_queue_size:
+  - name: standard_single_input
+    type: pointcloud
+    topic: /lidar/depth/points
+    queue_size: -1
+    publish_on_update: true
+no_topic:
+  - name: standard_single_input
+    type: pointcloud
+    queue_size: 1
+    publish_on_update: true
+no_queue_size:
+  - name: standard_single_input
+    type: pointcloud
+    topic: /lidar/depth/points
+    publish_on_update: true
+no_publish_on_update:
+  - name: standard_single_input
+    type: pointcloud
+    topic: /lidar/depth/points
+    queue_size: 1
+unknown_type:
+  - name: unknown_input
+    type: sonar
+    topic: /sonar/ranges
+    queue_size: 1
+    publish_on_update: true
+wrong_type_configuration: [name: test, type:pointcloud, topic:/yet/another/topic, queue_size:3, publish_on_update:true]
+not_an_array: /lidar_1/depth/points
+subscribing_same_topic_twice:
+  - name: input_1
+    type: pointcloud
+    topic: /lidar_1/depth/points
+    queue_size: 1
+    publish_on_update: true
+  - name: input_2
+    type: pointcloud
+    topic: /lidar_1/depth/points
+    queue_size: 1
+    publish_on_update: false
+empty_sources_list: []

@@ -136,7 +136,7 @@ bool SensorProcessorBase::transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>:
   pointCloudTransformed->header.frame_id = targetFrame;
 
   ROS_DEBUG_THROTTLE(5, "Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),
-                     ros::Time(pointCloudTransformed->header.stamp).toSec());
+                     pointCloudTransformed->header.stamp / 1000.0);
   return true;
 }
 

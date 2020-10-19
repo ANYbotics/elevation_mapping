@@ -32,6 +32,7 @@ namespace elevation_mapping {
 
 ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
+      inputSources_(nodeHandle_),
       robotPoseCacheSize_(200),
       map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
@@ -48,14 +49,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   ROS_INFO("Elevation mapping node started.");
 
   readParameters();
-  pointCloudSubscriber_ = nodeHandle_.subscribe(pointCloudTopic_, 1, &ElevationMapping::pointCloudCallback, this);
-  if (!robotPoseTopic_.empty()) {
-    robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
-    robotPoseCache_.connectInput(robotPoseSubscriber_);
-    robotPoseCache_.setCacheSize(robotPoseCacheSize_);
-  } else {
-    ignoreRobotMotionUpdates_ = true;
-  }
+  setupSubscribers();
 
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
@@ -97,11 +91,58 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   initialize();
 }
 
+void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_topic and input_sources configuration.
+  const bool configuredInputSources = inputSources_.configureFromRos("input_sources");
+  const bool hasDeprecatedPointcloudTopic = nodeHandle_.hasParam("point_cloud_topic");
+  if (hasDeprecatedPointcloudTopic) {
+    ROS_WARN("Parameter 'point_cloud_topic' is deprecated, please use 'input_sources' instead.");
+  }
+  if (!configuredInputSources && hasDeprecatedPointcloudTopic) {
+    pointCloudSubscriber_ = nodeHandle_.subscribe<sensor_msgs::PointCloud2>(
+        pointCloudTopic_, 1, std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true));
+  }
+  if (configuredInputSources) {
+    inputSources_.registerCallbacks(*this, make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
+  }
+
+  if (!robotPoseTopic_.empty()) {
+    robotPoseSubscriber_.subscribe(nodeHandle_, robotPoseTopic_, 1);
+    robotPoseCache_.connectInput(robotPoseSubscriber_);
+    robotPoseCache_.setCacheSize(robotPoseCacheSize_);
+  } else {
+    ignoreRobotMotionUpdates_ = true;
+  }
+}
+
 ElevationMapping::~ElevationMapping() {
-  fusionServiceQueue_.clear();
-  fusionServiceQueue_.disable();
+  // Shutdown all services.
+
+  {  // Fusion Service Queue
+    rawSubmapService_.shutdown();
+    fusionTriggerService_.shutdown();
+    fusedSubmapService_.shutdown();
+    fusedMapPublishTimer_.stop();
+
+    fusionServiceQueue_.disable();
+    fusionServiceQueue_.clear();
+  }
+
+  {  // Visibility cleanup queue
+    visibilityCleanupTimer_.stop();
+
+    visibilityCleanupQueue_.disable();
+    visibilityCleanupQueue_.clear();
+  }
+
   nodeHandle_.shutdown();
-  fusionServiceThread_.join();
+
+  // Join threads.
+  if (fusionServiceThread_.joinable()) {
+    fusionServiceThread_.join();
+  }
+  if (visibilityCleanupThread_.joinable()) {
+    visibilityCleanupThread_.join();
+  }
 }
 
 bool ElevationMapping::readParameters() {
@@ -242,18 +283,20 @@ void ElevationMapping::visibilityCleanupThread() {
   }
 }
 
-void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2& rawPointCloud) {
+void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud) {
   if (!updatesEnabled_) {
     ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");
-    map_.setTimestamp(ros::Time::now());
-    map_.publishRawElevationMap();
+    if (publishPointCloud) {
+      map_.setTimestamp(ros::Time::now());
+      map_.publishRawElevationMap();
+    }
     return;
   }
 
   // Check if point cloud has corresponding robot pose at the beginning
   if (!receivedFirstMatchingPointcloudAndPose_) {
     const double oldestPoseTime = robotPoseCache_.getOldestTime().toSec();
-    const double currentPointCloudTime = rawPointCloud.header.stamp.toSec();
+    const double currentPointCloudTime = pointCloudMsg->header.stamp.toSec();
 
     if (currentPointCloudTime < oldestPoseTime) {
       ROS_WARN_THROTTLE(5, "No corresponding point cloud and pose are found. Waiting for first match. (Warning message is throttled, 5s.)");
@@ -269,7 +312,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2& rawPoi
   // Convert the sensor_msgs/PointCloud2 data to pcl/PointCloud.
   // TODO(max): Double check with http://wiki.ros.org/hydro/Migration
   pcl::PCLPointCloud2 pcl_pc;
-  pcl_conversions::toPCL(rawPointCloud, pcl_pc);
+  pcl_conversions::toPCL(*pointCloudMsg, pcl_pc);
 
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
@@ -335,11 +378,13 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2& rawPoi
     return;
   }
 
-  // Publish elevation map.
-  map_.publishRawElevationMap();
-  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
-    map_.fuseAll();
-    map_.publishFusedElevationMap();
+  if (publishPointCloud) {
+    // Publish elevation map.
+    map_.publishRawElevationMap();
+    if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+      map_.fuseAll();
+      map_.publishFusedElevationMap();
+    }
   }
 
   resetMapUpdateTimer();
@@ -484,7 +529,7 @@ bool ElevationMapping::getFusedSubmap(grid_map_msgs::GetGridMap::Request& reques
     grid_map::GridMapRosConverter::toMessage(subMap, response.map);
   } else {
     std::vector<std::string> layers;
-    for (const auto& layer : request.layers) {
+    for (const std::string& layer : request.layers) {
       layers.push_back(layer);
     }
     grid_map::GridMapRosConverter::toMessage(subMap, layers, response.map);
@@ -510,7 +555,7 @@ bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request,
     grid_map::GridMapRosConverter::toMessage(subMap, response.map);
   } else {
     std::vector<std::string> layers;
-    for (const auto& layer : request.layers) {
+    for (const std::string& layer : request.layers) {
       layers.push_back(layer);
     }
     grid_map::GridMapRosConverter::toMessage(subMap, layers, response.map);

@@ -12,6 +12,7 @@
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
+#include "elevation_mapping/input_sources/InputSourceManager.hpp"
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
 // Grid Map
@@ -64,9 +65,10 @@ class ElevationMapping {
   /*!
    * Callback function for new data to be added to the elevation map.
    *
-   * @param pointCloud    The point cloud to be fused with the existing data.
+   * @param pointCloudMsg    The point cloud to be fused with the existing data.
+   * @param publishPointCloud If true, publishes the pointcloud after updating the map.
    */
-  void pointCloudCallback(const sensor_msgs::PointCloud2& pointCloud);
+  void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud);
 
   /*!
    * Callback function for the update timer. Forces an update of the map from
@@ -193,6 +195,11 @@ class ElevationMapping {
    */
   bool initialize();
 
+  /**
+   * Sets up the subscribers for both robot poses and input data.
+   */
+  void setupSubscribers();
+
   /*!
    * Separate thread for all fusion service calls.
    */
@@ -235,10 +242,13 @@ class ElevationMapping {
   bool initializeElevationMap();
 
   //! ROS nodehandle.
-  ros::NodeHandle& nodeHandle_;
+  ros::NodeHandle nodeHandle_;
 
+ protected:
+  //! Input sources.
+  InputSourceManager inputSources_;
   //! ROS subscribers.
-  ros::Subscriber pointCloudSubscriber_;
+  ros::Subscriber pointCloudSubscriber_;  //!< Deprecated, use input_source instead.
   message_filters::Subscriber<geometry_msgs::PoseWithCovarianceStamped> robotPoseSubscriber_;
 
   //! ROS service servers.
@@ -275,7 +285,7 @@ class ElevationMapping {
   std::string trackPointFrameId_;
 
   //! ROS topics for subscriptions.
-  std::string pointCloudTopic_;
+  std::string pointCloudTopic_;  //!< Deprecated, use input_source instead.
   std::string robotPoseTopic_;
 
   //! Elevation map.
