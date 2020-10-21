@@ -59,6 +59,9 @@ bool LaserSensorProcessor::computeVariances(const pcl::PointCloud<pcl::PointXYZR
   const Eigen::Matrix3f B_r_BS_skew =
       kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
+  const float varianceNormal = sensorParameters_.at("min_radius") * sensorParameters_.at("min_radius");
+  const float beamConstant = sensorParameters_.at("beam_constant");
+  const float beamAngle = sensorParameters_.at("beam_angle");
   for (size_t i = 0; i < pointCloud->size(); ++i) {
     // TODO(needs assignment): Move this loop body into a function for better unit testing.
     // For every point in point cloud.
@@ -71,8 +74,9 @@ bool LaserSensorProcessor::computeVariances(const pcl::PointCloud<pcl::PointXYZR
     const float measurementDistance = pointVector.norm();
 
     // Compute sensor covariance matrix (Sigma_S) with sensor model.
-    const float varianceNormal = pow(sensorParameters_.at("min_radius"), 2);
-    const float varianceLateral = pow(sensorParameters_.at("beam_constant") + sensorParameters_.at("beam_angle") * measurementDistance, 2);
+    float varianceLateral = beamConstant + beamAngle * measurementDistance;
+    varianceLateral *= varianceLateral;
+
     Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
     sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 

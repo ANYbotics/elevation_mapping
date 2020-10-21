@@ -123,7 +123,7 @@ bool SensorProcessorBase::transformPointCloud(pcl::PointCloud<pcl::PointXYZRGB>:
 
   tf::StampedTransform transformTf;
   try {
-    transformListener_.waitForTransform(targetFrame, inputFrameId, timeStamp, ros::Duration(1.0));
+    transformListener_.waitForTransform(targetFrame, inputFrameId, timeStamp, ros::Duration(1.0), ros::Duration(0.001));
     transformListener_.lookupTransform(targetFrame, inputFrameId, timeStamp, transformTf);
   } catch (tf::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
@@ -174,9 +174,11 @@ bool SensorProcessorBase::filterPointCloud(const pcl::PointCloud<pcl::PointXYZRG
 
   // Remove nan points.
   std::vector<int> indices;
-  pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
-  tempPointCloud.is_dense = true;
-  pointCloud->swap(tempPointCloud);
+  if (!pointCloud->is_dense) {
+    pcl::removeNaNFromPointCloud(*pointCloud, tempPointCloud, indices);
+    tempPointCloud.is_dense = true;
+    pointCloud->swap(tempPointCloud);
+  }
 
   // Reduce points using VoxelGrid filter.
   if (applyVoxelGridFilter_) {

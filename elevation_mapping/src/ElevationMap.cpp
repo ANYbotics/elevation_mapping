@@ -75,6 +75,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   if (initialTime_.toSec() == 0) {
     initialTime_ = timestamp;
   }
+  const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
   // Store references for efficient interation.
   auto& elevationLayer = rawMap_["elevation"];
@@ -115,7 +116,6 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& sensorZatLowestScan = sensorZatLowestScanLayer(index(0), index(1));
 
     const float& pointVariance = pointCloudVariances(i);
-    const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
     bool isValid = std::all_of(basicLayers_.begin(), basicLayers_.end(),
                                [&](Eigen::Ref<const grid_map::Matrix> layer) { return std::isfinite(layer(index(0), index(1))); });
     if (!isValid) {
