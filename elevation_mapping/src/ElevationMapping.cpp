@@ -320,18 +320,6 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
 
   ROS_DEBUG("ElevationMap received a point cloud (%i points) for elevation mapping.", static_cast<int>(pointCloud->size()));
 
-  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
-
-  // Update map location.
-  updateMapLocation();
-
-  // Update map from motion prediction.
-  if (!updatePrediction(lastPointCloudUpdateTime_)) {
-    ROS_ERROR("Updating process noise failed.");
-    resetMapUpdateTimer();
-    return;
-  }
-
   // Get robot pose covariance matrix at timestamp of point cloud.
   Eigen::Matrix<double, 6, 6> robotPoseCovariance;
   robotPoseCovariance.setZero();
@@ -360,6 +348,18 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
       return;
     }
     ROS_ERROR("Point cloud could not be processed.");
+    resetMapUpdateTimer();
+    return;
+  }
+
+  boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
+
+  // Update map location.
+  updateMapLocation();
+
+  // Update map from motion prediction.
+  if (!updatePrediction(lastPointCloudUpdateTime_)) {
+    ROS_ERROR("Updating process noise failed.");
     resetMapUpdateTimer();
     return;
   }

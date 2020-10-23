@@ -316,8 +316,11 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     Each cell in the elevation map has an uncertainty for its height value. Depending on the Mahalonobis distance of the existing height distribution and the new measurements, the incoming data is fused with the existing estimate, overwritten, or ignored. This parameter determines the threshold on the Mahalanobis distance which determines how the incoming measurements are processed.
 
-* **`sensor_processor/ignore_points_above`** (double, default: 0.4)
+* **`sensor_processor/ignore_points_above`** (double, default: inf)
     A hard threshold on the height of points introduced by the depth sensor. Points with a height over this threshold will not be considered valid during the data collection step.
+
+* **`sensor_processor/ignore_points_below`** (double, default: -inf)
+    A hard threshold on the height of points introduced by the depth sensor. Points with a height below this threshold will not be considered valid during the data collection step.
 
 * **`multi_height_noise`** (double, default: 9.0e-7)
 
@@ -338,6 +341,9 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 * **`enable_continuous_cleanup`** (bool, default: false)
 
     Enable/disable a continuous clean-up of the elevation map. If enabled, on arrival of each new sensor data the elevation map will be cleared and filled up only with the latest data from the sensor. When continuous clean-up is enabled, visibility clean-up will automatically be disabled since it is not needed in this case.
+    
+* **`num_callback_threads`** (int, default: 1, min: 1)
+    The number of threads to use for processing callbacks. More threads results in higher throughput, at cost of more resource usage. 
 
 * **`postprocessor_pipeline_name`** (string, default: postprocessor_pipeline)
 

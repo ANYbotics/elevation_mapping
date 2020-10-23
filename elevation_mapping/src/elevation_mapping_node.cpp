@@ -15,7 +15,7 @@ int main(int argc, char** argv) {
   elevation_mapping::ElevationMapping elevationMap(nodeHandle);
 
   // Spin
-  ros::AsyncSpinner spinner(1);  // Use n threads
+  ros::AsyncSpinner spinner(nodeHandle.param("num_callback_threads", 1));  // Use n threads
   spinner.start();
   ros::waitForShutdown();
   return 0;
