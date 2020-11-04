@@ -77,7 +77,8 @@ In order to install the Robot-Centric Elevation Mapping, clone the latest versio
     cd catkin_workspace/src
     git clone https://github.com/anybotics/elevation_mapping.git
     cd ../
-    catkin_make
+    catkin config --cmake-args -DCMAKE_BUILD_TYPE=Release
+    catkin build
 
 
 ### Unit Tests
