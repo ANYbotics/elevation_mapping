@@ -41,7 +41,6 @@ SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::Transf
 SensorProcessorBase::~SensorProcessorBase() = default;
 
 bool SensorProcessorBase::readParameters() {
-  nodeHandle_.param("sensor_frame_id", sensorFrameId_, std::string("/sensor"));  // TODO(max): Fail if parameters are not found.
   nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
   nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
 
@@ -60,24 +59,36 @@ bool SensorProcessorBase::readParameters() {
 
 bool SensorProcessorBase::process(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput,
                                   const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-                                  const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudMapFrame, Eigen::VectorXf& variances) {
+                                  const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudMapFrame, Eigen::VectorXf& variances,
+                                  std::string sensorFrame) {
+  sensorFrameId_ = sensorFrame;
+  ROS_DEBUG("Sensor Processor processing for frame %s", sensorFrameId_.c_str());
+
+  // Update transformation at timestamp of pointcloud
   ros::Time timeStamp;
   timeStamp.fromNSec(1000 * pointCloudInput->header.stamp);
   if (!updateTransformations(timeStamp)) {
     return false;
   }
 
+  // Transform into sensor frame.
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudSensorFrame(new pcl::PointCloud<pcl::PointXYZRGB>);
   transformPointCloud(pointCloudInput, pointCloudSensorFrame, sensorFrameId_);
+
+  // Remove Nans (optional voxel grid filter)
   filterPointCloud(pointCloudSensorFrame);
+
+  // Specific filtering per sensor type
   filterPointCloudSensorType(pointCloudSensorFrame);
 
+  // Remove outside limits in map frame
   if (!transformPointCloud(pointCloudSensorFrame, pointCloudMapFrame, mapFrameId_)) {
     return false;
   }
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pointClouds({pointCloudMapFrame, pointCloudSensorFrame});
   removePointsOutsideLimits(pointCloudMapFrame, pointClouds);
 
+  // Compute variances
   return computeVariances(pointCloudSensorFrame, robotPoseCovariance, variances);
 }
 

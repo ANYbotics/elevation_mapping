@@ -1,7 +1,6 @@
 # Robot.
 map_frame_id:                               odom
 robot_base_frame_id:                        base_footprint
-sensor_frame_id:                            camera_depth_optical_frame
 robot_pose_with_covariance_topic:           /base_footprint_pose
 robot_pose_cache_size:                      200
 point_cloud_topic:                          /camera/depth/points

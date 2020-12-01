@@ -343,7 +343,8 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   // Process point cloud.
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudProcessed(new pcl::PointCloud<pcl::PointXYZRGB>);
   Eigen::VectorXf measurementVariances;
-  if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances)) {
+  if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances,
+                                 pointCloudMsg->header.frame_id)) {
     if (!sensorProcessor_->isTfAvailableInBuffer()) {
       ROS_INFO_THROTTLE(10, "Waiting for tf transformation to be available. (Message is throttled, 10s.)");
       return;

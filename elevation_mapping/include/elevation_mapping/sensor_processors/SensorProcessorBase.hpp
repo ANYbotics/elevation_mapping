@@ -63,7 +63,7 @@ class SensorProcessorBase {
    * @return true if successful.
    */
   bool process(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-               const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudMapFrame, Eigen::VectorXf& variances);
+               const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudMapFrame, Eigen::VectorXf& variances, std::string sensorFrame);
 
   /*!
    * Checks if a valid tf transformation was received since startup.

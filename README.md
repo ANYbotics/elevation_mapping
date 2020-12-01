@@ -265,10 +265,6 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     The id of the robot base tf frame.
 
-* **`sensor_frame_id`** (string, default: "/sensor")
-
-    The id of the depth sensor tf frame.
-
 * **`map_frame_id`** (string, default: "/map")
 
     The id of the tf frame of the elevation map.
