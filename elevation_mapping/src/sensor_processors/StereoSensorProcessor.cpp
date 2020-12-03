@@ -16,8 +16,8 @@
 
 namespace elevation_mapping {
 
-StereoSensorProcessor::StereoSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
-    : SensorProcessorBase(nodeHandle, transformListener), originalWidth_(1) {}
+StereoSensorProcessor::StereoSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters)
+    : SensorProcessorBase(nodeHandle, generalParameters), originalWidth_(1) {}
 
 StereoSensorProcessor::~StereoSensorProcessor() = default;
 

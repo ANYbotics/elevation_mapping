@@ -22,8 +22,9 @@ namespace elevation_mapping {
  * C. V., Izadi, S., & Lovell, D., Modeling Kinect Sensor Noise for Improved 3D Reconstruction and Tracking, 2012.
  */
 
-StructuredLightSensorProcessor::StructuredLightSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
-    : SensorProcessorBase(nodeHandle, transformListener) {}
+StructuredLightSensorProcessor::StructuredLightSensorProcessor(ros::NodeHandle& nodeHandle,
+                                                               const SensorProcessorBase::GeneralParameters& generalParameters)
+    : SensorProcessorBase(nodeHandle, generalParameters) {}
 
 StructuredLightSensorProcessor::~StructuredLightSensorProcessor() = default;
 

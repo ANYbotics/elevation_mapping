@@ -20,9 +20,8 @@ class LaserSensorProcessor : public SensorProcessorBase {
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
-   * @param transformListener the ROS transform listener.
    */
-  LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  LaserSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters);
 
   /*!
    * Destructor.

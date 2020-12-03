@@ -13,7 +13,6 @@
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 #include "elevation_mapping/input_sources/InputSourceManager.hpp"
-#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
 // Grid Map
 #include <grid_map_msgs/GetGridMap.h>
@@ -67,8 +66,10 @@ class ElevationMapping {
    *
    * @param pointCloudMsg    The point cloud to be fused with the existing data.
    * @param publishPointCloud If true, publishes the pointcloud after updating the map.
+   * @param sensorProcessor_ The sensorProcessor to use in this callback.
    */
-  void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud);
+  void pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud,
+                          const SensorProcessorBase::Ptr& sensorProcessor_);
 
   /*!
    * Callback function for the update timer. Forces an update of the map from
@@ -291,7 +292,7 @@ class ElevationMapping {
   //! Elevation map.
   ElevationMap map_;
 
-  //! Sensor processors.
+  //! Sensor processors. Deprecated use the one from input sources instead.
   SensorProcessorBase::Ptr sensorProcessor_;
 
   //! Robot motion elevation map updater.

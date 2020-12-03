@@ -26,29 +26,25 @@
 
 namespace elevation_mapping {
 
-SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
+SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, const GeneralParameters& generalConfig)
     : nodeHandle_(nodeHandle),
-      transformListener_(transformListener),
       ignorePointsUpperThreshold_(std::numeric_limits<double>::infinity()),
       ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity()),
       applyVoxelGridFilter_(false),
       firstTfAvailable_(false) {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
   transformationSensorToMap_.setIdentity();
-  transformListenerTimeout_.fromSec(1.0);
+  generalParameters_ = generalConfig;
+  ROS_DEBUG(
+      "Sensor processor general parameters are:"
+      "\n\t- robot_base_frame_id: %s"
+      "\n\t- map_frame_id: %s",
+      generalConfig.robotBaseFrameId_.c_str(), generalConfig.mapFrameId_.c_str());
 }
 
 SensorProcessorBase::~SensorProcessorBase() = default;
 
 bool SensorProcessorBase::readParameters() {
-  nodeHandle_.param("robot_base_frame_id", robotBaseFrameId_, std::string("/robot"));
-  nodeHandle_.param("map_frame_id", mapFrameId_, std::string("/map"));
-
-  double minUpdateRate;
-  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
-  transformListenerTimeout_.fromSec(1.0 / minUpdateRate);
-  ROS_ASSERT(!transformListenerTimeout_.isZero());
-
   nodeHandle_.param("sensor_processor/ignore_points_above", ignorePointsUpperThreshold_, std::numeric_limits<double>::infinity());
   nodeHandle_.param("sensor_processor/ignore_points_below", ignorePointsLowerThreshold_, -std::numeric_limits<double>::infinity());
 
@@ -82,7 +78,7 @@ bool SensorProcessorBase::process(const pcl::PointCloud<pcl::PointXYZRGB>::Const
   filterPointCloudSensorType(pointCloudSensorFrame);
 
   // Remove outside limits in map frame
-  if (!transformPointCloud(pointCloudSensorFrame, pointCloudMapFrame, mapFrameId_)) {
+  if (!transformPointCloud(pointCloudSensorFrame, pointCloudMapFrame, generalParameters_.mapFrameId_)) {
     return false;
   }
   std::vector<pcl::PointCloud<pcl::PointXYZRGB>::Ptr> pointClouds({pointCloudMapFrame, pointCloudSensorFrame});
@@ -94,19 +90,21 @@ bool SensorProcessorBase::process(const pcl::PointCloud<pcl::PointXYZRGB>::Const
 
 bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
   try {
-    transformListener_.waitForTransform(sensorFrameId_, mapFrameId_, timeStamp, ros::Duration(1.0));
+    transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
 
     tf::StampedTransform transformTf;
-    transformListener_.lookupTransform(mapFrameId_, sensorFrameId_, timeStamp, transformTf);
+    transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
     poseTFToEigen(transformTf, transformationSensorToMap_);
 
-    transformListener_.lookupTransform(robotBaseFrameId_, sensorFrameId_, timeStamp, transformTf);  // TODO(max): Why wrong direction?
+    transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
+                                       transformTf);  // TODO(max): Why wrong direction?
     Eigen::Affine3d transform;
     poseTFToEigen(transformTf, transform);
     rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
     translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
 
-    transformListener_.lookupTransform(mapFrameId_, robotBaseFrameId_, timeStamp, transformTf);  // TODO(max): Why wrong direction?
+    transformListener_.lookupTransform(generalParameters_.mapFrameId_, generalParameters_.robotBaseFrameId_, timeStamp,
+                                       transformTf);  // TODO(max): Why wrong direction?
     poseTFToEigen(transformTf, transform);
     rotationMapToBase_.setMatrix(transform.rotation().matrix());
     translationMapToBaseInMapFrame_.toImplementation() = transform.translation();

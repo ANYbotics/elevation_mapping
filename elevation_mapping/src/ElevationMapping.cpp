@@ -99,7 +99,8 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
   }
   if (!configuredInputSources && hasDeprecatedPointcloudTopic) {
     pointCloudSubscriber_ = nodeHandle_.subscribe<sensor_msgs::PointCloud2>(
-        pointCloudTopic_, 1, std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true));
+        pointCloudTopic_, 1,
+        std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true, std::ref(sensorProcessor_)));
   }
   if (configuredInputSources) {
     inputSources_.registerCallbacks(*this, make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
@@ -230,17 +231,20 @@ bool ElevationMapping::readParameters() {
   nodeHandle_.param("init_submap_height_offset", initSubmapHeightOffset_, 0.0);
   nodeHandle_.param("target_frame_init_submap", targetFrameInitSubmap_, std::string("/footprint"));
 
-  // SensorProcessor parameters.
+  // SensorProcessor parameters. Deprecated, use the sensorProcessor from within input sources instead!
   std::string sensorType;
   nodeHandle_.param("sensor_processor/type", sensorType, std::string("structured_light"));
+
+  SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{nodeHandle_.param("robot_base_frame_id", std::string("/robot")),
+                                                                      mapFrameId_};
   if (sensorType == "structured_light") {
-    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
   } else if (sensorType == "stereo") {
-    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
   } else if (sensorType == "laser") {
-    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
   } else if (sensorType == "perfect") {
-    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, transformListener_));
+    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
   }
@@ -283,7 +287,8 @@ void ElevationMapping::visibilityCleanupThread() {
   }
 }
 
-void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud) {
+void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr& pointCloudMsg, bool publishPointCloud,
+                                          const SensorProcessorBase::Ptr& sensorProcessor_) {
   ROS_DEBUG("Processing data from: %s", pointCloudMsg->header.frame_id.c_str());
   if (!updatesEnabled_) {
     ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");

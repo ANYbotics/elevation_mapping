@@ -27,9 +27,14 @@ bool InputSourceManager::configureFromRos(const std::string& inputSourcesNamespa
 }
 
 bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std::string& sourceConfigurationName) {
-  if (config.getType() != XmlRpc::XmlRpcValue::TypeArray) {
+  if (config.getType() == XmlRpc::XmlRpcValue::TypeArray &&
+      config.size() == 0) {  // Use Empty array as special case to explicitly configure no inputs.
+    return true;
+  }
+
+  if (config.getType() != XmlRpc::XmlRpcValue::TypeStruct) {
     ROS_ERROR(
-        "%s: The input sources specification must be a list. but is of "
+        "%s: The input sources specification must be a struct. but is of "
         "of XmlRpcType %d",
         sourceConfigurationName.c_str(), config.getType());
     ROS_ERROR("The xml passed in is formatted as follows:\n %s", config.toXml().c_str());
@@ -38,12 +43,13 @@ bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std:
 
   bool successfulConfiguration = true;
   std::set<std::string> subscribedTopics;
-
+  SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{nodeHandle_.param("robot_base_frame_id", std::string("/robot")),
+                                                                      nodeHandle_.param("map_frame_id", std::string("/map"))};
   // Configure all input sources in the list.
-  for (int i = 0; i < config.size(); ++i) {
-    Input source{nodeHandle_};
+  for (auto& inputConfig : config) {
+    Input source = Input(ros::NodeHandle(nodeHandle_.resolveName(sourceConfigurationName + "/" + inputConfig.first)));
 
-    bool configured = source.configure(config[i]);
+    bool configured = source.configure(inputConfig.first, inputConfig.second, generalSensorProcessorConfig);
     if (!configured) {
       successfulConfiguration = false;
       continue;
@@ -53,7 +59,7 @@ bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std:
     bool topicIsUnique = subscribedTopics.insert(subscribedTopic).second;
 
     if (topicIsUnique) {
-      sources_.push_back(source);
+      sources_.push_back(std::move(source));
     } else {
       ROS_WARN(
           "The input sources specification tried to subscribe to %s "

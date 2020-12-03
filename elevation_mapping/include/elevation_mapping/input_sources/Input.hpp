@@ -12,6 +12,8 @@
 #include <ros/ros.h>
 #include <string>
 
+#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
+
 namespace elevation_mapping {
 class ElevationMapping;  // Forward declare to avoid cyclic import dependency.
 
@@ -22,21 +24,24 @@ class ElevationMapping;  // Forward declare to avoid cyclic import dependency.
 class Input {
  public:
   template <typename MsgT>
-  using CallbackT = void (ElevationMapping::*)(const boost::shared_ptr<const MsgT>&, bool);
+  using CallbackT = void (ElevationMapping::*)(const boost::shared_ptr<const MsgT>&, bool, const SensorProcessorBase::Ptr&);
 
   /**
    * @brief Constructor.
    * @param nh Reference to the nodeHandle of the manager. Used to subscribe
    * to inputs.
    */
-  explicit Input(ros::NodeHandle& nh);
+  explicit Input(ros::NodeHandle nh);
 
   /**
    * @brief Configure the input source.
+   * @param name Name of this input source.
    * @param parameters The configuration parameters.
+   * @param generalSensorProcessorParameters Parameters shared by all sensor processors.
    * @return True if configuring was successful.
    */
-  bool configure(const XmlRpc::XmlRpcValue& parameters);
+  bool configure(std::string name, const XmlRpc::XmlRpcValue& parameters,
+                 const SensorProcessorBase::GeneralParameters& generalSensorProcessorParameters);
 
   /**
    * @brief Registers the corresponding callback in the elevationMap.
@@ -59,22 +64,36 @@ class Input {
   std::string getType() { return type_; }
 
  private:
+  /**
+   * @brief Configures the used sensor processor from the given parameters.
+   * @param name The name of this input source
+   * @param parameters The parameters of this input source
+   * @param generalSensorProcessorParameters  General parameters needed for the sensor processor that are not specific to this sensor
+   * processor.
+   * @return True if successful.
+   */
+  bool configureSensorProcessor(std::string name, const XmlRpc::XmlRpcValue& parameters,
+                                const SensorProcessorBase::GeneralParameters& generalSensorProcessorParameters);
+
+  // ROS connection.
+  ros::Subscriber subscriber_;
+  ros::NodeHandle nodeHandle_;
+
+  //! Sensor processor
+  SensorProcessorBase::Ptr sensorProcessor_;
+
   // Parameters.
   std::string name_;
   std::string type_;
   uint32_t queueSize_;
   std::string topic_;
   bool publishOnUpdate_;
-
-  // ROS connection.
-  ros::Subscriber subscriber_;
-  ros::NodeHandle& nodeHandle_;
 };
 
 template <typename MsgT>
 void Input::registerCallback(ElevationMapping& map, CallbackT<MsgT> callback) {
-  subscriber_ =
-      nodeHandle_.subscribe<MsgT>(topic_, queueSize_, std::bind(callback, std::ref(map), std::placeholders::_1, publishOnUpdate_));
+  subscriber_ = nodeHandle_.subscribe<MsgT>(
+      topic_, queueSize_, std::bind(callback, std::ref(map), std::placeholders::_1, publishOnUpdate_, std::ref(sensorProcessor_)));
   ROS_INFO("Subscribing to %s: %s, queue_size: %i.", type_.c_str(), topic_.c_str(), queueSize_);
 }
 

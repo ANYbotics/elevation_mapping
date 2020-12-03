@@ -244,18 +244,22 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
     Here you specify your inputs to elevation mapping, currently "pointcloud" inputs are supported. 
     
     Example configuration:
-    ```
+    ```yaml
     input_sources:
-    - name: front # A name to identify the input source
-      type: pointcloud # Supported types: pointcloud
-      topic: /lidar_front/depth/points
-      queue_size: 1
-      publish_on_update: true # Wheter to publish the elevation map after a callback from this source. 
-    - name: rear
-      type: pointcloud
-      topic: /lidar_rear/depth/points
-      queue_size: 5
-      publish_on_update: false
+        front: # A name to identify the input source
+          type: pointcloud # Supported types: pointcloud
+          topic: /lidar_front/depth/points
+          queue_size: 1
+          publish_on_update: true # Wheter to publish the elevation map after a callback from this source. 
+        rear:
+          type: pointcloud
+          topic: /lidar_rear/depth/points
+          queue_size: 5
+          publish_on_update: false
+    ```
+    No input sources can be configured with an empty array:
+    ```yaml
+    input_sources: []
     ```
 * **`robot_pose_topic`** (string, default: "/robot_state/pose")
 

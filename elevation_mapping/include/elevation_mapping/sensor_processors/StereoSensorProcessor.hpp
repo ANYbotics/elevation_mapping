@@ -25,9 +25,8 @@ class StereoSensorProcessor : public SensorProcessorBase {
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
-   * @param transformListener the ROS transform listener.
    */
-  StereoSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  StereoSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters);
 
   /*!
    * Destructor.

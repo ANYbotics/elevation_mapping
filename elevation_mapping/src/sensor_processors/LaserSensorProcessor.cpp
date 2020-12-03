@@ -25,8 +25,8 @@ namespace elevation_mapping {
  * International Conference on Applied Robotics for the Power Industry (CARPI), 2012.
  */
 
-LaserSensorProcessor::LaserSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener)
-    : SensorProcessorBase(nodeHandle, transformListener) {}
+LaserSensorProcessor::LaserSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters)
+    : SensorProcessorBase(nodeHandle, generalParameters) {}
 
 LaserSensorProcessor::~LaserSensorProcessor() = default;
 

@@ -20,9 +20,8 @@ class StructuredLightSensorProcessor : public SensorProcessorBase {
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
-   * @param transformListener the ROS transform listener.
    */
-  StructuredLightSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  StructuredLightSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters);
 
   /*!
    * Destructor.

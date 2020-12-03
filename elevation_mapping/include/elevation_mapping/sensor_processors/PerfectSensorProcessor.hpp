@@ -20,9 +20,8 @@ class PerfectSensorProcessor : public SensorProcessorBase {
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
-   * @param transformListener the ROS transform listener.
    */
-  PerfectSensorProcessor(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  PerfectSensorProcessor(ros::NodeHandle& nodeHandle, const SensorProcessorBase::GeneralParameters& generalParameters);
 
   /*!
    * Destructor.

@@ -16,7 +16,8 @@ static void assertSuccessAndNumberOfSources(const std::string& inputConfiguratio
                                             uint32_t numberOfExpectedInputSources) {
   elevation_mapping::InputSourceManager inputSourceManager(ros::NodeHandle("~"));
   bool success = inputSourceManager.configureFromRos(inputConfiguration);
-  ASSERT_EQ(success, successExpected);
+  ASSERT_EQ(success, successExpected) << "Configuration was:\n"
+                                      << ros::NodeHandle("~").param<XmlRpc::XmlRpcValue>(inputConfiguration, "not set").toXml() << "\n";
   ASSERT_EQ(inputSourceManager.getNumberOfSources(), numberOfExpectedInputSources);
 }
 
@@ -26,10 +27,6 @@ TEST(InputSources, SingleInputValid) {  // NOLINT
 
 TEST(InputSources, MultipleInputsValid) {  // NOLINT
   assertSuccessAndNumberOfSources("multiple_valid", true, 3);
-}
-
-TEST(InputSources, NoName) {  // NOLINT
-  assertSuccessAndNumberOfSources("no_name", false, 0);
 }
 
 TEST(InputSources, NoType) {  // NOLINT
@@ -64,8 +61,8 @@ TEST(InputSources, ConfigurationWrongType) {  // NOLINT
   assertSuccessAndNumberOfSources("wrong_type_configuration", false, 0);
 }
 
-TEST(InputSources, ConfigurationNotAnArray) {  // NOLINT
-  assertSuccessAndNumberOfSources("not_an_array", false, 0);
+TEST(InputSources, ConfigurationNotAStruct) {  // NOLINT
+  assertSuccessAndNumberOfSources("not_a_struct", false, 0);
 }
 
 TEST(InputSources, ConfigurationQueueSizeIsString) {  // NOLINT

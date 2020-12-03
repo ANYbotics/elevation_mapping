@@ -41,13 +41,22 @@ class SensorProcessorBase {
  public:
   using Ptr = std::unique_ptr<SensorProcessorBase>;
   friend class ElevationMapping;
+  friend class Input;
+
+  struct GeneralParameters {
+    std::string robotBaseFrameId_;
+    std::string mapFrameId_;
+
+    GeneralParameters(std::string robotBaseFrameId = "robot", std::string mapFrameId = "map")
+        : robotBaseFrameId_(std::move(robotBaseFrameId)), mapFrameId_(std::move(mapFrameId)) {}
+  };
 
   /*!
    * Constructor.
    * @param nodeHandle the ROS node handle.
-   * @param transformListener the ROS transform listener.
+   * @param generalConfig General parameters that the sensor processor must know in order to work. // TODO (magnus) improve documentation.
    */
-  SensorProcessorBase(ros::NodeHandle& nodeHandle, tf::TransformListener& transformListener);
+  SensorProcessorBase(ros::NodeHandle& nodeHandle, const GeneralParameters& generalConfig);
 
   /*!
    * Destructor.
@@ -133,10 +142,7 @@ class SensorProcessorBase {
   ros::NodeHandle& nodeHandle_;
 
   //! TF transform listener.
-  tf::TransformListener& transformListener_;
-
-  //! The timeout duration for the lookup of the transformation between sensor frame and target frame.
-  ros::Duration transformListenerTimeout_;
+  tf::TransformListener transformListener_;
 
   //! Rotation from Base to Sensor frame (C_SB)
   kindr::RotationMatrixD rotationBaseToSensor_;
@@ -153,11 +159,7 @@ class SensorProcessorBase {
   //! Transformation from Sensor to Map frame
   Eigen::Affine3d transformationSensorToMap_;
 
-  //! TF frame id of the map.
-  std::string mapFrameId_;
-
-  //! TF frame id of the robot base.
-  std::string robotBaseFrameId_;
+  GeneralParameters generalParameters_;
 
   //! TF frame id of the range sensor for the point clouds.
   std::string sensorFrameId_;
