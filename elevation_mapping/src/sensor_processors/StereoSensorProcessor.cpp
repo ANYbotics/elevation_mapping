@@ -5,7 +5,7 @@
  *      Author: Hannes Keller
  */
 
-#include <elevation_mapping/sensor_processors/StereoSensorProcessor.hpp>
+#include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
 
 // PCL
 #include <pcl/filters/filter.h>
@@ -13,6 +13,8 @@
 
 // STD
 #include <vector>
+
+#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 
 namespace elevation_mapping {
 
@@ -35,7 +37,7 @@ bool StereoSensorProcessor::readParameters() {
   return true;
 }
 
-bool StereoSensorProcessor::computeVariances(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+bool StereoSensorProcessor::computeVariances(const PointCloudType::ConstPtr pointCloud,
                                              const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) {
   variances.resize(pointCloud->size());
 
@@ -61,7 +63,7 @@ bool StereoSensorProcessor::computeVariances(const pcl::PointCloud<pcl::PointXYZ
     // For every point in point cloud.
 
     // Preparation.
-    pcl::PointXYZRGB point = pointCloud->points[i];
+    pcl::PointXYZRGBConfidenceRatio point = pointCloud->points[i];
     double disparity = sensorParameters_.at("depth_to_disparity_factor") / point.z;  // NOLINT(cppcoreguidelines-pro-type-union-access)
     Eigen::Vector3f pointVector(point.x, point.y, point.z);  // S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
     float heightVariance = 0.0;                              // sigma_p
@@ -94,9 +96,9 @@ bool StereoSensorProcessor::computeVariances(const pcl::PointCloud<pcl::PointXYZ
   return true;
 }
 
-bool StereoSensorProcessor::filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud) {
-  pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
-  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+bool StereoSensorProcessor::filterPointCloudSensorType(const PointCloudType::Ptr pointCloud) {
+  pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter;
+  PointCloudType tempPointCloud;
 
   // cutoff points with z values
   passThroughFilter.setInputCloud(pointCloud);

@@ -23,6 +23,7 @@
 
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/ElevationMapping.hpp"
+#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 #include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/PerfectSensorProcessor.hpp"
 #include "elevation_mapping/sensor_processors/StereoSensorProcessor.hpp"
@@ -320,7 +321,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   pcl::PCLPointCloud2 pcl_pc;
   pcl_conversions::toPCL(*pointCloudMsg, pcl_pc);
 
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud(new pcl::PointCloud<pcl::PointXYZRGB>);
+  PointCloudType::Ptr pointCloud(new PointCloudType);
   pcl::fromPCLPointCloud2(pcl_pc, *pointCloud);
   lastPointCloudUpdateTime_.fromNSec(1000 * pointCloud->header.stamp);
 
@@ -346,7 +347,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   }
 
   // Process point cloud.
-  pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloudProcessed(new pcl::PointCloud<pcl::PointXYZRGB>);
+  PointCloudType::Ptr pointCloudProcessed(new PointCloudType);
   Eigen::VectorXf measurementVariances;
   if (!sensorProcessor_->process(pointCloud, robotPoseCovariance, pointCloudProcessed, measurementVariances,
                                  pointCloudMsg->header.frame_id)) {

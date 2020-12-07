@@ -8,7 +8,8 @@
 
 #pragma once
 
-#include <elevation_mapping/sensor_processors/SensorProcessorBase.hpp>
+#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
 namespace elevation_mapping {
 
@@ -43,8 +44,8 @@ class LaserSensorProcessor : public SensorProcessorBase {
    * @param[out] variances the elevation map height variances.
    * @return true if successful.
    */
-  bool computeVariances(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
-                        const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) override;
+  bool computeVariances(const PointCloudType::ConstPtr pointCloud, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+                        Eigen::VectorXf& variances) override;
 };
 
 } /* namespace elevation_mapping */

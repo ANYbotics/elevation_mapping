@@ -8,24 +8,10 @@
 
 #pragma once
 
-// Elevation Mapping
-#include "elevation_mapping/ElevationMap.hpp"
-#include "elevation_mapping/RobotMotionMapUpdater.hpp"
-#include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
-#include "elevation_mapping/input_sources/InputSourceManager.hpp"
-
 // Grid Map
 #include <grid_map_msgs/GetGridMap.h>
 #include <grid_map_msgs/ProcessFile.h>
 #include <grid_map_msgs/SetGridMap.h>
-
-// Eigen
-#include <Eigen/Core>
-#include <Eigen/Geometry>
-
-// PCL
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
 
 // ROS
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -36,8 +22,20 @@
 #include <std_srvs/Empty.h>
 #include <tf/transform_listener.h>
 
+// Eigen
+#include <Eigen/Core>
+#include <Eigen/Geometry>
+
 // Boost
 #include <boost/thread.hpp>
+
+// Elevation Mapping
+#include "elevation_mapping/ElevationMap.hpp"
+#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+#include "elevation_mapping/RobotMotionMapUpdater.hpp"
+#include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
+#include "elevation_mapping/input_sources/InputSourceManager.hpp"
+#include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
 namespace elevation_mapping {
 

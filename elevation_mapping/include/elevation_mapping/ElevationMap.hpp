@@ -15,10 +15,6 @@
 #include <Eigen/Core>
 #include <Eigen/Geometry>
 
-// PCL
-#include <pcl/point_cloud.h>
-#include <pcl/point_types.h>
-
 // Kindr
 #include <kindr/Core>
 
@@ -28,7 +24,8 @@
 // ROS
 #include <ros/ros.h>
 
-// Postprocessing
+// Elevation Mapping
+#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 #include "elevation_mapping/postprocessing/PostprocessorPool.hpp"
 
 namespace elevation_mapping {
@@ -65,7 +62,7 @@ class ElevationMap {
    * @param transformationSensorToMap
    * @return true if successful.
    */
-  bool add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp,
+  bool add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp,
            const Eigen::Affine3d& transformationSensorToMap);
 
   /*!

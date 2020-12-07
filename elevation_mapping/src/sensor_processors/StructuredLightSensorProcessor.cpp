@@ -12,6 +12,7 @@
 #include <pcl/filters/passthrough.h>
 #include <pcl/filters/voxel_grid.h>
 
+#include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 #include "elevation_mapping/sensor_processors/StructuredLightSensorProcessor.hpp"
 
 namespace elevation_mapping {
@@ -41,7 +42,7 @@ bool StructuredLightSensorProcessor::readParameters() {
   return true;
 }
 
-bool StructuredLightSensorProcessor::computeVariances(const pcl::PointCloud<pcl::PointXYZRGB>::ConstPtr pointCloud,
+bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::ConstPtr pointCloud,
                                                       const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) {
   variances.resize(pointCloud->size());
 
@@ -61,13 +62,15 @@ bool StructuredLightSensorProcessor::computeVariances(const pcl::PointCloud<pcl:
   const Eigen::Matrix3f C_SB_transpose = rotationBaseToSensor_.transposed().toImplementation().cast<float>();
   const Eigen::Matrix3f B_r_BS_skew =
       kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
+  const float epsilon = std::numeric_limits<float>::min();
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     // For every point in point cloud.
 
     // Preparation.
     auto& point = pointCloud->points[i];
-    const Eigen::Vector3f pointVector(point.x, point.y, point.z);  // S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
+    const float& confidenceRatio = point.confidence_ratio;
+    Eigen::Vector3f pointVector(point.x, point.y, point.z);  // S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
 
     // Measurement distance.
     const float measurementDistance = pointVector.z();
@@ -91,7 +94,9 @@ bool StructuredLightSensorProcessor::computeVariances(const pcl::PointCloud<pcl:
     // Measurement variance for map (error propagation law).
     float heightVariance = 0.0;  // sigma_p
     heightVariance = rotationJacobian * rotationVariance * rotationJacobian.transpose();
-    heightVariance += sensorJacobian * sensorVariance * sensorJacobian.transpose();
+    // Scale the sensor variance by the inverse, squared confidence ratio
+    heightVariance +=
+        static_cast<float>(sensorJacobian * sensorVariance * sensorJacobian.transpose()) / (epsilon + confidenceRatio * confidenceRatio);
 
     // Copy to list.
     variances(i) = heightVariance;
@@ -100,9 +105,9 @@ bool StructuredLightSensorProcessor::computeVariances(const pcl::PointCloud<pcl:
   return true;
 }
 
-bool StructuredLightSensorProcessor::filterPointCloudSensorType(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud) {
-  pcl::PassThrough<pcl::PointXYZRGB> passThroughFilter;
-  pcl::PointCloud<pcl::PointXYZRGB> tempPointCloud;
+bool StructuredLightSensorProcessor::filterPointCloudSensorType(const PointCloudType::Ptr pointCloud) {
+  pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter;
+  PointCloudType tempPointCloud;
 
   // cutoff points with z values
   passThroughFilter.setInputCloud(pointCloud);
