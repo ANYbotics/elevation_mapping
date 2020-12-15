@@ -43,7 +43,7 @@ struct PointXYZRGBConfidenceRatio : public _PointXYZRGBConfidenceRatio {
     confidence_ratio = p.confidence_ratio;
   }
 
-  inline PointXYZRGBConfidenceRatio(float _confidence_ratio = 0.f)
+  inline PointXYZRGBConfidenceRatio(float _confidence_ratio = 1.f)
       : PointXYZRGBConfidenceRatio(0.f, 0.f, 0.f, 0, 0, 0, _confidence_ratio) {}
 
   inline PointXYZRGBConfidenceRatio(std::uint8_t _r, std::uint8_t _g, std::uint8_t _b)
@@ -52,7 +52,7 @@ struct PointXYZRGBConfidenceRatio : public _PointXYZRGBConfidenceRatio {
   inline PointXYZRGBConfidenceRatio(float _x, float _y, float _z) : PointXYZRGBConfidenceRatio(_x, _y, _z, 0, 0, 0) {}
 
   inline PointXYZRGBConfidenceRatio(float _x, float _y, float _z, std::uint8_t _r, std::uint8_t _g, std::uint8_t _b,
-                                    float _confidence_ratio = 0.f) {
+                                    float _confidence_ratio = 1.f) {
     x = _x;
     y = _y;
     z = _z;
