@@ -8,6 +8,8 @@
 
 #pragma once
 
+#include <memory>
+
 #include <filters/filter_chain.h>
 #include <ros/ros.h>
 #include <grid_map_core/GridMap.hpp>
@@ -79,7 +81,8 @@ class PostprocessingPipelineFunctor {
   ros::Publisher publisher_;
 
   //! Filter chain.
-  filters::FilterChain<grid_map::GridMap> filterChain_;
+  // We wrap the filter chain with a unique_ptr to simplify moving this object, overcoming shortcomings of its implementation.
+  std::unique_ptr<filters::FilterChain<grid_map::GridMap>> filterChain_;
 
   //! Filter chain parameters name.
   std::string filterChainParametersName_;

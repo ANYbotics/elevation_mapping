@@ -15,14 +15,18 @@
 namespace elevation_mapping {
 
 PostprocessingPipelineFunctor::PostprocessingPipelineFunctor(ros::NodeHandle& nodeHandle)
-    : nodeHandle_(nodeHandle), filterChain_("grid_map::GridMap"), filterChainConfigured_(false) {
+    : nodeHandle_(nodeHandle), filterChain_(), filterChainConfigured_(false) {
   // TODO (magnus) Add logic when setting up failed. What happens actually if it is not configured?
   readParameters();
+
+  // Note: we declare the ROS filter chain as a unique pointer so that each PostprocessingPipelineFunctor
+  // can own one chain, without that chain taking away move construction ability from the functor.
+  filterChain_ = std::make_unique<filters::FilterChain<grid_map::GridMap>>("grid_map::GridMap");
 
   publisher_ = nodeHandle_.advertise<grid_map_msgs::GridMap>(outputTopic_, 1, true);
 
   // Setup filter chain.
-  if (!nodeHandle.hasParam(filterChainParametersName_) || !filterChain_.configure(filterChainParametersName_, nodeHandle)) {
+  if (!nodeHandle.hasParam(filterChainParametersName_) || !filterChain_->configure(filterChainParametersName_, nodeHandle)) {
     ROS_WARN("Could not configure the filter chain. Will publish the raw elevation map without postprocessing!");
     return;
   }
@@ -44,7 +48,7 @@ grid_map::GridMap PostprocessingPipelineFunctor::operator()(GridMap& inputMap) {
   }
 
   grid_map::GridMap outputMap;
-  if (not filterChain_.update(inputMap, outputMap)) {
+  if (not filterChain_->update(inputMap, outputMap)) {
     ROS_ERROR("Could not perform the grid map filter chain! Forwarding the raw elevation map!");
     return inputMap;
   }
