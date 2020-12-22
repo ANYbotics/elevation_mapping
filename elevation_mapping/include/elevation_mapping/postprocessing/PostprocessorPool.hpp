@@ -10,12 +10,15 @@
 
 #include <boost/asio.hpp>
 #include <boost/thread.hpp>
+#include <deque>
+#include <memory>
 #include <mutex>
 #include <thread>
 
 #include <grid_map_core/GridMap.hpp>
 
 #include "elevation_mapping/postprocessing/PostprocessingPipelineFunctor.hpp"
+#include "elevation_mapping/postprocessing/PostprocessingWorker.hpp"
 
 namespace elevation_mapping {
 
@@ -38,7 +41,11 @@ class PostprocessorPool {
    */
   PostprocessorPool(std::size_t poolSize, ros::NodeHandle nodeHandle);
 
-  //! @brief Destructor.
+  /**
+   * @brief Destructor.
+   *
+   * Requests all postprocessing pipelines to stop and joins their threads until they're done.
+   */
   ~PostprocessorPool();
 
   /**
@@ -62,27 +69,13 @@ class PostprocessorPool {
    */
   void wrapTask(size_t serviceIndex);
 
-  //! The functor to execute on a given GridMap.
-  PostprocessingPipelineFunctor postprocessor_;
-
-  //! Multiple service workers, all addressed with their corresponding index.
-  //! The io_service objects provide the interface to post an asynchronous task.
-  //! The work object ensures that the io_service run() method keeps spinning and accepts tasks.
-  //! A thread executes the io_service::run() method, which does io_service::work, ie accepting and executing new tasks.
-
-  //! Service objects, object i runs work_[i] on threads_[i].
-  std::vector<boost::asio::io_service> ioService_;
-  //! The routines to accept is_service tasks.
-  std::vector<boost::asio::io_service::work> work_;
-  //! Data container for the workers. E.g ioService_[i] operates on dataBuffers_[i].
-  std::vector<GridMap> dataBuffers_;
-  //! The threads on which the services run. E.g ioService_[i] runs on threads_[i].
-  std::vector<std::thread> threads_;
+  // Post-processing workers.
+  std::vector<std::unique_ptr<PostprocessingWorker>> workers_;
 
   //! Container holding the service ids which have corresponding threads. The only object that is used in a mutual exclusive manner and must
   //! be protected by availableServicesMutex_.
-  std::deque<size_t> availableServices_;
   boost::mutex availableServicesMutex_;
+  std::deque<size_t> availableServices_;
 };
 
 }  // namespace elevation_mapping

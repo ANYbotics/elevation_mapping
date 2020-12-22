@@ -69,6 +69,7 @@ add_library(${PROJECT_NAME}_library
   src/input_sources/Input.cpp
   src/input_sources/InputSourceManager.cpp
   src/postprocessing/PostprocessorPool.cpp
+  src/postprocessing/PostprocessingWorker.cpp
   src/postprocessing/PostprocessingPipelineFunctor.cpp
   src/RobotMotionMapUpdater.cpp
   src/sensor_processors/SensorProcessorBase.cpp

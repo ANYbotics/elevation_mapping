@@ -8,8 +8,6 @@
 
 #pragma once
 
-#include <memory>
-
 #include <filters/filter_chain.h>
 #include <ros/ros.h>
 #include <grid_map_core/GridMap.hpp>
@@ -34,7 +32,7 @@ class PostprocessingPipelineFunctor {
   using GridMap = grid_map::GridMap;
 
   /**
-   * @brief Constructor.
+   * @brief Explicit Constructor.
    * @param nodeHandle The node handle to read parameters from and to publish output data.
    */
   explicit PostprocessingPipelineFunctor(ros::NodeHandle& nodeHandle);
@@ -55,14 +53,14 @@ class PostprocessingPipelineFunctor {
    * Publishes a given grid map.
    * @param gridMap   The Grid Map that this functor will publish.
    */
-  void publish(GridMap& gridMap) const;
+  void publish(const GridMap& gridMap) const;
 
   /**
-   * Checks whether there are any subscribers to the result of this pipeline.
+   * Checks whether there are any subscribers to the result of this functor.
    *
-   * @return True if someone listens to the topic this task publishes to.
+   * @return True if someone listens to the topic this functor publishes to.
    */
-  bool pipelineHasSubscribers() const;
+  bool hasSubscribers() const;
 
  private:
   /**
@@ -81,8 +79,7 @@ class PostprocessingPipelineFunctor {
   ros::Publisher publisher_;
 
   //! Filter chain.
-  // We wrap the filter chain with a unique_ptr to simplify moving this object, overcoming shortcomings of its implementation.
-  std::unique_ptr<filters::FilterChain<grid_map::GridMap>> filterChain_;
+  filters::FilterChain<grid_map::GridMap> filterChain_;
 
   //! Filter chain parameters name.
   std::string filterChainParametersName_;

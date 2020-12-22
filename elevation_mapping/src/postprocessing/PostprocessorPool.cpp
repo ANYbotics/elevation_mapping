@@ -10,28 +10,26 @@
 
 namespace elevation_mapping {
 
-PostprocessorPool::PostprocessorPool(std::size_t poolSize, ros::NodeHandle nodeHandle)
-    : postprocessor_(nodeHandle), ioService_(poolSize), dataBuffers_(poolSize) {
+PostprocessorPool::PostprocessorPool(std::size_t poolSize, ros::NodeHandle nodeHandle) {
   for (std::size_t i = 0; i < poolSize; ++i) {
+    // Add worker to the collection.
+    workers_.emplace_back(std::make_unique<PostprocessingWorker>(nodeHandle));
     // Create one service per thread
     availableServices_.push_back(i);
-    // Generate services and link work to it. Needed to accept tasks and keep the service thread running.
-    work_.emplace_back(ioService_.at(i));
-    threads_.emplace_back(boost::bind(&boost::asio::io_service::run, &ioService_.at(i)));
   }
 }
 
 PostprocessorPool::~PostprocessorPool() {
   // Force all threads to return from io_service::run().
-  for (auto& service : ioService_) {
-    service.stop();
+  for (auto& worker : workers_) {
+    worker->ioService().stop();
   }
 
   // Suppress all exceptions. Try to join every worker thread.
-  for (auto& thread : threads_) {
+  for (auto& worker : workers_) {
     try {
-      if (thread.joinable()) {
-        thread.join();
+      if (worker->thread().joinable()) {
+        worker->thread().join();
       }
     } catch (const std::exception&) {
     }
@@ -50,20 +48,20 @@ bool PostprocessorPool::runTask(const GridMap& gridMap) {
     availableServices_.pop_back();
   }
 
-  // Copy data to the buffer for the worker thread.
-  dataBuffers_.at(serviceIndex) = gridMap;
+  // Copy data to the buffer for the worker.
+  workers_.at(serviceIndex)->setDataBuffer(gridMap);
 
   // Create a task with the post-processor and dispatch it.
   auto task = std::bind(&PostprocessorPool::wrapTask, this, serviceIndex);
-  ioService_.at(serviceIndex).post(task);
+  workers_.at(serviceIndex)->ioService().post(task);
   return true;
 }
 
 void PostprocessorPool::wrapTask(size_t serviceIndex) {
   // Run the user supplied task.
   try {
-    GridMap postprocessedMap = postprocessor_(dataBuffers_.at(serviceIndex));
-    postprocessor_.publish(postprocessedMap);
+    GridMap postprocessedMap = workers_.at(serviceIndex)->processBuffer();
+    workers_.at(serviceIndex)->publish(postprocessedMap);
   }
   // Suppress all exceptions.
   catch (const std::exception& exception) {
@@ -76,7 +74,8 @@ void PostprocessorPool::wrapTask(size_t serviceIndex) {
 }
 
 bool PostprocessorPool::pipelineHasSubscribers() const {
-  return postprocessor_.pipelineHasSubscribers();
+  return std::all_of(workers_.cbegin(), workers_.cend(),
+                     [](const std::unique_ptr<PostprocessingWorker>& worker) { return worker->hasSubscribers(); });
 }
 
 }  // namespace elevation_mapping
