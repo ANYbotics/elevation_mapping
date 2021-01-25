@@ -273,18 +273,24 @@ bool ElevationMapping::initialize() {
 }
 
 void ElevationMapping::runFusionServiceThread() {
-  static const double timeout = 0.05;
+  ros::Rate loopRate(20);
 
   while (nodeHandle_.ok()) {
-    fusionServiceQueue_.callAvailable(ros::WallDuration(timeout));
+    fusionServiceQueue_.callAvailable();
+
+    // Sleep until the next execution.
+    loopRate.sleep();
   }
 }
 
 void ElevationMapping::visibilityCleanupThread() {
-  static const double timeout = 0.05;
+  ros::Rate loopRate(20);
 
   while (nodeHandle_.ok()) {
-    visibilityCleanupQueue_.callAvailable(ros::WallDuration(timeout));
+    visibilityCleanupQueue_.callAvailable();
+
+    // Sleep until the next execution.
+    loopRate.sleep();
   }
 }
 
