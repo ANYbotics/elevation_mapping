@@ -17,6 +17,8 @@
 
 namespace pcl {
 
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
 struct _PointXYZRGBConfidenceRatio {
   PCL_ADD_POINT4D;  // This adds the members x,y,z which can also be accessed using the point (which is float[4])
   PCL_ADD_RGB;
@@ -28,6 +30,7 @@ struct _PointXYZRGBConfidenceRatio {
   };
   PCL_MAKE_ALIGNED_OPERATOR_NEW
 } EIGEN_ALIGN16;  // enforce SSE padding for correct memory alignment
+#pragma GCC diagnostic pop
 
 struct PointXYZRGBConfidenceRatio : public _PointXYZRGBConfidenceRatio {
   inline PointXYZRGBConfidenceRatio(const _PointXYZRGBConfidenceRatio& p) {

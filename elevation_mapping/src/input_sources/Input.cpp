@@ -53,7 +53,7 @@ bool Input::configure(std::string name, const XmlRpc::XmlRpcValue& parameters,
   topic_ = static_cast<std::string>(parameters["topic"]);
   const int& queueSize = static_cast<int>(parameters["queue_size"]);
   if (queueSize >= 0) {
-    queueSize_ = static_cast<const unsigned int>(queueSize);
+    queueSize_ = static_cast<unsigned int>(queueSize);
   } else {
     ROS_ERROR("The specified queue_size is negative.");
     return false;
