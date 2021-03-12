@@ -56,15 +56,17 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
 
   // Multi-threading for fusion.
   ros::AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
-      "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMap, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
+      "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
   ros::AdvertiseServiceOptions advertiseServiceOptionsForGetFusedSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_submap", boost::bind(&ElevationMapping::getFusedSubmap, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
+      "get_submap", boost::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
   fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetFusedSubmap);
 
   ros::AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmap, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
+      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
   rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
 
   if (!fusedMapPublishTimerDuration_.isZero()) {
@@ -82,12 +84,12 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 
-  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMap, this);
-  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdates, this);
-  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdates, this);
-  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplace, this);
-  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMap, this);
-  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMap, this);
+  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMapServiceCallback, this);
+  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdatesServiceCallback, this);
+  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdatesServiceCallback, this);
+  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplaceServiceCallback, this);
+  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMapServiceCallback, this);
+  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMapServiceCallback, this);
 
   initialize();
 }
@@ -455,7 +457,7 @@ void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent&) {
   map_.visibilityCleanup(ros::Time(lastPointCloudUpdateTime_));
 }
 
-bool ElevationMapping::fuseEntireMap(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+bool ElevationMapping::fuseEntireMapServiceCallback(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
   map_.publishFusedElevationMap();
@@ -526,7 +528,8 @@ bool ElevationMapping::updateMapLocation() {
   return true;
 }
 
-bool ElevationMapping::getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response) {
+bool ElevationMapping::getFusedSubmapServiceCallback(grid_map_msgs::GetGridMap::Request& request,
+                                                     grid_map_msgs::GetGridMap::Response& response) {
   grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
   grid_map::Length requestedSubmapLength(request.length_x, request.length_y);
   ROS_DEBUG("Elevation submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(), requestedSubmapPosition.y(),
@@ -553,7 +556,8 @@ bool ElevationMapping::getFusedSubmap(grid_map_msgs::GetGridMap::Request& reques
   return isSuccess;
 }
 
-bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response) {
+bool ElevationMapping::getRawSubmapServiceCallback(grid_map_msgs::GetGridMap::Request& request,
+                                                   grid_map_msgs::GetGridMap::Response& response) {
   grid_map::Position requestedSubmapPosition(request.position_x, request.position_y);
   grid_map::Length requestedSubmapLength(request.length_x, request.length_y);
   ROS_DEBUG("Elevation raw submap request: Position x=%f, y=%f, Length x=%f, y=%f.", requestedSubmapPosition.x(),
@@ -577,13 +581,13 @@ bool ElevationMapping::getRawSubmap(grid_map_msgs::GetGridMap::Request& request,
   return isSuccess;
 }
 
-bool ElevationMapping::disableUpdates(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/) {
+bool ElevationMapping::disableUpdatesServiceCallback(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/) {
   ROS_INFO("Disabling updates.");
   updatesEnabled_ = false;
   return true;
 }
 
-bool ElevationMapping::enableUpdates(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/) {
+bool ElevationMapping::enableUpdatesServiceCallback(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/) {
   ROS_INFO("Enabling updates.");
   updatesEnabled_ = true;
   return true;
@@ -621,7 +625,7 @@ bool ElevationMapping::initializeElevationMap() {
   return true;
 }
 
-bool ElevationMapping::clearMap(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/) {
+bool ElevationMapping::clearMapServiceCallback(std_srvs::Empty::Request& /*request*/, std_srvs::Empty::Response& /*response*/) {
   ROS_INFO("Clearing map...");
   bool success = map_.clear();
   success &= initializeElevationMap();
@@ -630,7 +634,8 @@ bool ElevationMapping::clearMap(std_srvs::Empty::Request& /*request*/, std_srvs:
   return success;
 }
 
-bool ElevationMapping::maskedReplace(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& /*response*/) {
+bool ElevationMapping::maskedReplaceServiceCallback(grid_map_msgs::SetGridMap::Request& request,
+                                                    grid_map_msgs::SetGridMap::Response& /*response*/) {
   ROS_INFO("Masked replacing of map.");
   grid_map::GridMap sourceMap;
   grid_map::GridMapRosConverter::fromMessage(request.map, sourceMap);
@@ -681,7 +686,8 @@ bool ElevationMapping::maskedReplace(grid_map_msgs::SetGridMap::Request& request
   return true;
 }
 
-bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response) {
+bool ElevationMapping::saveMapServiceCallback(grid_map_msgs::ProcessFile::Request& request,
+                                              grid_map_msgs::ProcessFile::Response& response) {
   ROS_INFO("Saving map to file.");
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
@@ -696,7 +702,8 @@ bool ElevationMapping::saveMap(grid_map_msgs::ProcessFile::Request& request, gri
   return static_cast<bool>(response.success);
 }
 
-bool ElevationMapping::loadMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response) {
+bool ElevationMapping::loadMapServiceCallback(grid_map_msgs::ProcessFile::Request& request,
+                                              grid_map_msgs::ProcessFile::Response& response) {
   ROS_WARN("Loading from bag file.");
   boost::recursive_mutex::scoped_lock scopedLockFused(map_.getFusedDataMutex());
   boost::recursive_mutex::scoped_lock scopedLockRaw(map_.getRawDataMutex());

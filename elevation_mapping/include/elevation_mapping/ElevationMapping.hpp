@@ -101,7 +101,7 @@ class ElevationMapping {
    * @param response    The ROS service response.
    * @return true if successful.
    */
-  bool fuseEntireMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+  bool fuseEntireMapServiceCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
    * ROS service callback function to return a submap of the fused elevation map.
@@ -110,7 +110,7 @@ class ElevationMapping {
    * @param response    The ROS service response containing the requested fused submap.
    * @return true if successful.
    */
-  bool getFusedSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
+  bool getFusedSubmapServiceCallback(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
    * ROS service callback function to return a submap of the raw elevation map.
@@ -119,37 +119,37 @@ class ElevationMapping {
    * @param response    The ROS service response containing the requested raw submap.
    * @return true if successful.
    */
-  bool getRawSubmap(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
+  bool getRawSubmapServiceCallback(grid_map_msgs::GetGridMap::Request& request, grid_map_msgs::GetGridMap::Response& response);
 
   /*!
-   * Enables updates of the elevation map.
+   * ROS service callback function to enable updates of the elevation map.
    *
    * @param request     The ROS service request.
    * @param response    The ROS service response.
    * @return true if successful.
    */
-  bool enableUpdates(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+  bool enableUpdatesServiceCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-   * Disables updates of the elevation map.
+   * ROS service callback function to disable updates of the elevation map.
    *
    * @param request     The ROS service request.
    * @param response    The ROS service response.
    * @return true if successful.
    */
-  bool disableUpdates(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+  bool disableUpdatesServiceCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-   * Clears all data of the elevation map.
+   * ROS service callback function to clear all data of the elevation map.
    *
    * @param request     The ROS service request.
    * @param response    The ROS service response.
    * @return true if successful.
    */
-  bool clearMap(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
+  bool clearMapServiceCallback(std_srvs::Empty::Request& request, std_srvs::Empty::Response& response);
 
   /*!
-   * Allows for setting the individual layers of the elevation map through a service call.
+   * ROS service callback function to allow for setting the individual layers of the elevation map through a service call.
    * The layer mask can be used to only set certain cells and not the entire map. Cells
    * containing NAN in the mask are not set, all the others are set. If the layer mask is
    * not supplied, the entire map will be set in the intersection of both maps. The
@@ -159,25 +159,25 @@ class ElevationMapping {
    * @param response   The ROS service response.
    * @return true if successful.
    */
-  bool maskedReplace(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response);
+  bool maskedReplaceServiceCallback(grid_map_msgs::SetGridMap::Request& request, grid_map_msgs::SetGridMap::Response& response);
 
   /*!
-   * Saves the grid map with all layers to a ROS bag file.
+   * ROS service callback function to save the grid map with all layers to a ROS bag file.
    *
    * @param request   The ROS service request.
    * @param response  The ROS service response.
    * @return true if successful.
    */
-  bool saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
+  bool saveMapServiceCallback(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
 
   /*!
-   * Loads the grid map with all layers from a ROS bag file.
+   * ROS service callback function to load the grid map with all layers from a ROS bag file.
    *
    * @param request     The ROS service request.
    * @param response    The ROS service response.
    * @return true if successful.
    */
-  bool loadMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
+  bool loadMapServiceCallback(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
 
  private:
   /*!
