@@ -1,8 +1,8 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
+
 import rospy
 import geometry_msgs.msg
 import tf
-
 
 def callback(newPose):
     """Listens to a transform between from_frame and to_frame and publishes it
@@ -47,7 +47,6 @@ def main_program():
         the ROS loop. """
     global publisher, tf_listener, from_frame, to_frame
     rospy.init_node('tf_to_pose_publisher')
-
     # Read frame id's for tf listener
     from_frame = rospy.get_param("~from_frame")
     to_frame = rospy.get_param("~to_frame")
