@@ -24,6 +24,11 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(Eigen3 REQUIRED)
 
+
+generate_dynamic_reconfigure_options(
+  cfg/ElevationMapPlugin.cfg
+)
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -60,6 +65,8 @@ catkin_package(
 ###########
 ## Build ##
 ###########
+
+
 
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations

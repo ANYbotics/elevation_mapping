@@ -201,6 +201,9 @@ bool ElevationMapping::readParameters()
   if (!sensorProcessor_->readParameters()) return false;
   if (!robotMotionMapUpdater_.readParameters()) return false;
 
+  dsrv_ = nullptr;
+  setupDynamicReconfigure(nodeHandle_);
+
   return true;
 }
 
@@ -493,5 +496,37 @@ void ElevationMapping::stopMapUpdateTimer()
 {
   mapUpdateTimer_.stop();
 }
+
+  void ElevationMapping::setupDynamicReconfigure(ros::NodeHandle &nh_)
+  {
+    dsrv_.reset(new dynamic_reconfigure::Server<elevation_mapping::ElevationMapPluginConfig>(nh_));
+    dynamic_reconfigure::Server<elevation_mapping::ElevationMapPluginConfig>::CallbackType cb =
+        boost::bind(&ElevationMapping::reconfigureCB, this, _1, _2);
+    dsrv_->setCallback(cb);
+  }
+
+  void ElevationMapping::reconfigureCB(elevation_mapping::ElevationMapPluginConfig &config, uint32_t level)
+  {
+    // enabled_ = config.enabled;
+    // edges_sharpness_threshold_ = config.edge_sharpness;
+  grid_map::Length length;
+  grid_map::Position position;
+  double resolution;
+  length.x() = config.length_in_x;
+  length.y() = config.length_in_y;
+  position.x() = config.position_x;
+  position.y() = config.position_y;
+  resolution = config.resolution;
+
+  map_.setGeometry(length, resolution, position);
+
+  map_.minVariance_ = config.min_variance;
+  map_.maxVariance_ = config.max_variance;
+  map_.mahalanobisDistanceThreshold_ = config.mahalanobis_distance_threshold;
+  map_.multiHeightNoise_ = config.multi_height_noise;
+  map_.minHorizontalVariance_ = pow(resolution / 2.0, 2);
+  
+  }
+
 
 } /* namespace */

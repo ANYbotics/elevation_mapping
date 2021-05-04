@@ -38,6 +38,9 @@
 // Boost
 #include <boost/thread.hpp>
 
+// Dynamic Reconfigure
+#include <dynamic_reconfigure/server.h>
+#include <elevation_mapping/ElevationMapPluginConfig.h>
 
 namespace elevation_mapping {
 
@@ -120,6 +123,17 @@ class ElevationMapping
    * @return true if successful.
    */
   bool saveMap(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
+
+ protected:
+   /**
+   * set up the dynamic reconfigure
+   * @param nh
+   */
+  virtual void setupDynamicReconfigure(ros::NodeHandle& nh);
+ 
+
+  ///< @brief dynamic reconfigure server
+  std::unique_ptr<dynamic_reconfigure::Server<elevation_mapping::ElevationMapPluginConfig> > dsrv_;
 
  private:
 
@@ -259,6 +273,10 @@ class ElevationMapping
 
   //! Becomes true when corresponding poses and point clouds can be found
   bool receivedFirstMatchingPointcloudAndPose_;
+ 
+  // Dynamic reconf 
+  void reconfigureCB(elevation_mapping::ElevationMapPluginConfig& config, uint32_t level);
+
 };
 
 } /* namespace */
