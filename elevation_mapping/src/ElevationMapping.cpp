@@ -616,8 +616,8 @@ bool ElevationMapping::initializeElevationMap() {
                                 lengthInYInitSubmap_, marginInitSubmap_);
         return true;
       } catch (tf::TransformException& ex) {
-        ROS_ERROR("%s", ex.what());
-        ROS_ERROR("Could not initialize elevation map with constant height.");
+        ROS_DEBUG("%s", ex.what());
+        ROS_WARN("Could not initialize elevation map with constant height. (This warning can be ignored if TF tree is not available.)");
         return false;
       }
     }
