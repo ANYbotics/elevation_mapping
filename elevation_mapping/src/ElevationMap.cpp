@@ -7,6 +7,7 @@
  */
 
 #include <cmath>
+#include <cstring>
 
 #include <grid_map_msgs/GridMap.h>
 #include <ros/ros.h>
@@ -17,12 +18,25 @@
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 
+namespace {
+/**
+ * Store an unsigned integer value in a float
+ * @param input integer
+ * @return A float with the bit pattern of the input integer
+ */
+float intAsFloat(const uint32_t input) {
+  float output;
+  std::memcpy(&output, &input, sizeof(uint32_t));
+  return output;
+}
+}  // namespace
+
 namespace elevation_mapping {
 
 ElevationMap::ElevationMap(ros::NodeHandle nodeHandle)
     : nodeHandle_(nodeHandle),
       rawMap_({"elevation", "variance", "horizontal_variance_x", "horizontal_variance_y", "horizontal_variance_xy", "color", "time",
-               "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
+               "dynamic_time", "lowest_scan_point", "sensor_x_at_lowest_scan", "sensor_y_at_lowest_scan", "sensor_z_at_lowest_scan"}),
       fusedMap_({"elevation", "upper_bound", "lower_bound", "color"}),
       postprocessorPool_(nodeHandle.param("postprocessor_num_threads", 1), nodeHandle_),
       hasUnderlyingMap_(false),
@@ -69,6 +83,8 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
 
   // Initialization for time calculation.
   const ros::WallTime methodStartTime(ros::WallTime::now());
+  const ros::Time currentTime(ros::Time::now());
+  const float currentTimeSecondsPattern{intAsFloat(static_cast<uint32_t>(static_cast<uint64_t>(currentTime.toSec())))};
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
 
   // Update initial time if it is not initialized.
@@ -85,6 +101,7 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
   auto& horizontalVarianceXYLayer = rawMap_["horizontal_variance_xy"];
   auto& colorLayer = rawMap_["color"];
   auto& timeLayer = rawMap_["time"];
+  auto& dynamicTimeLayer = rawMap_["dynamic_time"];
   auto& lowestScanPointLayer = rawMap_["lowest_scan_point"];
   auto& sensorXatLowestScanLayer = rawMap_["sensor_x_at_lowest_scan"];
   auto& sensorYatLowestScanLayer = rawMap_["sensor_y_at_lowest_scan"];
@@ -110,6 +127,7 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
     auto& horizontalVarianceXY = horizontalVarianceXYLayer(index(0), index(1));
     auto& color = colorLayer(index(0), index(1));
     auto& time = timeLayer(index(0), index(1));
+    auto& dynamicTime = dynamicTimeLayer(index(0), index(1));
     auto& lowestScanPoint = lowestScanPointLayer(index(0), index(1));
     auto& sensorXatLowestScan = sensorXatLowestScanLayer(index(0), index(1));
     auto& sensorYatLowestScan = sensorYatLowestScanLayer(index(0), index(1));
@@ -164,6 +182,7 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
     // TODO(max): Add color fusion.
     grid_map::colorVectorToValue(point.getRGBVector3i(), color);
     time = scanTimeSinceInitialization;
+    dynamicTime = currentTimeSecondsPattern;
 
     // Horizontal variances are reset.
     horizontalVarianceX = minHorizontalVariance_;
@@ -401,6 +420,7 @@ bool ElevationMap::clear() {
     boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
     rawMap_.clearAll();
     rawMap_.resetTimestamp();
+    rawMap_.get("dynamic_time").setZero();
   }
   {
     boost::recursive_mutex::scoped_lock scopedLockForFusedData(fusedMapMutex_);
@@ -493,6 +513,7 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime) {
     }
     if (rawMap_.isValid(index)) {
       rawMap_.at("elevation", index) = NAN;
+      rawMap_.at("dynamic_time", index) = 0.0f;
     }
   }
   scopedLockForRawData.unlock();
@@ -513,6 +534,11 @@ void ElevationMap::move(const Eigen::Vector2d& position) {
 
   if (rawMap_.move(position, newRegions)) {
     ROS_DEBUG("Elevation map has been moved to position (%f, %f).", rawMap_.getPosition().x(), rawMap_.getPosition().y());
+
+    // The "dynamic_time" layer is meant to be interpreted as integer values, therefore nan:s need to be zeroed.
+    grid_map::Matrix& dynTime{rawMap_.get("dynamic_time")};
+    dynTime = dynTime.array().isNaN().select(grid_map::Matrix::Scalar(0.0f), dynTime.array());
+
     if (hasUnderlyingMap_) {
       rawMap_.addDataFrom(underlyingMap_, false, false, true);
     }
