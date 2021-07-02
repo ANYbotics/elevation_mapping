@@ -51,45 +51,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
 
   readParameters();
   setupSubscribers();
-
-  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
-
-  // Multi-threading for fusion.
-  ros::AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
-      "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
-      &fusionServiceQueue_);
-  fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
-
-  ros::AdvertiseServiceOptions advertiseServiceOptionsForGetFusedSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_submap", boost::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
-  fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetFusedSubmap);
-
-  ros::AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
-      &fusionServiceQueue_);
-  rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
-
-  if (!fusedMapPublishTimerDuration_.isZero()) {
-    ros::TimerOptions timerOptions =
-        ros::TimerOptions(fusedMapPublishTimerDuration_, boost::bind(&ElevationMapping::publishFusedMapCallback, this, _1),
-                          &fusionServiceQueue_, false, false);
-    fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
-  }
-
-  // Multi-threading for visibility cleanup. Visibility clean-up does not help when continuous clean-up is enabled.
-  if (map_.enableVisibilityCleanup_ && !visibilityCleanupTimerDuration_.isZero() && !map_.enableContinuousCleanup_) {
-    ros::TimerOptions timerOptions =
-        ros::TimerOptions(visibilityCleanupTimerDuration_, boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1),
-                          &visibilityCleanupQueue_, false, false);
-    visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
-  }
-
-  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMapServiceCallback, this);
-  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdatesServiceCallback, this);
-  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdatesServiceCallback, this);
-  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplaceServiceCallback, this);
-  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMapServiceCallback, this);
-  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMapServiceCallback, this);
+  setupServices();
+  setupTimers();
 
   initialize();
 }
@@ -115,6 +78,49 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
     robotPoseCache_.setCacheSize(robotPoseCacheSize_);
   } else {
     ignoreRobotMotionUpdates_ = true;
+  }
+}
+
+void ElevationMapping::setupServices() {
+  // Multi-threading for fusion.
+  ros::AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
+      "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
+  fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
+
+  ros::AdvertiseServiceOptions advertiseServiceOptionsForGetFusedSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
+      "get_submap", boost::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
+  fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetFusedSubmap);
+
+  ros::AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
+      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
+      &fusionServiceQueue_);
+  rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
+
+  clearMapService_ = nodeHandle_.advertiseService("clear_map", &ElevationMapping::clearMapServiceCallback, this);
+  enableUpdatesService_ = nodeHandle_.advertiseService("enable_updates", &ElevationMapping::enableUpdatesServiceCallback, this);
+  disableUpdatesService_ = nodeHandle_.advertiseService("disable_updates", &ElevationMapping::disableUpdatesServiceCallback, this);
+  maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplaceServiceCallback, this);
+  saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMapServiceCallback, this);
+  loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMapServiceCallback, this);
+}
+
+void ElevationMapping::setupTimers() {
+  mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
+
+  if (!fusedMapPublishTimerDuration_.isZero()) {
+    ros::TimerOptions timerOptions =
+        ros::TimerOptions(fusedMapPublishTimerDuration_, boost::bind(&ElevationMapping::publishFusedMapCallback, this, _1),
+                          &fusionServiceQueue_, false, false);
+    fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
+  }
+
+  // Multi-threading for visibility cleanup. Visibility clean-up does not help when continuous clean-up is enabled.
+  if (map_.enableVisibilityCleanup_ && !visibilityCleanupTimerDuration_.isZero() && !map_.enableContinuousCleanup_) {
+    ros::TimerOptions timerOptions =
+        ros::TimerOptions(visibilityCleanupTimerDuration_, boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1),
+                          &visibilityCleanupQueue_, false, false);
+    visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 }
 

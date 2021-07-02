@@ -199,6 +199,16 @@ class ElevationMapping {
    */
   void setupSubscribers();
 
+  /**
+   * Sets up the services.
+   */
+  void setupServices();
+
+  /**
+   * Sets up the timers.
+   */
+  void setupTimers();
+
   /*!
    * Separate thread for all fusion service calls.
    */
