@@ -47,6 +47,11 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
       lengthInYInitSubmap_(1.8),
       marginInitSubmap_(0.3),
       initSubmapHeightOffset_(0.0) {
+#ifndef NDEBUG
+  // Print a warning if built in debug.
+  ROS_WARN("CMake Build Type is 'Debug'. Change to 'Release' for better performance.");
+#endif
+
   ROS_INFO("Elevation mapping node started.");
 
   readParameters();
@@ -55,6 +60,8 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
   setupTimers();
 
   initialize();
+
+  ROS_INFO("Successfully launched node.");
 }
 
 void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_topic and input_sources configuration.
@@ -276,7 +283,6 @@ bool ElevationMapping::initialize() {
   visibilityCleanupThread_ = boost::thread(boost::bind(&ElevationMapping::visibilityCleanupThread, this));
   visibilityCleanupTimer_.start();
   initializeElevationMap();
-  ROS_INFO("Done initializing.");
   return true;
 }
 
