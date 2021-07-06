@@ -246,9 +246,14 @@ class ElevationMapping {
   void stopMapUpdateTimer();
 
   /*!
-   * Initializes a submap around the robot of the elevation map with a constant height
+   * Initializes a submap around the robot of the elevation map with a constant height.
    */
   bool initializeElevationMap();
+
+  /*!
+   * Returns true if fusing the map is enabled.
+   */
+  bool isFusingEnabled();
 
   //! ROS nodehandle.
   ros::NodeHandle nodeHandle_;

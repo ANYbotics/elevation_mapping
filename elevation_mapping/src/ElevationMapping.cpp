@@ -409,7 +409,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   if (publishPointCloud) {
     // Publish elevation map.
     map_.publishRawElevationMap();
-    if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+    if (isFusingEnabled()) {
       map_.fuseAll();
       map_.publishFusedElevationMap();
     }
@@ -445,7 +445,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
 
   // Publish elevation map.
   map_.publishRawElevationMap();
-  if (isContinuouslyFusing_ && map_.hasFusedMapSubscribers()) {
+  if (isFusingEnabled()) {
     map_.fuseAll();
     map_.publishFusedElevationMap();
   }
@@ -454,7 +454,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
 }
 
 void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&) {
-  if (!map_.hasFusedMapSubscribers()) {
+  if (!isFusingEnabled()) {
     return;
   }
   ROS_DEBUG("Elevation map is fused and published from timer.");
@@ -474,6 +474,10 @@ bool ElevationMapping::fuseEntireMapServiceCallback(std_srvs::Empty::Request&, s
   map_.fuseAll();
   map_.publishFusedElevationMap();
   return true;
+}
+
+bool ElevationMapping::isFusingEnabled() {
+  return isContinuouslyFusing_ && map_.hasFusedMapSubscribers();
 }
 
 bool ElevationMapping::updatePrediction(const ros::Time& time) {
