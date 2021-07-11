@@ -454,7 +454,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
 }
 
 void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&) {
-  if (!isFusingEnabled()) {
+  if (!map_.hasFusedMapSubscribers()) {
     return;
   }
   ROS_DEBUG("Elevation map is fused and published from timer.");
