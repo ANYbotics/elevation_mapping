@@ -19,7 +19,7 @@ namespace pcl {
 
 #ifndef PCL_MAKE_ALIGNED_OPERATOR_NEW
 #define PCL_MAKE_ALIGNED_OPERATOR_NEW EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-
+#endif
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 struct _PointXYZRGBConfidenceRatio {
