@@ -102,11 +102,7 @@ bool Input::configureSensorProcessor(std::string name, const XmlRpc::XmlRpcValue
     return false;
   }
 
-  if (!sensorProcessor_->readParameters()) {
-    return false;
-  }
-
-  return true;
+  return sensorProcessor_->readParameters();
 }
 
 }  // namespace elevation_mapping
