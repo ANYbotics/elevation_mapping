@@ -20,8 +20,9 @@ namespace pcl {
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpedantic"
 struct _PointXYZRGBConfidenceRatio {
-  PCL_ADD_POINT4D;  // This adds the members x,y,z which can also be accessed using the point (which is float[4])
-  PCL_ADD_RGB;
+  PCL_ADD_POINT4D;  // NOLINT(cppcoreguidelines-pro-type-union-access, readability-const-return-type, modernize-avoid-c-arrays) This adds
+                    // the members x,y,z which can also be accessed using the point (which is float[4])
+  PCL_ADD_RGB;      // NOLINT(cppcoreguidelines-pro-type-union-access, readability-const-return-type)
   union {
     struct {
       float confidence_ratio;
