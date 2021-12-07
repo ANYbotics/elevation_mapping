@@ -2,8 +2,8 @@
 # Pomerleau, F.; Breitenmoser, A; Ming Liu; Colas, F.; Siegwart, R.,
 # "Noise characterization of depth sensors for surface inspections,"
 # International Conference on Applied Robotics for the Power Industry (CARPI), 2012.
-
-sensor_processor/type: laser
-sensor_processor/min_radius: 0.018
-sensor_processor/beam_angle: 0.0006
-sensor_processor/beam_constant: 0.0015
+sensor_processor:
+  type: laser
+  min_radius: 0.018
+  beam_angle: 0.0006
+  beam_constant: 0.0015

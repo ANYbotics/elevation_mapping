@@ -1,8 +1,14 @@
-point_cloud_topic: "/ground_truth"
+input_sources:
+  ground_truth_cloud: # A name to identify the input source
+    type: pointcloud # Supported types: pointcloud
+    topic: /points
+    queue_size: 1
+    publish_on_update: true # Whether to publish the elevation map after a callback from this source.
+    sensor_processor:
+      type: perfect
 map_frame_id: "map"
 robot_base_frame_id: "map"
-robot_pose_with_covariance_topic: "/ground_truth_pose"
-robot_pose_cache_size: 500
+robot_pose_with_covariance_topic: ""
 track_point_frame_id: "map"
 track_point_x: 0.0
 track_point_y: 0.0

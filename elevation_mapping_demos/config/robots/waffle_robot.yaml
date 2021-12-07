@@ -3,7 +3,14 @@ map_frame_id:                               odom
 robot_base_frame_id:                        base_footprint
 robot_pose_with_covariance_topic:           /base_footprint_pose
 robot_pose_cache_size:                      200
-point_cloud_topic:                          /camera/depth/points
+input_sources:
+  front: # A name to identify the input source
+    type: pointcloud # Supported types: pointcloud
+    topic: /camera/depth/points_downsampled
+    queue_size: 1
+    publish_on_update: true # Wheter to publish the elevation map after a callback from this source.
+    sensor_processor:
+      type: perfect
 track_point_frame_id:                       base_footprint
 track_point_x:                              0.0
 track_point_y:                              0.0

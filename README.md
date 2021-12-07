@@ -116,6 +116,18 @@ To control the robot with a keyboard, a new terminal window needs to be opened (
 
 Velocity inputs can be sent to the robot by pressing the keys `a`, `w`,`d`, `x`. To stop the robot completely, press `s`.
 
+### Simple Demo & Ground Truth Demo
+
+A .ply is published as static pointcloud, elevation_mapping subscribes to it and publishes the elevation map. You can visualize it through rviz. 
+For visualization, select `/elevation_mapping/elevation_map_raw`. 
+
+**Note**. You might need to toggle the visibility of the grid_map_plugin to visualize it. 
+```bash
+roslaunch elevation_mapping_demos ground_truth_demo.launch
+```
+
+While ground truth demo estimates the height in map frame, simple demo sets up a more realistic deployment scenario. Here, the elevation_map is configured to track a base frame.
+To get started, we suggest to play around and also visualize other published topics, such as `/elevation_mapping/elevation_map_raw` and change the height layer to another layer, e.g `elevation_inpainted`.
 ## Nodes
 
 ### Node: elevation_mapping

@@ -1,2 +1,3 @@
 # Noiseless ground truth measurements
-sensor_processor/type: perfect
+sensor_processor:
+  type: perfect

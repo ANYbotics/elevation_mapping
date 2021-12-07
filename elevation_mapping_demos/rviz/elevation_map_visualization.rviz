@@ -25,6 +25,10 @@ Panels:
     Name: Time
     SyncMode: 0
     SyncSource: Elevation Map Raw
+Preferences:
+  PromptSaveOnExit: true
+Toolbars:
+  toolButtonStyle: 2
 Visualization Manager:
   Class: ""
   Displays:
@@ -51,77 +55,20 @@ Visualization Manager:
       Frame Timeout: 15
       Frames:
         All Enabled: true
-        starleth/BASE:
+        base:
           Value: true
-        starleth/LF_FOOT:
+        map:
           Value: true
-        starleth/LF_HIP:
-          Value: true
-        starleth/LF_SHANK:
-          Value: true
-        starleth/LF_THIGH:
-          Value: true
-        starleth/LH_FOOT:
-          Value: true
-        starleth/LH_HIP:
-          Value: true
-        starleth/LH_SHANK:
-          Value: true
-        starleth/LH_THIGH:
-          Value: true
-        starleth/RF_FOOT:
-          Value: true
-        starleth/RF_HIP:
-          Value: true
-        starleth/RF_SHANK:
-          Value: true
-        starleth/RF_THIGH:
-          Value: true
-        starleth/RH_FOOT:
-          Value: true
-        starleth/RH_HIP:
-          Value: true
-        starleth/RH_SHANK:
-          Value: true
-        starleth/RH_THIGH:
-          Value: true
-        starleth/odometry:
-          Value: true
-        starleth/openni_rgb_optical_frame:
-          Value: true
-        starleth/sensor_base:
-          Value: true
-      Marker Scale: 0.3
+      Marker Alpha: 1
+      Marker Scale: 0.30000001192092896
       Name: TF
       Show Arrows: true
       Show Axes: true
       Show Names: false
       Tree:
-        starleth/odometry:
-          starleth/BASE:
-            starleth/LF_HIP:
-              starleth/LF_THIGH:
-                starleth/LF_SHANK:
-                  starleth/LF_FOOT:
-                    {}
-            starleth/LH_HIP:
-              starleth/LH_THIGH:
-                starleth/LH_SHANK:
-                  starleth/LH_FOOT:
-                    {}
-            starleth/RF_HIP:
-              starleth/RF_THIGH:
-                starleth/RF_SHANK:
-                  starleth/RF_FOOT:
-                    {}
-            starleth/RH_HIP:
-              starleth/RH_THIGH:
-                starleth/RH_SHANK:
-                  starleth/RH_FOOT:
-                    {}
-            starleth/sensor_base:
-              starleth/openni_rgb_optical_frame:
-                {}
+        map:
+          base:
+            {}
       Update Interval: 0
       Value: true
     - Alpha: 1
@@ -130,20 +77,23 @@ Visualization Manager:
       Color: 200; 200; 200
       Color Layer: uncertainty_range
       Color Transformer: GridMapLayer
+      ColorMap: default
       Enabled: true
+      Grid Cell Decimation: 1
+      Grid Line Thickness: 0.10000000149011612
       Height Layer: elevation
       Height Transformer: GridMapLayer
       History Length: 1
-      Invert Rainbow: false
+      Invert ColorMap: false
       Max Color: 255; 255; 255
-      Max Intensity: 0.1
+      Max Intensity: 0.10000000149011612
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: Elevation Map
       Show Grid Lines: true
       Topic: /elevation_mapping/elevation_map
       Unreliable: false
-      Use Rainbow: true
+      Use ColorMap: true
       Value: true
     - Alpha: 1
       Autocompute Intensity Bounds: false
@@ -155,7 +105,7 @@ Visualization Manager:
       Channel Name: rgb
       Class: rviz/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: RGB8
+      Color Transformer: AxisColor
       Decay Time: 0
       Enabled: false
       Invert Rainbow: true
@@ -168,7 +118,7 @@ Visualization Manager:
       Queue Size: 0
       Selectable: false
       Size (Pixels): 3
-      Size (m): 0.01
+      Size (m): 0.03999999910593033
       Style: Boxes
       Topic: /elevation_map_raw_visualization/elevation_cloud
       Unreliable: false
@@ -186,7 +136,8 @@ Visualization Manager:
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
-    Fixed Frame: starleth/odometry
+    Default Light: true
+    Fixed Frame: map
     Frame Rate: 30
   Name: root
   Tools:

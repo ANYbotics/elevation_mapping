@@ -13,6 +13,18 @@
   <depend>elevation_mapping</depend>
   <depend>grid_map_rviz_plugin</depend>
   <depend>rviz</depend>
+
+  <exec_depend>nodelet</exec_depend>
+  <exec_depend>gazebo_ros</exec_depend>
+  <exec_depend>grid_map_visualization</exec_depend>
+  <exec_depend>pcl_ros</exec_depend>
+  <exec_depend>point_cloud_io</exec_depend>
+  <exec_depend>robot_state_publisher</exec_depend>
+  <exec_depend>tf</exec_depend>
+  <exec_depend>turtlebot3_gazebo</exec_depend>
+  <exec_depend>xacro</exec_depend>
+
 <!--   <test_depend>cmake_code_coverage</test_depend> -->
   <test_depend>gtest</test_depend>
+  <test_depend>roslaunch</test_depend>
 </package>

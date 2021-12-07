@@ -2,10 +2,11 @@
 # Also includes uncertainties with non perpedicular surfaces and
 # biases/warp at further distances.
 # Coefficients for lateral model taken from kinect_nguyen_et_al.yaml
-sensor_processor/type: structured_light
-sensor_processor/cutoff_min_depth: 0.2
-sensor_processor/cutoff_max_depth: 2.0
-sensor_processor/normal_factor_a: 0.003
-sensor_processor/normal_factor_b: 0.015
-sensor_processor/normal_factor_c: 0.25
-sensor_processor/lateral_factor: 0.04
+sensor_processor:
+  type: structured_light
+  cutoff_min_depth: 0.2
+  cutoff_max_depth: 2.0
+  normal_factor_a: 0.003
+  normal_factor_b: 0.015
+  normal_factor_c: 0.25
+  lateral_factor: 0.04

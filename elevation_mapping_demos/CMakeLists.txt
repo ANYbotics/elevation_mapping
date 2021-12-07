@@ -8,6 +8,7 @@ find_package(catkin REQUIRED COMPONENTS
   rviz
 )
 
+
 ###################################
 ## catkin specific configuration ##
 ###################################
@@ -32,7 +33,7 @@ catkin_package(
 ## Install ##
 #############
 
-install(DIRECTORY config doc launch rviz
+install(DIRECTORY config doc launch rviz sample_data
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}
 )
 
@@ -44,6 +45,10 @@ install(PROGRAMS scripts/tf_to_pose_publisher.py
 ##   Test   ##
 ##############
 if(CATKIN_ENABLE_TESTING)
+  find_package(catkin REQUIRED
+    COMPONENTS
+    roslaunch
+    )
   catkin_add_gtest(test_${PROJECT_NAME}
     test/empty_test.cpp
   )
@@ -59,6 +64,7 @@ if(CATKIN_ENABLE_TESTING)
     ${catkin_LIBRARIES}
     gtest_main
   )
+  roslaunch_add_file_check(launch)
 
   ###################
   ## Code_coverage ##
