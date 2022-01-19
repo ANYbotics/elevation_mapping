@@ -545,24 +545,13 @@ void ElevationMap::move(const Eigen::Vector2d& position) {
   }
 }
 
-bool ElevationMap::publishRawElevationMap() {
+bool ElevationMap::postprocessAndPublishRawElevationMap() {
   if (!hasRawMapSubscribers()) {
     return false;
   }
   boost::recursive_mutex::scoped_lock scopedLock(rawMapMutex_);
   grid_map::GridMap rawMapCopy = rawMap_;
   scopedLock.unlock();
-
-  // TODO (magnus) This postprocessing should be moved to the postprocessor pipeline.
-  rawMapCopy.erase("lowest_scan_point");
-  rawMapCopy.erase("sensor_x_at_lowest_scan");
-  rawMapCopy.erase("sensor_y_at_lowest_scan");
-  rawMapCopy.erase("sensor_z_at_lowest_scan");
-  rawMapCopy.add("standard_deviation", rawMapCopy.get("variance").array().sqrt().matrix());
-  rawMapCopy.add("horizontal_standard_deviation",
-                 (rawMapCopy.get("horizontal_variance_x") + rawMapCopy.get("horizontal_variance_y")).array().sqrt().matrix());
-  rawMapCopy.add("two_sigma_bound", rawMapCopy.get("elevation") + 2.0 * rawMapCopy.get("variance").array().sqrt().matrix());
-
   return postprocessorPool_.runTask(rawMapCopy);
 }
 

@@ -115,8 +115,7 @@ class ElevationMap {
    * the map is postprocessed before publishing.
    * @return true if successful.
    */
-  // TODO (magnus) rename? E.g. adapt for postprocessing structure.
-  bool publishRawElevationMap();
+  bool postprocessAndPublishRawElevationMap();
 
   /*!
    * Publishes the fused elevation map. Takes the latest available fused elevation

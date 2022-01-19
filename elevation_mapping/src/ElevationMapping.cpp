@@ -315,7 +315,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
     ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");
     if (publishPointCloud) {
       map_.setTimestamp(ros::Time::now());
-      map_.publishRawElevationMap();
+      map_.postprocessAndPublishRawElevationMap();
     }
     return;
   }
@@ -408,7 +408,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
 
   if (publishPointCloud) {
     // Publish elevation map.
-    map_.publishRawElevationMap();
+    map_.postprocessAndPublishRawElevationMap();
     if (isFusingEnabled()) {
       map_.fuseAll();
       map_.publishFusedElevationMap();
@@ -422,7 +422,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
   if (!updatesEnabled_) {
     ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");
     map_.setTimestamp(ros::Time::now());
-    map_.publishRawElevationMap();
+    map_.postprocessAndPublishRawElevationMap();
     return;
   }
 
@@ -444,7 +444,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
   }
 
   // Publish elevation map.
-  map_.publishRawElevationMap();
+  map_.postprocessAndPublishRawElevationMap();
   if (isFusingEnabled()) {
     map_.fuseAll();
     map_.publishFusedElevationMap();
@@ -739,7 +739,7 @@ bool ElevationMapping::loadMapServiceCallback(grid_map_msgs::ProcessFile::Reques
 
   // Update timestamp for visualization in ROS
   map_.setTimestamp(ros::Time::now());
-  map_.publishRawElevationMap();
+  map_.postprocessAndPublishRawElevationMap();
   return static_cast<bool>(response.success);
 }
 
