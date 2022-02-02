@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>elevation_mapping</name>
-  <version>0.7.5</version>
+  <version>0.7.6</version>
   <description>Generates an elevation map from distance measurements and robot pose information.</description>
   <maintainer email="mwulf@anybotics.com">Maximilian Wulf</maintainer>
   <maintainer email="mgaertner@anybotics.com">Magnus Gaertner</maintainer>
