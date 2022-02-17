@@ -145,7 +145,7 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     The robot pose and covariance.
 
-* **`/tf`** ([tf/tfMessage])
+* **`/tf`** ([tf2_msgs/TFMessage])
 
     The transformation tree.
 
@@ -400,7 +400,7 @@ Please report bugs and request features using the [Issue Tracker](https://github
 [grid_map_msgs/GridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/msg/GridMap.msg
 [sensor_msgs/PointCloud2]: http://docs.ros.org/api/sensor_msgs/html/msg/PointCloud2.html
 [geometry_msgs/PoseWithCovarianceStamped]: http://docs.ros.org/api/geometry_msgs/html/msg/PoseWithCovarianceStamped.html
-[tf/tfMessage]: http://docs.ros.org/kinetic/api/tf/html/msg/tfMessage.html
+[tf2_msgs/TFMessage]: http://docs.ros.org/en/noetic/api/tf2_msgs/html/msg/TFMessage.html
 [std_srvs/Empty]: http://docs.ros.org/api/std_srvs/html/srv/Empty.html
 [grid_map_msgs/GetGridMap]: https://github.com/anybotics/grid_map/blob/master/grid_map_msgs/srv/GetGridMap.srv
 [grid_map_msgs/ProcessFile]: https://github.com/ANYbotics/grid_map/blob/master/grid_map_msgs/srv/ProcessFile.srv

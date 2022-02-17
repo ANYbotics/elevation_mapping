@@ -15,6 +15,7 @@
     <arg name="gui" value="false"/> <!-- Launch the user interface window of Gazebo-->
     <arg name="headless" value="false"/> <!-- Enable gazebo state log recording-->
     <arg name="debug" value="false"/> <!-- Start gzserver (Gazebo Server) in debug mode using gdb-->
+    <arg name="verbose" value="false"/> <!-- Start gazebo in verbose mode-->
   </include>
 
   <!-- Load robot_description param for tf, rviz and gazebo spawn. -->

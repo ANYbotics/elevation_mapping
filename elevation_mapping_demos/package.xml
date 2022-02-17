@@ -20,7 +20,7 @@
   <exec_depend>pcl_ros</exec_depend>
   <exec_depend>point_cloud_io</exec_depend>
   <exec_depend>robot_state_publisher</exec_depend>
-  <exec_depend>tf</exec_depend>
+  <exec_depend>tf2_ros</exec_depend>
   <exec_depend>turtlebot3_gazebo</exec_depend>
   <exec_depend>xacro</exec_depend>
 

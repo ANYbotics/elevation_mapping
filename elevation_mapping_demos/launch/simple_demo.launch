@@ -16,7 +16,7 @@
   </node>
 
   <!-- Setup a transform between the world and the robot -->
-  <node pkg="tf" type="static_transform_publisher" name="world_to_robot" args="2.0 6.0 0 0 0.0 0 /map /base 100"/>
+  <node pkg="tf2_ros" type="static_transform_publisher" name="world_to_robot" args="2.0 6.0 0.0 0.0 0.0 0.0 /map /base"/>
 
   <!-- Launch visualizations for the resulting elevation map -->
   <include file="$(find elevation_mapping_demos)/launch/visualization.launch" />
