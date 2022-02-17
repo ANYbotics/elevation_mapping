@@ -8,6 +8,9 @@
 
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
 
+// ROS
+#include <geometry_msgs/TransformStamped.h>
+
 // PCL
 #include <pcl/common/io.h>
 #include <pcl/common/transforms.h>
@@ -17,7 +20,7 @@
 #include <pcl/pcl_base.h>
 
 // TF
-#include <tf_conversions/tf_eigen.h>
+#include <tf2_eigen/tf2_eigen.h>
 
 // STL
 #include <cmath>
@@ -30,6 +33,7 @@ namespace elevation_mapping {
 
 SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, const GeneralParameters& generalConfig)
     : nodeHandle_(nodeHandle),
+      transformListener_(transformBuffer_),
       ignorePointsUpperThreshold_(std::numeric_limits<double>::infinity()),
       ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity()),
       applyVoxelGridFilter_(false),
@@ -90,31 +94,33 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
 
 bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
   try {
-    transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
 
-    tf::StampedTransform transformTf;
-    transformListener_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, transformTf);
-    poseTFToEigen(transformTf, transformationSensorToMap_);
+    geometry_msgs::TransformStamped transformGeom;
+    transformGeom = transformBuffer_.lookupTransform(generalParameters_.mapFrameId_, sensorFrameId_, timeStamp, ros::Duration(1.0));
+    transformationSensorToMap_ = tf2::transformToEigen(transformGeom);
 
-    transformListener_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
-                                       transformTf);  // TODO(max): Why wrong direction?
-    Eigen::Affine3d transform;
-    poseTFToEigen(transformTf, transform);
-    rotationBaseToSensor_.setMatrix(transform.rotation().matrix());
-    translationBaseToSensorInBaseFrame_.toImplementation() = transform.translation();
+    transformGeom = transformBuffer_.lookupTransform(generalParameters_.robotBaseFrameId_, sensorFrameId_, timeStamp,
+                                                      ros::Duration(1.0));  // TODO(max): Why wrong direction?
+    Eigen::Quaterniond rotationQuaternion;
+    tf2::fromMsg(transformGeom.transform.rotation, rotationQuaternion);
+    rotationBaseToSensor_.setMatrix(rotationQuaternion.toRotationMatrix());
+    Eigen::Vector3d translationVector;
+    tf2::fromMsg(transformGeom.transform.translation, translationVector);
+    translationBaseToSensorInBaseFrame_.toImplementation() = translationVector;
 
-    transformListener_.lookupTransform(generalParameters_.mapFrameId_, generalParameters_.robotBaseFrameId_, timeStamp,
-                                       transformTf);  // TODO(max): Why wrong direction?
-    poseTFToEigen(transformTf, transform);
-    rotationMapToBase_.setMatrix(transform.rotation().matrix());
-    translationMapToBaseInMapFrame_.toImplementation() = transform.translation();
+    transformGeom = transformBuffer_.lookupTransform(generalParameters_.mapFrameId_, generalParameters_.robotBaseFrameId_,
+                                                    timeStamp, ros::Duration(1.0));  // TODO(max): Why wrong direction?
+    tf2::fromMsg(transformGeom.transform.rotation, rotationQuaternion);
+    rotationMapToBase_.setMatrix(rotationQuaternion.toRotationMatrix());
+    tf2::fromMsg(transformGeom.transform.translation, translationVector);
+    translationMapToBaseInMapFrame_.toImplementation() = translationVector;
 
     if (!firstTfAvailable_) {
       firstTfAvailable_ = true;
     }
 
     return true;
-  } catch (tf::TransformException& ex) {
+  } catch (tf2::TransformException& ex) {
     if (!firstTfAvailable_) {
       return false;
     }
@@ -129,22 +135,20 @@ bool SensorProcessorBase::transformPointCloud(PointCloudType::ConstPtr pointClou
   timeStamp.fromNSec(1000 * pointCloud->header.stamp);
   const std::string inputFrameId(pointCloud->header.frame_id);
 
-  tf::StampedTransform transformTf;
   try {
-    transformListener_.waitForTransform(targetFrame, inputFrameId, timeStamp, ros::Duration(1.0), ros::Duration(0.001));
-    transformListener_.lookupTransform(targetFrame, inputFrameId, timeStamp, transformTf);
-  } catch (tf::TransformException& ex) {
+    geometry_msgs::TransformStamped transformGeom;
+    transformGeom = transformBuffer_.lookupTransform(targetFrame, inputFrameId, timeStamp, ros::Duration(1.0));  // FIXME: missing 0.001 retry duration
+    Eigen::Affine3d transform = tf2::transformToEigen(transformGeom);
+    pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.cast<float>());
+    pointCloudTransformed->header.frame_id = targetFrame;
+
+    ROS_DEBUG_THROTTLE(5, "Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),
+                      pointCloudTransformed->header.stamp / 1000.0);
+  } catch (tf2::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
     return false;
   }
 
-  Eigen::Affine3d transform;
-  poseTFToEigen(transformTf, transform);
-  pcl::transformPointCloud(*pointCloud, *pointCloudTransformed, transform.cast<float>());
-  pointCloudTransformed->header.frame_id = targetFrame;
-
-  ROS_DEBUG_THROTTLE(5, "Point cloud transformed to frame %s for time stamp %f.", targetFrame.c_str(),
-                     pointCloudTransformed->header.stamp / 1000.0);
   return true;
 }
 

@@ -20,7 +20,8 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_srvs/Empty.h>
-#include <tf/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -291,8 +292,9 @@ class ElevationMapping {
   //! Frame ID of the elevation map
   std::string mapFrameId_;
 
-  //! TF listener and broadcaster.
-  tf::TransformListener transformListener_;
+  //! TF listener and buffer.
+  tf2_ros::Buffer transformBuffer_;
+  tf2_ros::TransformListener transformListener_;
 
   //! Point which the elevation map follows.
   kindr::Position3D trackPoint_;
