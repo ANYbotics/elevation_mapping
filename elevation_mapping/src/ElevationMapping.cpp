@@ -375,7 +375,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
       ROS_INFO_THROTTLE(10, "Waiting for tf transformation to be available. (Message is throttled, 10s.)");
       return;
     }
-    ROS_ERROR("Point cloud could not be processed.");
+    ROS_ERROR_THROTTLE(10, "Point cloud could not be processed. (Throttled 10s)");
     resetMapUpdateTimer();
     return;
   }
