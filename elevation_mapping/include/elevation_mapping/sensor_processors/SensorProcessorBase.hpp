@@ -10,7 +10,8 @@
 
 // ROS
 #include <ros/ros.h>
-#include <tf/transform_listener.h>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 
 // Eigen
 #include <Eigen/Core>
@@ -138,8 +139,9 @@ class SensorProcessorBase {
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
 
-  //! TF transform listener.
-  tf::TransformListener transformListener_;
+  //! TF transform listener and buffer.
+  tf2_ros::Buffer transformBuffer_;
+  tf2_ros::TransformListener transformListener_;
 
   //! Rotation from Base to Sensor frame (C_SB)
   kindr::RotationMatrixD rotationBaseToSensor_;

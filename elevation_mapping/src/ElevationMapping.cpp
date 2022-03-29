@@ -21,6 +21,10 @@
 #include <grid_map_ros/grid_map_ros.hpp>
 #include <kindr/Core>
 #include <kindr_ros/kindr_ros.hpp>
+#include <geometry_msgs/TransformStamped.h>
+#include <geometry_msgs/PointStamped.h>
+#include <tf2/LinearMath/Transform.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
 
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/ElevationMapping.hpp"
@@ -36,6 +40,7 @@ ElevationMapping::ElevationMapping(ros::NodeHandle& nodeHandle)
     : nodeHandle_(nodeHandle),
       inputSources_(nodeHandle_),
       robotPoseCacheSize_(200),
+      transformListener_(transformBuffer_),
       map_(nodeHandle),
       robotMotionMapUpdater_(nodeHandle),
       ignoreRobotMotionUpdates_(false),
@@ -530,8 +535,8 @@ bool ElevationMapping::updateMapLocation() {
   geometry_msgs::PointStamped trackPointTransformed;
 
   try {
-    transformListener_.transformPoint(map_.getFrameId(), trackPoint, trackPointTransformed);
-  } catch (tf::TransformException& ex) {
+    trackPointTransformed = transformBuffer_.transform(trackPoint, map_.getFrameId());
+  } catch (tf2::TransformException& ex) {
     ROS_ERROR("%s", ex.what());
     return false;
   }
@@ -612,12 +617,14 @@ bool ElevationMapping::initializeElevationMap() {
   if (initializeElevationMap_) {
     if (static_cast<elevation_mapping::InitializationMethods>(initializationMethod_) ==
         elevation_mapping::InitializationMethods::PlanarFloorInitializer) {
-      tf::StampedTransform transform;
+      geometry_msgs::TransformStamped transform_msg;
+      tf2::Stamped<tf2::Transform> transform;
 
       // Listen to transform between mapFrameId_ and targetFrameInitSubmap_ and use z value for initialization
       try {
-        transformListener_.waitForTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), ros::Duration(5.0));
-        transformListener_.lookupTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), transform);
+        transform_msg = transformBuffer_.lookupTransform(mapFrameId_, targetFrameInitSubmap_, ros::Time(0), ros::Duration(5.0));
+        tf2::fromMsg(transform_msg, transform);
+
         ROS_DEBUG_STREAM("Initializing with x: " << transform.getOrigin().x() << " y: " << transform.getOrigin().y()
                                                  << " z: " << transform.getOrigin().z());
 
@@ -630,7 +637,7 @@ bool ElevationMapping::initializeElevationMap() {
         map_.setRawSubmapHeight(positionRobot, transform.getOrigin().z() + initSubmapHeightOffset_, lengthInXInitSubmap_,
                                 lengthInYInitSubmap_, marginInitSubmap_);
         return true;
-      } catch (tf::TransformException& ex) {
+      } catch (tf2::TransformException& ex) {
         ROS_DEBUG("%s", ex.what());
         ROS_WARN("Could not initialize elevation map with constant height. (This warning can be ignored if TF tree is not available.)");
         return false;

@@ -2,33 +2,25 @@
 
 import rospy
 import geometry_msgs.msg
-import tf
+import tf2_ros
 
 def callback(newPose):
     """Listens to a transform between from_frame and to_frame and publishes it
        as a pose with a zero covariance."""
-    global publisher, tf_listener, from_frame, to_frame
+    global publisher, tf_buffer, tf_listener, from_frame, to_frame
 
     # Listen to transform and throw exception if the transform is not
     # available.
     try:
-        (trans, rot) = tf_listener.lookupTransform(
-            from_frame, to_frame, rospy.Time(0))
-    except (tf.LookupException, tf.ConnectivityException,
-            tf.ExtrapolationException):
+        trans = tf_buffer.lookup_transform(from_frame, to_frame, rospy.Time())
+    except (tf2_ros.LookupException, tf2_ros.ConnectivityException, tf2_ros.ExtrapolationException):
         return
 
     # Create and fill pose message for publishing
     pose = geometry_msgs.msg.PoseWithCovarianceStamped()
-    pose.header.stamp = rospy.Time(0)
-    pose.header.frame_id = from_frame
-    pose.pose.pose.position.x = trans[0]
-    pose.pose.pose.position.y = trans[1]
-    pose.pose.pose.position.z = trans[2]
-    pose.pose.pose.orientation.x = rot[0]
-    pose.pose.pose.orientation.y = rot[1]
-    pose.pose.pose.orientation.z = rot[2]
-    pose.pose.pose.orientation.w = rot[3]
+    pose.header = trans.header
+    pose.pose.pose.position = trans.transform.translation
+    pose.pose.pose.orientation = trans.transform.rotation
 
     # Since tf transforms do not have a covariance, pose is filled with
     # a zero covariance.
@@ -45,14 +37,15 @@ def callback(newPose):
 def main_program():
     """ Main function initializes node and subscribers and starts
         the ROS loop. """
-    global publisher, tf_listener, from_frame, to_frame
+    global publisher, tf_buffer, tf_listener, from_frame, to_frame
     rospy.init_node('tf_to_pose_publisher')
     # Read frame id's for tf listener
     from_frame = rospy.get_param("~from_frame")
     to_frame = rospy.get_param("~to_frame")
     pose_name = str(to_frame) + "_pose"
 
-    tf_listener = tf.TransformListener()
+    tf_buffer = tf2_ros.Buffer()
+    tf_listener = tf2_ros.TransformListener(tf_buffer)
     publisher = rospy.Publisher(
         pose_name, geometry_msgs.msg.PoseWithCovarianceStamped, queue_size=10)
 

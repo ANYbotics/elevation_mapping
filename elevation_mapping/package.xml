@@ -27,8 +27,10 @@
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
-  <depend>tf</depend>
-  <depend>tf_conversions</depend>
+  <depend>tf2</depend>
+  <depend>tf2_ros</depend>
+  <depend>tf2_eigen</depend>
+  <depend>tf2_geometry_msgs</depend>
 
 <!--   <test_depend>cmake_code_coverage</test_depend> -->
   <test_depend>grid_map_filters</test_depend>

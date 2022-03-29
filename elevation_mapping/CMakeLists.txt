@@ -7,7 +7,7 @@ add_compile_options(-Wall -Wextra -Wpedantic)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(
-  CATKIN_PACKAGE_DEPENDENCIES 
+  CATKIN_PACKAGE_DEPENDENCIES
     eigen_conversions
     grid_map_core
     grid_map_ros
@@ -19,11 +19,13 @@ set(
     roscpp
     sensor_msgs
     std_msgs
-    tf
-    tf_conversions
+    tf2
+    tf2_ros
+    tf2_eigen
+    tf2_geometry_msgs
 )
 
-find_package(catkin REQUIRED 
+find_package(catkin REQUIRED
   COMPONENTS
     ${CATKIN_PACKAGE_DEPENDENCIES}
 )
@@ -102,7 +104,7 @@ target_link_libraries(${PROJECT_NAME}
 #############
 
 install(
-  TARGETS 
+  TARGETS
     ${PROJECT_NAME}
     ${PROJECT_NAME}_pcl_types
     ${PROJECT_NAME}_library
