@@ -68,7 +68,8 @@ class RobotMotionMapUpdater {
    * @param[out] reducedCovariance the reduced covariance matrix (4x4);
    * @return true if successful.
    */
-  bool computeReducedCovariance(const Pose& robotPose, const PoseCovariance& robotPoseCovariance, ReducedCovariance& reducedCovariance);
+  static bool computeReducedCovariance(const Pose& robotPose, const PoseCovariance& robotPoseCovariance,
+                                       ReducedCovariance& reducedCovariance);
 
   /*!
    * Computes the covariance between the new and the previous pose.

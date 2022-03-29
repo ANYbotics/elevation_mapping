@@ -68,7 +68,7 @@ bool StructuredLightSensorProcessor::computeVariances(const PointCloudType::Cons
     // For every point in point cloud.
 
     // Preparation.
-    auto& point = pointCloud->points[i];
+    const auto& point{pointCloud->points[i]};
     const float& confidenceRatio = point.confidence_ratio;
     Eigen::Vector3f pointVector(point.x, point.y, point.z);  // S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
 

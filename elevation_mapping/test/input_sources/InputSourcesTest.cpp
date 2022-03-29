@@ -96,8 +96,8 @@ TEST(InputSources, ListeningToTopicsAfterRegistration) {  // NOLINT
   ros::NodeHandle nodeHandle("~");
   class ElevationMappingWithInputSourcesAccessor : public elevation_mapping::ElevationMapping {
    public:
-    ElevationMappingWithInputSourcesAccessor(ros::NodeHandle nodeHandle) : elevation_mapping::ElevationMapping(nodeHandle) {}
-    virtual ~ElevationMappingWithInputSourcesAccessor() = default;
+    explicit ElevationMappingWithInputSourcesAccessor(ros::NodeHandle nodeHandle) : elevation_mapping::ElevationMapping(nodeHandle) {}
+    ~ElevationMappingWithInputSourcesAccessor() override = default;
     int getNumberOfSources() { return inputSources_.getNumberOfSources(); }
   } map{nodeHandle};
 

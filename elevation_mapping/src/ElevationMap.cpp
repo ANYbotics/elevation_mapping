@@ -25,7 +25,7 @@ namespace {
  * @return A float with the bit pattern of the input integer
  */
 float intAsFloat(const uint32_t input) {
-  float output;
+  float output{std::nanf("1")};
   std::memcpy(&output, &input, sizeof(uint32_t));
   return output;
 }
@@ -109,7 +109,7 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
 
   std::vector<Eigen::Ref<const grid_map::Matrix>> basicLayers_;
   for (const std::string& layer : rawMap_.getBasicLayers()) {
-    basicLayers_.push_back(rawMap_.get(layer));
+    basicLayers_.emplace_back(rawMap_.get(layer));
   }
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
@@ -310,9 +310,9 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     Eigen::EigenSolver<Eigen::Matrix2d> solver(covarianceMatrix);
     Eigen::Array2d eigenvalues(solver.eigenvalues().real().cwiseAbs());
 
-    Eigen::Array2d::Index maxEigenvalueIndex;
+    Eigen::Array2d::Index maxEigenvalueIndex{0};
     eigenvalues.maxCoeff(&maxEigenvalueIndex);
-    Eigen::Array2d::Index minEigenvalueIndex;
+    Eigen::Array2d::Index minEigenvalueIndex{0};
     maxEigenvalueIndex == Eigen::Array2d::Index(0) ? minEigenvalueIndex = 1 : minEigenvalueIndex = 0;
     const grid_map::Length ellipseLength =
         2.0 * uncertaintyFactor * grid_map::Length(eigenvalues(maxEigenvalueIndex), eigenvalues(minEigenvalueIndex)).sqrt() +
@@ -326,7 +326,8 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     grid_map::EllipseIterator ellipseIterator(rawMapCopy, requestedSubmapPosition, ellipseLength, ellipseRotation);
 
     // Prepare data fusion.
-    Eigen::ArrayXf means, weights;
+    Eigen::ArrayXf means;
+    Eigen::ArrayXf weights;
     const unsigned int maxNumberOfCellsToFuse = ellipseIterator.getSubmapSize().prod();
     means.resize(maxNumberOfCellsToFuse);
     weights.resize(maxNumberOfCellsToFuse);
@@ -336,7 +337,8 @@ bool ElevationMap::fuse(const grid_map::Index& topLeftIndex, const grid_map::Ind
     float maxStandardDeviation = sqrt(eigenvalues(maxEigenvalueIndex));
     float minStandardDeviation = sqrt(eigenvalues(minEigenvalueIndex));
     Eigen::Rotation2Dd rotationMatrix(ellipseRotation);
-    std::string maxEigenvalueLayer, minEigenvalueLayer;
+    std::string maxEigenvalueLayer;
+    std::string minEigenvalueLayer;
     if (maxEigenvalueIndex == 0) {
       maxEigenvalueLayer = "horizontal_variance_x";
       minEigenvalueLayer = "horizontal_variance_y";

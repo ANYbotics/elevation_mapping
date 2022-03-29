@@ -6,6 +6,8 @@
  *  Institute: ETH Zurich, ANYbotics
  */
 
+#include <memory>
+
 #include "elevation_mapping/input_sources/Input.hpp"
 
 #include "elevation_mapping/sensor_processors/LaserSensorProcessor.hpp"
@@ -90,13 +92,13 @@ bool Input::configureSensorProcessor(std::string name, const XmlRpc::XmlRpcValue
   }
   std::string sensorType = static_cast<std::string>(parameters["sensor_processor"]["type"]);
   if (sensorType == "structured_light") {
-    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
+    sensorProcessor_ = std::make_unique<StructuredLightSensorProcessor>(nodeHandle_, generalSensorProcessorParameters);
   } else if (sensorType == "stereo") {
-    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
+    sensorProcessor_ = std::make_unique<StereoSensorProcessor>(nodeHandle_, generalSensorProcessorParameters);
   } else if (sensorType == "laser") {
-    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
+    sensorProcessor_ = std::make_unique<LaserSensorProcessor>(nodeHandle_, generalSensorProcessorParameters);
   } else if (sensorType == "perfect") {
-    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, generalSensorProcessorParameters));
+    sensorProcessor_ = std::make_unique<PerfectSensorProcessor>(nodeHandle_, generalSensorProcessorParameters);
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
     return false;

@@ -78,7 +78,7 @@ class WeightedEmpiricalCumulativeDistributionFunction {
    * @param probability the order of the quantile.
    * @return the quantile for the given probability.
    */
-  const Type quantile(const double probability) const {
+  Type quantile(const double probability) const {
     if (!isComputed_) {
       throw std::runtime_error(
           "WeightedEmpiricalCumulativeDistributionFunction::quantile(...): The distribution functions needs to be computed (compute()) "

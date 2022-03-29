@@ -46,7 +46,7 @@ bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std:
   SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{nodeHandle_.param("robot_base_frame_id", std::string("/robot")),
                                                                       nodeHandle_.param("map_frame_id", std::string("/map"))};
   // Configure all input sources in the list.
-  for (auto& inputConfig : config) {
+  for (const auto& inputConfig : config) {
     Input source = Input(ros::NodeHandle(nodeHandle_.resolveName(sourceConfigurationName + "/" + inputConfig.first)));
 
     bool configured = source.configure(inputConfig.first, inputConfig.second, generalSensorProcessorConfig);

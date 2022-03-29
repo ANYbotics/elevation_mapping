@@ -7,6 +7,7 @@
  */
 
 #include <cmath>
+#include <memory>
 #include <string>
 
 #include <grid_map_msgs/GridMap.h>
@@ -72,8 +73,7 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
   }
   if (!configuredInputSources && hasDeprecatedPointcloudTopic) {
     pointCloudSubscriber_ = nodeHandle_.subscribe<sensor_msgs::PointCloud2>(
-        pointCloudTopic_, 1,
-        std::bind(&ElevationMapping::pointCloudCallback, this, std::placeholders::_1, true, std::ref(sensorProcessor_)));
+        pointCloudTopic_, 1, [&](const auto& msg) { pointCloudCallback(msg, true, sensorProcessor_); });
   }
   if (configuredInputSources) {
     inputSources_.registerCallbacks(*this, make_pair("pointcloud", &ElevationMapping::pointCloudCallback));
@@ -91,16 +91,17 @@ void ElevationMapping::setupSubscribers() {  // Handle deprecated point_cloud_to
 void ElevationMapping::setupServices() {
   // Multi-threading for fusion.
   ros::AdvertiseServiceOptions advertiseServiceOptionsForTriggerFusion = ros::AdvertiseServiceOptions::create<std_srvs::Empty>(
-      "trigger_fusion", boost::bind(&ElevationMapping::fuseEntireMapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
+      "trigger_fusion", [&](auto& req, auto& res) { return fuseEntireMapServiceCallback(req, res); }, ros::VoidConstPtr(),
       &fusionServiceQueue_);
   fusionTriggerService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForTriggerFusion);
 
   ros::AdvertiseServiceOptions advertiseServiceOptionsForGetFusedSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_submap", boost::bind(&ElevationMapping::getFusedSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(), &fusionServiceQueue_);
+      "get_submap", [&](auto& req, auto& res) { return getFusedSubmapServiceCallback(req, res); }, ros::VoidConstPtr(),
+      &fusionServiceQueue_);
   fusedSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetFusedSubmap);
 
   ros::AdvertiseServiceOptions advertiseServiceOptionsForGetRawSubmap = ros::AdvertiseServiceOptions::create<grid_map_msgs::GetGridMap>(
-      "get_raw_submap", boost::bind(&ElevationMapping::getRawSubmapServiceCallback, this, _1, _2), ros::VoidConstPtr(),
+      "get_raw_submap", [&](auto& req, auto& res) { return getRawSubmapServiceCallback(req, res); }, ros::VoidConstPtr(),
       &fusionServiceQueue_);
   rawSubmapService_ = nodeHandle_.advertiseService(advertiseServiceOptionsForGetRawSubmap);
 
@@ -116,17 +117,15 @@ void ElevationMapping::setupTimers() {
   mapUpdateTimer_ = nodeHandle_.createTimer(maxNoUpdateDuration_, &ElevationMapping::mapUpdateTimerCallback, this, true, false);
 
   if (!fusedMapPublishTimerDuration_.isZero()) {
-    ros::TimerOptions timerOptions =
-        ros::TimerOptions(fusedMapPublishTimerDuration_, boost::bind(&ElevationMapping::publishFusedMapCallback, this, _1),
-                          &fusionServiceQueue_, false, false);
+    ros::TimerOptions timerOptions = ros::TimerOptions(
+        fusedMapPublishTimerDuration_, [this](auto&& PH1) { publishFusedMapCallback(PH1); }, &fusionServiceQueue_, false, false);
     fusedMapPublishTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 
   // Multi-threading for visibility cleanup. Visibility clean-up does not help when continuous clean-up is enabled.
   if (map_.enableVisibilityCleanup_ && !visibilityCleanupTimerDuration_.isZero() && !map_.enableContinuousCleanup_) {
-    ros::TimerOptions timerOptions =
-        ros::TimerOptions(visibilityCleanupTimerDuration_, boost::bind(&ElevationMapping::visibilityCleanupCallback, this, _1),
-                          &visibilityCleanupQueue_, false, false);
+    ros::TimerOptions timerOptions = ros::TimerOptions(
+        visibilityCleanupTimerDuration_, [this](auto&& PH1) { visibilityCleanupCallback(PH1); }, &visibilityCleanupQueue_, false, false);
     visibilityCleanupTimer_ = nodeHandle_.createTimer(timerOptions);
   }
 }
@@ -174,8 +173,8 @@ bool ElevationMapping::readParameters() {
   nodeHandle_.param("robot_pose_cache_size", robotPoseCacheSize_, 200);
   ROS_ASSERT(robotPoseCacheSize_ >= 0);
 
-  double minUpdateRate;
-  nodeHandle_.param("min_update_rate", minUpdateRate, 2.0);
+  double minUpdateRate{2.0};
+  nodeHandle_.param("min_update_rate", minUpdateRate, minUpdateRate);
   if (minUpdateRate == 0.0) {
     maxNoUpdateDuration_.fromSec(0.0);
     ROS_WARN("Rate for publishing the map is zero.");
@@ -184,12 +183,12 @@ bool ElevationMapping::readParameters() {
   }
   ROS_ASSERT(!maxNoUpdateDuration_.isZero());
 
-  double timeTolerance;
-  nodeHandle_.param("time_tolerance", timeTolerance, 0.0);
+  double timeTolerance{0.0};
+  nodeHandle_.param("time_tolerance", timeTolerance, timeTolerance);
   timeTolerance_.fromSec(timeTolerance);
 
-  double fusedMapPublishingRate;
-  nodeHandle_.param("fused_map_publishing_rate", fusedMapPublishingRate, 1.0);
+  double fusedMapPublishingRate{1.0};
+  nodeHandle_.param("fused_map_publishing_rate", fusedMapPublishingRate, fusedMapPublishingRate);
   if (fusedMapPublishingRate == 0.0) {
     fusedMapPublishTimerDuration_.fromSec(0.0);
     ROS_WARN(
@@ -202,8 +201,8 @@ bool ElevationMapping::readParameters() {
     fusedMapPublishTimerDuration_.fromSec(1.0 / fusedMapPublishingRate);
   }
 
-  double visibilityCleanupRate;
-  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, 1.0);
+  double visibilityCleanupRate{1.0};
+  nodeHandle_.param("visibility_cleanup_rate", visibilityCleanupRate, visibilityCleanupRate);
   if (visibilityCleanupRate == 0.0) {
     visibilityCleanupTimerDuration_.fromSec(0.0);
     ROS_WARN("Rate for visibility cleanup is zero and therefore disabled.");
@@ -218,12 +217,12 @@ bool ElevationMapping::readParameters() {
 
   grid_map::Length length;
   grid_map::Position position;
-  double resolution;
+  double resolution{0.01};
   nodeHandle_.param("length_in_x", length(0), 1.5);
   nodeHandle_.param("length_in_y", length(1), 1.5);
   nodeHandle_.param("position_x", position.x(), 0.0);
   nodeHandle_.param("position_y", position.y(), 0.0);
-  nodeHandle_.param("resolution", resolution, 0.01);
+  nodeHandle_.param("resolution", resolution, resolution);
   map_.setGeometry(length, resolution, position);
 
   nodeHandle_.param("min_variance", map_.minVariance_, pow(0.003, 2));
@@ -254,13 +253,13 @@ bool ElevationMapping::readParameters() {
   SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{nodeHandle_.param("robot_base_frame_id", std::string("/robot")),
                                                                       mapFrameId_};
   if (sensorType == "structured_light") {
-    sensorProcessor_.reset(new StructuredLightSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
+    sensorProcessor_ = std::make_unique<StructuredLightSensorProcessor>(nodeHandle_, generalSensorProcessorConfig);
   } else if (sensorType == "stereo") {
-    sensorProcessor_.reset(new StereoSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
+    sensorProcessor_ = std::make_unique<StereoSensorProcessor>(nodeHandle_, generalSensorProcessorConfig);
   } else if (sensorType == "laser") {
-    sensorProcessor_.reset(new LaserSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
+    sensorProcessor_ = std::make_unique<LaserSensorProcessor>(nodeHandle_, generalSensorProcessorConfig);
   } else if (sensorType == "perfect") {
-    sensorProcessor_.reset(new PerfectSensorProcessor(nodeHandle_, generalSensorProcessorConfig));
+    sensorProcessor_ = std::make_unique<PerfectSensorProcessor>(nodeHandle_, generalSensorProcessorConfig);
   } else {
     ROS_ERROR("The sensor type %s is not available.", sensorType.c_str());
   }
@@ -276,11 +275,11 @@ bool ElevationMapping::readParameters() {
 
 bool ElevationMapping::initialize() {
   ROS_INFO("Elevation mapping node initializing ... ");
-  fusionServiceThread_ = boost::thread(boost::bind(&ElevationMapping::runFusionServiceThread, this));
+  fusionServiceThread_ = boost::thread(&ElevationMapping::runFusionServiceThread, this);
   ros::Duration(1.0).sleep();  // Need this to get the TF caches fill up.
   resetMapUpdateTimer();
   fusedMapPublishTimer_.start();
-  visibilityCleanupThread_ = boost::thread(boost::bind(&ElevationMapping::visibilityCleanupThread, this));
+  visibilityCleanupThread_ = boost::thread([this] { visibilityCleanupThread(); });
   visibilityCleanupTimer_.start();
   initializeElevationMap();
   return true;
@@ -418,7 +417,7 @@ void ElevationMapping::pointCloudCallback(const sensor_msgs::PointCloud2ConstPtr
   resetMapUpdateTimer();
 }
 
-void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
+void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent& /*unused*/) {
   if (!updatesEnabled_) {
     ROS_WARN_THROTTLE(10, "Updating of elevation map is disabled. (Warning message is throttled, 10s.)");
     map_.setTimestamp(ros::Time::now());
@@ -453,7 +452,7 @@ void ElevationMapping::mapUpdateTimerCallback(const ros::TimerEvent&) {
   resetMapUpdateTimer();
 }
 
-void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&) {
+void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent& /*unused*/) {
   if (!map_.hasFusedMapSubscribers()) {
     return;
   }
@@ -463,13 +462,13 @@ void ElevationMapping::publishFusedMapCallback(const ros::TimerEvent&) {
   map_.publishFusedElevationMap();
 }
 
-void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent&) {
+void ElevationMapping::visibilityCleanupCallback(const ros::TimerEvent& /*unused*/) {
   ROS_DEBUG("Elevation map is running visibility cleanup.");
   // Copy constructors for thread-safety.
   map_.visibilityCleanup(ros::Time(lastPointCloudUpdateTime_));
 }
 
-bool ElevationMapping::fuseEntireMapServiceCallback(std_srvs::Empty::Request&, std_srvs::Empty::Response&) {
+bool ElevationMapping::fuseEntireMapServiceCallback(std_srvs::Empty::Request& /*unused*/, std_srvs::Empty::Response& /*unused*/) {
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseAll();
   map_.publishFusedElevationMap();
@@ -553,7 +552,7 @@ bool ElevationMapping::getFusedSubmapServiceCallback(grid_map_msgs::GetGridMap::
   boost::recursive_mutex::scoped_lock scopedLock(map_.getFusedDataMutex());
   map_.fuseArea(requestedSubmapPosition, requestedSubmapLength);
 
-  bool isSuccess;
+  bool isSuccess{false};
   grid_map::Index index;
   grid_map::GridMap subMap = map_.getFusedGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
   scopedLock.unlock();
@@ -580,7 +579,7 @@ bool ElevationMapping::getRawSubmapServiceCallback(grid_map_msgs::GetGridMap::Re
             requestedSubmapPosition.y(), requestedSubmapLength(0), requestedSubmapLength(1));
   boost::recursive_mutex::scoped_lock scopedLock(map_.getRawDataMutex());
 
-  bool isSuccess;
+  bool isSuccess{false};
   grid_map::Index index;
   grid_map::GridMap subMap = map_.getRawGridMap().getSubmap(requestedSubmapPosition, requestedSubmapLength, index, isSuccess);
   scopedLock.unlock();

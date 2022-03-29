@@ -38,7 +38,7 @@ PostprocessorPool::~PostprocessorPool() {
 
 bool PostprocessorPool::runTask(const GridMap& gridMap) {
   // Get an available service id from the shared services pool in a mutually exclusive manner.
-  size_t serviceIndex;
+  size_t serviceIndex{0};
   {
     boost::lock_guard<boost::mutex> lock(availableServicesMutex_);
     if (availableServices_.empty()) {
@@ -52,7 +52,7 @@ bool PostprocessorPool::runTask(const GridMap& gridMap) {
   workers_.at(serviceIndex)->setDataBuffer(gridMap);
 
   // Create a task with the post-processor and dispatch it.
-  auto task = std::bind(&PostprocessorPool::wrapTask, this, serviceIndex);
+  auto task = [this, serviceIndex] { wrapTask(serviceIndex); };
   workers_.at(serviceIndex)->ioService().post(task);
   return true;
 }

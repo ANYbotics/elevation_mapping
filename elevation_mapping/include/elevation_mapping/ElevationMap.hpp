@@ -62,7 +62,7 @@ class ElevationMap {
    * @param transformationSensorToMap
    * @return true if successful.
    */
-  bool add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp,
+  bool add(PointCloudType::Ptr pointCloud, Eigen::VectorXf& pointCloudVariances, const ros::Time& timeStamp,
            const Eigen::Affine3d& transformationSensorToMap);
 
   /*!
@@ -271,7 +271,7 @@ class ElevationMap {
    * @param standardDeviation the standardDeviation of the distribution.
    * @return the function value.
    */
-  float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
+  static float cumulativeDistributionFunction(float x, float mean, float standardDeviation);
 
   //! ROS nodehandle.
   ros::NodeHandle nodeHandle_;

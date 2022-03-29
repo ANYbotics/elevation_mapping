@@ -46,7 +46,7 @@ class SensorProcessorBase {
     std::string robotBaseFrameId_;
     std::string mapFrameId_;
 
-    GeneralParameters(std::string robotBaseFrameId = "robot", std::string mapFrameId = "map")
+    explicit GeneralParameters(std::string robotBaseFrameId = "robot", std::string mapFrameId = "map")
         : robotBaseFrameId_(std::move(robotBaseFrameId)), mapFrameId_(std::move(mapFrameId)) {}
   };
 
@@ -70,14 +70,14 @@ class SensorProcessorBase {
    * @param[out] variances the measurement variances expressed in the target frame.
    * @return true if successful.
    */
-  bool process(const PointCloudType::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
-               const PointCloudType::Ptr pointCloudMapFrame, Eigen::VectorXf& variances, std::string sensorFrame);
+  bool process(PointCloudType::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+               PointCloudType::Ptr pointCloudMapFrame, Eigen::VectorXf& variances, std::string sensorFrame);
 
   /*!
    * Checks if a valid tf transformation was received since startup.
    * @return True if there was one valid tf transformation.
    */
-  bool isTfAvailableInBuffer() { return firstTfAvailable_; }
+  bool isTfAvailableInBuffer() const { return firstTfAvailable_; }
 
  protected:
   /*!
@@ -93,14 +93,14 @@ class SensorProcessorBase {
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
-  bool filterPointCloud(const PointCloudType::Ptr pointCloud);
+  bool filterPointCloud(PointCloudType::Ptr pointCloud);
 
   /*!
    * Sensor specific point cloud cleaning.
    * @param pointCloud the point cloud to clean.
    * @return true if successful.
    */
-  virtual bool filterPointCloudSensorType(const PointCloudType::Ptr pointCloud);
+  virtual bool filterPointCloudSensorType(PointCloudType::Ptr pointCloud);
 
   /*!
    * Computes the elevation map height variances for each point in a point cloud with the
@@ -110,7 +110,7 @@ class SensorProcessorBase {
    * @param[out] variances the elevation map height variances.
    * @return true if successful.
    */
-  virtual bool computeVariances(const PointCloudType::ConstPtr pointCloud, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
+  virtual bool computeVariances(PointCloudType::ConstPtr pointCloud, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
                                 Eigen::VectorXf& variances) = 0;
 
   /*!

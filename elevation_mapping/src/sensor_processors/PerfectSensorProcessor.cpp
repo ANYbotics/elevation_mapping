@@ -58,7 +58,7 @@ bool PerfectSensorProcessor::computeVariances(const PointCloudType::ConstPtr poi
     // For every point in point cloud.
 
     // Preparation.
-    auto& point = pointCloud->points[i];
+    const auto& point{pointCloud->points[i]};
     Eigen::Vector3f pointVector(point.x, point.y, point.z);  // S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
     float heightVariance = 0.0;                              // sigma_p
 
