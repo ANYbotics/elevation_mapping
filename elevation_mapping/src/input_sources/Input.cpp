@@ -17,7 +17,7 @@
 
 namespace elevation_mapping {
 
-Input::Input(ros::NodeHandle nh) : nodeHandle_(nh), queueSize_(0), publishOnUpdate_(true) {}
+Input::Input(ros::NodeHandle nh) : nodeHandle_(nh) {}
 
 bool Input::configure(std::string name, const XmlRpc::XmlRpcValue& parameters,
                       const SensorProcessorBase::GeneralParameters& generalSensorProcessorParameters) {
@@ -50,31 +50,31 @@ bool Input::configure(std::string name, const XmlRpc::XmlRpcValue& parameters,
     }
   }
 
-  name_ = name;
-  type_ = static_cast<std::string>(parameters["type"]);
-  topic_ = static_cast<std::string>(parameters["topic"]);
+  parameters_.name_ = name;
+  parameters_.type_ = static_cast<std::string>(parameters["type"]);
+  parameters_.topic_ = static_cast<std::string>(parameters["topic"]);
   const int& queueSize = static_cast<int>(parameters["queue_size"]);
   if (queueSize >= 0) {
-    queueSize_ = static_cast<unsigned int>(queueSize);
+    parameters_.queueSize_ = static_cast<unsigned int>(queueSize);
   } else {
     ROS_ERROR("The specified queue_size is negative.");
     return false;
   }
-  publishOnUpdate_ = static_cast<bool>(parameters["publish_on_update"]);
+  parameters_.publishOnUpdate_ = static_cast<bool>(parameters["publish_on_update"]);
 
   // SensorProcessor
   if (!configureSensorProcessor(name, parameters, generalSensorProcessorParameters)) {
     return false;
   }
 
-  ROS_DEBUG("Configured %s:%s @ %s (publishing_on_update: %s), using %s to process data.\n", type_.c_str(), name_.c_str(),
-            nodeHandle_.resolveName(topic_).c_str(), publishOnUpdate_ ? "true" : "false",
+  ROS_DEBUG("Configured %s:%s @ %s (publishing_on_update: %s), using %s to process data.\n", parameters_.type_.c_str(),
+            parameters_.name_.c_str(), nodeHandle_.resolveName(parameters_.topic_).c_str(), parameters_.publishOnUpdate_ ? "true" : "false",
             static_cast<std::string>(parameters["sensor_processor"]["type"]).c_str());
   return true;
 }
 
 std::string Input::getSubscribedTopic() const {
-  return nodeHandle_.resolveName(topic_);
+  return nodeHandle_.resolveName(parameters_.topic_);
 }
 
 bool Input::configureSensorProcessor(std::string name, const XmlRpc::XmlRpcValue& parameters,

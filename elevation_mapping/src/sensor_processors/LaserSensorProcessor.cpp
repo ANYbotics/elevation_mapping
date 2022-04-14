@@ -34,9 +34,9 @@ LaserSensorProcessor::~LaserSensorProcessor() = default;
 
 bool LaserSensorProcessor::readParameters() {
   SensorProcessorBase::readParameters();
-  nodeHandle_.param("sensor_processor/min_radius", sensorParameters_["min_radius"], 0.0);
-  nodeHandle_.param("sensor_processor/beam_angle", sensorParameters_["beam_angle"], 0.0);
-  nodeHandle_.param("sensor_processor/beam_constant", sensorParameters_["beam_constant"], 0.0);
+  nodeHandle_.param("sensor_processor/min_radius", parameters_.sensorParameters_["min_radius"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_angle", parameters_.sensorParameters_["beam_angle"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_constant", parameters_.sensorParameters_["beam_constant"], 0.0);
   return true;
 }
 
@@ -61,9 +61,9 @@ bool LaserSensorProcessor::computeVariances(const PointCloudType::ConstPtr point
   const Eigen::Matrix3f B_r_BS_skew =
       kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
-  const float varianceNormal = sensorParameters_.at("min_radius") * sensorParameters_.at("min_radius");
-  const float beamConstant = sensorParameters_.at("beam_constant");
-  const float beamAngle = sensorParameters_.at("beam_angle");
+  const float varianceNormal = parameters_.sensorParameters_.at("min_radius") * parameters_.sensorParameters_.at("min_radius");
+  const float beamConstant = parameters_.sensorParameters_.at("beam_constant");
+  const float beamAngle = parameters_.sensorParameters_.at("beam_angle");
   for (size_t i = 0; i < pointCloud->size(); ++i) {
     // TODO(needs assignment): Move this loop body into a function for better unit testing.
     // For every point in point cloud.

@@ -72,17 +72,19 @@ class PostprocessingPipelineFunctor {
   //! ROS nodehandle.
   ros::NodeHandle& nodeHandle_;
 
-  //! Name of the output grid map topic.
-  std::string outputTopic_;
-
   //! Grid map publisher.
   ros::Publisher publisher_;
 
   //! Filter chain.
   filters::FilterChain<grid_map::GridMap> filterChain_;
 
-  //! Filter chain parameters name.
-  std::string filterChainParametersName_;
+  struct Parameters {
+    //! Name of the output grid map topic.
+    std::string outputTopic_;
+
+    //! Filter chain parameters name.
+    std::string filterChainParametersName_;
+  } parameters_;
 
   //! Flag indicating if the filter chain was successfully configured.
   bool filterChainConfigured_;

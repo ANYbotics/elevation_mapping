@@ -23,7 +23,7 @@
 #include <string>
 #include <unordered_map>
 
-// PCL
+// Elevation Mapping
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 
 namespace elevation_mapping {
@@ -158,20 +158,22 @@ class SensorProcessorBase {
 
   GeneralParameters generalParameters_;
 
+  struct Parameters {
+    //! Ignore points above this height in map frame.
+    double ignorePointsUpperThreshold_{std::numeric_limits<double>::infinity()};
+
+    //! Ignore points below this height in map frame.
+    double ignorePointsLowerThreshold_{-std::numeric_limits<double>::infinity()};
+
+    //! Use VoxelGrid filter to cleanup pointcloud if true.
+    bool applyVoxelGridFilter_{false};
+
+    //! Sensor parameters.
+    std::unordered_map<std::string, double> sensorParameters_;
+  } parameters_;
+
   //! TF frame id of the range sensor for the point clouds.
   std::string sensorFrameId_;
-
-  //! Ignore points above this height in map frame.
-  double ignorePointsUpperThreshold_;
-
-  //! Ignore points below this height in map frame.
-  double ignorePointsLowerThreshold_;
-
-  //! Sensor parameters.
-  std::unordered_map<std::string, double> sensorParameters_;
-
-  //! Use VoxelGrid filter to cleanup pointcloud if true.
-  bool applyVoxelGridFilter_;
 
   //! Indicates if the requested tf transformation was available.
   bool firstTfAvailable_;

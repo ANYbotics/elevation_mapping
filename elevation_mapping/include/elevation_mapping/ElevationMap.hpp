@@ -317,17 +317,19 @@ class ElevationMap {
   ros::Time initialTime_;
 
   //! Parameters. Are set through the ElevationMapping class.
-  double minVariance_;
-  double maxVariance_;
-  double mahalanobisDistanceThreshold_;
-  double multiHeightNoise_;
-  double minHorizontalVariance_;
-  double maxHorizontalVariance_;
-  std::string underlyingMapTopic_;
-  bool enableVisibilityCleanup_;
-  bool enableContinuousCleanup_;
-  double visibilityCleanupDuration_;
-  double scanningDuration_;
+  struct Parameters {
+    double minVariance_{0.000009};
+    double maxVariance_{0.0009};
+    double mahalanobisDistanceThreshold_{2.5};
+    double multiHeightNoise_{0.000009};
+    double minHorizontalVariance_{0.0001};
+    double maxHorizontalVariance_{0.05};
+    std::string underlyingMapTopic_;
+    bool enableVisibilityCleanup_{true};
+    bool enableContinuousCleanup_{false};
+    double visibilityCleanupDuration_{0.0};
+    double scanningDuration_{1.0};
+  } parameters_;
 };
 
 }  // namespace elevation_mapping

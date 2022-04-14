@@ -285,22 +285,70 @@ class ElevationMapping {
   //! Cache for the robot pose messages.
   message_filters::Cache<geometry_msgs::PoseWithCovarianceStamped> robotPoseCache_;
 
-  //! Size of the cache for the robot pose messages.
-  int robotPoseCacheSize_;
-
-  //! Frame ID of the elevation map
-  std::string mapFrameId_;
-
   //! TF listener and broadcaster.
   tf::TransformListener transformListener_;
 
-  //! Point which the elevation map follows.
-  kindr::Position3D trackPoint_;
-  std::string trackPointFrameId_;
+  struct Parameters {
+    //! Size of the cache for the robot pose messages.
+    int robotPoseCacheSize_{200};
 
-  //! ROS topics for subscriptions.
-  std::string pointCloudTopic_;  //!< Deprecated, use input_source instead.
-  std::string robotPoseTopic_;
+    //! Frame ID of the elevation map
+    std::string mapFrameId_;
+
+    //! Point which the elevation map follows.
+    kindr::Position3D trackPoint_;
+    std::string trackPointFrameId_;
+
+    //! ROS topics for subscriptions.
+    std::string pointCloudTopic_;  //!< Deprecated, use input_source instead.
+    std::string robotPoseTopic_;
+
+    //! If true, robot motion updates are ignored.
+    bool ignoreRobotMotionUpdates_{false};
+
+    //! If false, elevation mapping stops updating
+    bool updatesEnabled_{true};
+
+    //! Maximum time that the map will not be updated.
+    ros::Duration maxNoUpdateDuration_;
+
+    //! Time tolerance for updating the map with data before the last update.
+    //! This is useful when having multiple sensors adding data to the map.
+    ros::Duration timeTolerance_;
+
+    //! Duration for the publishing the fusing map.
+    ros::Duration fusedMapPublishTimerDuration_;
+
+    //! If map is fused after every change for debugging/analysis purposes.
+    bool isContinuouslyFusing_{false};
+
+    //! Duration for the raytracing cleanup timer.
+    ros::Duration visibilityCleanupTimerDuration_;
+
+    //! Name of the mask layer used in the masked replace service
+    std::string maskedReplaceServiceMaskLayerName_;
+
+    //! Enables initialization of the elevation map
+    bool initializeElevationMap_{false};
+
+    //! Enum to choose the initialization method
+    int initializationMethod_{0};
+
+    //! Width of submap of the elevation map with a constant height
+    double lengthInXInitSubmap_{1.2};
+
+    //! Height of submap of the elevation map with a constant height
+    double lengthInYInitSubmap_{1.8};
+
+    //! Margin of submap of the elevation map with a constant height
+    double marginInitSubmap_{0.3};
+
+    //! Target frame to get the init height of the elevation map
+    std::string targetFrameInitSubmap_;
+
+    //! Additional offset of the height value
+    double initSubmapHeightOffset_{0.0};
+  } parameters_;
 
   //! Elevation map.
   ElevationMap map_;
@@ -311,39 +359,17 @@ class ElevationMapping {
   //! Robot motion elevation map updater.
   RobotMotionMapUpdater robotMotionMapUpdater_;
 
-  //! If true, robot motion updates are ignored.
-  bool ignoreRobotMotionUpdates_;
-
-  //! If false, elevation mapping stops updating
-  bool updatesEnabled_;
+  //! Timer for the robot motion update.
+  ros::Timer mapUpdateTimer_;
 
   //! Time of the last point cloud update.
   ros::Time lastPointCloudUpdateTime_;
 
-  //! Timer for the robot motion update.
-  ros::Timer mapUpdateTimer_;
-
-  //! Maximum time that the map will not be updated.
-  ros::Duration maxNoUpdateDuration_;
-
-  //! Time tolerance for updating the map with data before the last update.
-  //! This is useful when having multiple sensors adding data to the map.
-  ros::Duration timeTolerance_;
-
   //! Timer for publishing the fused map.
   ros::Timer fusedMapPublishTimer_;
 
-  //! Duration for the publishing the fusing map.
-  ros::Duration fusedMapPublishTimerDuration_;
-
-  //! If map is fused after every change for debugging/analysis purposes.
-  bool isContinuouslyFusing_;
-
   //! Timer for the raytracing cleanup.
   ros::Timer visibilityCleanupTimer_;
-
-  //! Duration for the raytracing cleanup timer.
-  ros::Duration visibilityCleanupTimerDuration_;
 
   //! Callback queue for raytracing cleanup thread.
   ros::CallbackQueue visibilityCleanupQueue_;
@@ -353,30 +379,6 @@ class ElevationMapping {
 
   //! Becomes true when corresponding poses and point clouds can be found
   bool receivedFirstMatchingPointcloudAndPose_;
-
-  //! Name of the mask layer used in the masked replace service
-  std::string maskedReplaceServiceMaskLayerName_;
-
-  //! Enables initialization of the elevation map
-  bool initializeElevationMap_;
-
-  //! Enum to choose the initialization method
-  int initializationMethod_;
-
-  //! Width of submap of the elevation map with a constant height
-  double lengthInXInitSubmap_;
-
-  //! Height of submap of the elevation map with a constant height
-  double lengthInYInitSubmap_;
-
-  //! Margin of submap of the elevation map with a constant height
-  double marginInitSubmap_;
-
-  //! Target frame to get the init height of the elevation map
-  std::string targetFrameInitSubmap_;
-
-  //! Additional offset of the height value
-  double initSubmapHeightOffset_;
 };
 
 }  // namespace elevation_mapping

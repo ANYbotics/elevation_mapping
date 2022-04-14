@@ -29,11 +29,7 @@
 namespace elevation_mapping {
 
 SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, const GeneralParameters& generalConfig)
-    : nodeHandle_(nodeHandle),
-      ignorePointsUpperThreshold_(std::numeric_limits<double>::infinity()),
-      ignorePointsLowerThreshold_(-std::numeric_limits<double>::infinity()),
-      applyVoxelGridFilter_(false),
-      firstTfAvailable_(false) {
+    : nodeHandle_(nodeHandle), firstTfAvailable_(false) {
   pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
   transformationSensorToMap_.setIdentity();
   generalParameters_ = generalConfig;
@@ -47,11 +43,13 @@ SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, const Gene
 SensorProcessorBase::~SensorProcessorBase() = default;
 
 bool SensorProcessorBase::readParameters() {
-  nodeHandle_.param("sensor_processor/ignore_points_above", ignorePointsUpperThreshold_, std::numeric_limits<double>::infinity());
-  nodeHandle_.param("sensor_processor/ignore_points_below", ignorePointsLowerThreshold_, -std::numeric_limits<double>::infinity());
+  nodeHandle_.param("sensor_processor/ignore_points_above", parameters_.ignorePointsUpperThreshold_,
+                    std::numeric_limits<double>::infinity());
+  nodeHandle_.param("sensor_processor/ignore_points_below", parameters_.ignorePointsLowerThreshold_,
+                    -std::numeric_limits<double>::infinity());
 
-  nodeHandle_.param("sensor_processor/apply_voxelgrid_filter", applyVoxelGridFilter_, false);
-  nodeHandle_.param("sensor_processor/voxelgrid_filter_size", sensorParameters_["voxelgrid_filter_size"], 0.0);
+  nodeHandle_.param("sensor_processor/apply_voxelgrid_filter", parameters_.applyVoxelGridFilter_, false);
+  nodeHandle_.param("sensor_processor/voxelgrid_filter_size", parameters_.sensorParameters_["voxelgrid_filter_size"], 0.0);
   return true;
 }
 
@@ -149,17 +147,17 @@ bool SensorProcessorBase::transformPointCloud(PointCloudType::ConstPtr pointClou
 }
 
 void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr reference, std::vector<PointCloudType::Ptr>& pointClouds) {
-  if (!std::isfinite(ignorePointsLowerThreshold_) && !std::isfinite(ignorePointsUpperThreshold_)) {
+  if (!std::isfinite(parameters_.ignorePointsLowerThreshold_) && !std::isfinite(parameters_.ignorePointsUpperThreshold_)) {
     return;
   }
-  ROS_DEBUG("Limiting point cloud to the height interval of [%f, %f] relative to the robot base.", ignorePointsLowerThreshold_,
-            ignorePointsUpperThreshold_);
+  ROS_DEBUG("Limiting point cloud to the height interval of [%f, %f] relative to the robot base.", parameters_.ignorePointsLowerThreshold_,
+            parameters_.ignorePointsUpperThreshold_);
 
   pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter(true);
   passThroughFilter.setInputCloud(reference);
   passThroughFilter.setFilterFieldName("z");  // TODO(max): Should this be configurable?
-  double relativeLowerThreshold = translationMapToBaseInMapFrame_.z() + ignorePointsLowerThreshold_;
-  double relativeUpperThreshold = translationMapToBaseInMapFrame_.z() + ignorePointsUpperThreshold_;
+  double relativeLowerThreshold = translationMapToBaseInMapFrame_.z() + parameters_.ignorePointsLowerThreshold_;
+  double relativeUpperThreshold = translationMapToBaseInMapFrame_.z() + parameters_.ignorePointsUpperThreshold_;
   passThroughFilter.setFilterLimits(relativeLowerThreshold, relativeUpperThreshold);
   pcl::IndicesPtr insideIndeces(new std::vector<int>);
   passThroughFilter.filter(*insideIndeces);
@@ -188,10 +186,10 @@ bool SensorProcessorBase::filterPointCloud(const PointCloudType::Ptr pointCloud)
   }
 
   // Reduce points using VoxelGrid filter.
-  if (applyVoxelGridFilter_) {
+  if (parameters_.applyVoxelGridFilter_) {
     pcl::VoxelGrid<pcl::PointXYZRGBConfidenceRatio> voxelGridFilter;
     voxelGridFilter.setInputCloud(pointCloud);
-    double filter_size = sensorParameters_.at("voxelgrid_filter_size");
+    double filter_size = parameters_.sensorParameters_.at("voxelgrid_filter_size");
     voxelGridFilter.setLeafSize(filter_size, filter_size, filter_size);
     voxelGridFilter.filter(tempPointCloud);
     pointCloud->swap(tempPointCloud);

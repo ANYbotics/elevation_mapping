@@ -61,7 +61,7 @@ class Input {
   /**
    * @return The type of this input source.
    */
-  std::string getType() { return type_; }
+  std::string getType() { return parameters_.type_; }
 
  private:
   /**
@@ -83,18 +83,21 @@ class Input {
   SensorProcessorBase::Ptr sensorProcessor_;
 
   // Parameters.
-  std::string name_;
-  std::string type_;
-  uint32_t queueSize_;
-  std::string topic_;
-  bool publishOnUpdate_;
+  struct Parameters {
+    std::string name_;
+    std::string type_;
+    uint32_t queueSize_{0};
+    std::string topic_;
+    bool publishOnUpdate_{true};
+  } parameters_;
 };
 
 template <typename MsgT>
 void Input::registerCallback(ElevationMapping& map, CallbackT<MsgT> callback) {
   subscriber_ = nodeHandle_.subscribe<MsgT>(
-      topic_, queueSize_, std::bind(callback, std::ref(map), std::placeholders::_1, publishOnUpdate_, std::ref(sensorProcessor_)));
-  ROS_INFO("Subscribing to %s: %s, queue_size: %i.", type_.c_str(), topic_.c_str(), queueSize_);
+      parameters_.topic_, parameters_.queueSize_,
+      std::bind(callback, std::ref(map), std::placeholders::_1, parameters_.publishOnUpdate_, std::ref(sensorProcessor_)));
+  ROS_INFO("Subscribing to %s: %s, queue_size: %i.", parameters_.type_.c_str(), parameters_.topic_.c_str(), parameters_.queueSize_);
 }
 
 }  // namespace elevation_mapping
