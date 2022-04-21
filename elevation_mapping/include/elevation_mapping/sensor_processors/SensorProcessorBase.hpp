@@ -25,6 +25,7 @@
 
 // Elevation Mapping
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+#include "elevation_mapping/ThreadSafeDataWrapper.hpp"
 
 namespace elevation_mapping {
 
@@ -170,7 +171,8 @@ class SensorProcessorBase {
 
     //! Sensor parameters.
     std::unordered_map<std::string, double> sensorParameters_;
-  } parameters_;
+  };
+  ThreadSafeDataWrapper<Parameters> parameters_;
 
   //! TF frame id of the range sensor for the point clouds.
   std::string sensorFrameId_;

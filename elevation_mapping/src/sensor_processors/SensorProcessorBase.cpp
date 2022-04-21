@@ -43,18 +43,21 @@ SensorProcessorBase::SensorProcessorBase(ros::NodeHandle& nodeHandle, const Gene
 SensorProcessorBase::~SensorProcessorBase() = default;
 
 bool SensorProcessorBase::readParameters() {
-  nodeHandle_.param("sensor_processor/ignore_points_above", parameters_.ignorePointsUpperThreshold_,
+  Parameters parameters;
+  nodeHandle_.param("sensor_processor/ignore_points_above", parameters.ignorePointsUpperThreshold_,
                     std::numeric_limits<double>::infinity());
-  nodeHandle_.param("sensor_processor/ignore_points_below", parameters_.ignorePointsLowerThreshold_,
+  nodeHandle_.param("sensor_processor/ignore_points_below", parameters.ignorePointsLowerThreshold_,
                     -std::numeric_limits<double>::infinity());
 
-  nodeHandle_.param("sensor_processor/apply_voxelgrid_filter", parameters_.applyVoxelGridFilter_, false);
-  nodeHandle_.param("sensor_processor/voxelgrid_filter_size", parameters_.sensorParameters_["voxelgrid_filter_size"], 0.0);
+  nodeHandle_.param("sensor_processor/apply_voxelgrid_filter", parameters.applyVoxelGridFilter_, false);
+  nodeHandle_.param("sensor_processor/voxelgrid_filter_size", parameters.sensorParameters_["voxelgrid_filter_size"], 0.0);
+  parameters_.setData(parameters);
   return true;
 }
 
 bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput, const Eigen::Matrix<double, 6, 6>& robotPoseCovariance,
                                   const PointCloudType::Ptr pointCloudMapFrame, Eigen::VectorXf& variances, std::string sensorFrame) {
+  const Parameters parameters{parameters_.getData()};
   sensorFrameId_ = sensorFrame;
   ROS_DEBUG("Sensor Processor processing for frame %s", sensorFrameId_.c_str());
 
@@ -87,6 +90,7 @@ bool SensorProcessorBase::process(const PointCloudType::ConstPtr pointCloudInput
 }
 
 bool SensorProcessorBase::updateTransformations(const ros::Time& timeStamp) {
+  const Parameters parameters{parameters_.getData()};
   try {
     transformListener_.waitForTransform(sensorFrameId_, generalParameters_.mapFrameId_, timeStamp, ros::Duration(1.0));
 
@@ -147,17 +151,18 @@ bool SensorProcessorBase::transformPointCloud(PointCloudType::ConstPtr pointClou
 }
 
 void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr reference, std::vector<PointCloudType::Ptr>& pointClouds) {
-  if (!std::isfinite(parameters_.ignorePointsLowerThreshold_) && !std::isfinite(parameters_.ignorePointsUpperThreshold_)) {
+  const Parameters parameters{parameters_.getData()};
+  if (!std::isfinite(parameters.ignorePointsLowerThreshold_) && !std::isfinite(parameters.ignorePointsUpperThreshold_)) {
     return;
   }
-  ROS_DEBUG("Limiting point cloud to the height interval of [%f, %f] relative to the robot base.", parameters_.ignorePointsLowerThreshold_,
-            parameters_.ignorePointsUpperThreshold_);
+  ROS_DEBUG("Limiting point cloud to the height interval of [%f, %f] relative to the robot base.", parameters.ignorePointsLowerThreshold_,
+            parameters.ignorePointsUpperThreshold_);
 
   pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter(true);
   passThroughFilter.setInputCloud(reference);
   passThroughFilter.setFilterFieldName("z");  // TODO(max): Should this be configurable?
-  double relativeLowerThreshold = translationMapToBaseInMapFrame_.z() + parameters_.ignorePointsLowerThreshold_;
-  double relativeUpperThreshold = translationMapToBaseInMapFrame_.z() + parameters_.ignorePointsUpperThreshold_;
+  double relativeLowerThreshold = translationMapToBaseInMapFrame_.z() + parameters.ignorePointsLowerThreshold_;
+  double relativeUpperThreshold = translationMapToBaseInMapFrame_.z() + parameters.ignorePointsUpperThreshold_;
   passThroughFilter.setFilterLimits(relativeLowerThreshold, relativeUpperThreshold);
   pcl::IndicesPtr insideIndeces(new std::vector<int>);
   passThroughFilter.filter(*insideIndeces);
@@ -175,6 +180,7 @@ void SensorProcessorBase::removePointsOutsideLimits(PointCloudType::ConstPtr ref
 }
 
 bool SensorProcessorBase::filterPointCloud(const PointCloudType::Ptr pointCloud) {
+  const Parameters parameters{parameters_.getData()};
   PointCloudType tempPointCloud;
 
   // Remove nan points.
@@ -186,10 +192,10 @@ bool SensorProcessorBase::filterPointCloud(const PointCloudType::Ptr pointCloud)
   }
 
   // Reduce points using VoxelGrid filter.
-  if (parameters_.applyVoxelGridFilter_) {
+  if (parameters.applyVoxelGridFilter_) {
     pcl::VoxelGrid<pcl::PointXYZRGBConfidenceRatio> voxelGridFilter;
     voxelGridFilter.setInputCloud(pointCloud);
-    double filter_size = parameters_.sensorParameters_.at("voxelgrid_filter_size");
+    double filter_size = parameters.sensorParameters_.at("voxelgrid_filter_size");
     voxelGridFilter.setLeafSize(filter_size, filter_size, filter_size);
     voxelGridFilter.filter(tempPointCloud);
     pointCloud->swap(tempPointCloud);

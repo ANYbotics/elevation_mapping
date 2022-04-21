@@ -33,6 +33,7 @@
 #include "elevation_mapping/ElevationMap.hpp"
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
 #include "elevation_mapping/RobotMotionMapUpdater.hpp"
+#include "elevation_mapping/ThreadSafeDataWrapper.hpp"
 #include "elevation_mapping/WeightedEmpiricalCumulativeDistributionFunction.hpp"
 #include "elevation_mapping/input_sources/InputSourceManager.hpp"
 #include "elevation_mapping/sensor_processors/SensorProcessorBase.hpp"
@@ -348,7 +349,8 @@ class ElevationMapping {
 
     //! Additional offset of the height value
     double initSubmapHeightOffset_{0.0};
-  } parameters_;
+  };
+  ThreadSafeDataWrapper<Parameters> parameters_;
 
   //! Elevation map.
   ElevationMap map_;

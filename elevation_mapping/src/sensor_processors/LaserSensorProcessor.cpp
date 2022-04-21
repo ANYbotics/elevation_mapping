@@ -34,14 +34,16 @@ LaserSensorProcessor::~LaserSensorProcessor() = default;
 
 bool LaserSensorProcessor::readParameters() {
   SensorProcessorBase::readParameters();
-  nodeHandle_.param("sensor_processor/min_radius", parameters_.sensorParameters_["min_radius"], 0.0);
-  nodeHandle_.param("sensor_processor/beam_angle", parameters_.sensorParameters_["beam_angle"], 0.0);
-  nodeHandle_.param("sensor_processor/beam_constant", parameters_.sensorParameters_["beam_constant"], 0.0);
+  auto [parameters, parameterGuard]{parameters_.getDataToWrite()};
+  nodeHandle_.param("sensor_processor/min_radius", parameters.sensorParameters_["min_radius"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_angle", parameters.sensorParameters_["beam_angle"], 0.0);
+  nodeHandle_.param("sensor_processor/beam_constant", parameters.sensorParameters_["beam_constant"], 0.0);
   return true;
 }
 
 bool LaserSensorProcessor::computeVariances(const PointCloudType::ConstPtr pointCloud,
                                             const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) {
+  const Parameters parameters{parameters_.getData()};
   variances.resize(pointCloud->size());
 
   // Projection vector (P).
@@ -61,9 +63,9 @@ bool LaserSensorProcessor::computeVariances(const PointCloudType::ConstPtr point
   const Eigen::Matrix3f B_r_BS_skew =
       kindr::getSkewMatrixFromVector(Eigen::Vector3f(translationBaseToSensorInBaseFrame_.toImplementation().cast<float>()));
 
-  const float varianceNormal = parameters_.sensorParameters_.at("min_radius") * parameters_.sensorParameters_.at("min_radius");
-  const float beamConstant = parameters_.sensorParameters_.at("beam_constant");
-  const float beamAngle = parameters_.sensorParameters_.at("beam_angle");
+  const float varianceNormal = parameters.sensorParameters_.at("min_radius") * parameters.sensorParameters_.at("min_radius");
+  const float beamConstant = parameters.sensorParameters_.at("beam_constant");
+  const float beamAngle = parameters.sensorParameters_.at("beam_angle");
   for (size_t i = 0; i < pointCloud->size(); ++i) {
     // TODO(needs assignment): Move this loop body into a function for better unit testing.
     // For every point in point cloud.

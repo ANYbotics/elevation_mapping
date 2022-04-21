@@ -26,6 +26,7 @@
 
 // Elevation Mapping
 #include "elevation_mapping/PointXYZRGBConfidenceRatio.hpp"
+#include "elevation_mapping/ThreadSafeDataWrapper.hpp"
 #include "elevation_mapping/postprocessing/PostprocessorPool.hpp"
 
 namespace elevation_mapping {
@@ -329,7 +330,8 @@ class ElevationMap {
     bool enableContinuousCleanup_{false};
     double visibilityCleanupDuration_{0.0};
     double scanningDuration_{1.0};
-  } parameters_;
+  };
+  ThreadSafeDataWrapper<Parameters> parameters_;
 };
 
 }  // namespace elevation_mapping

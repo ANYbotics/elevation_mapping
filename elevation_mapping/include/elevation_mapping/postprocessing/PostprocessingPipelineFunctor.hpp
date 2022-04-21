@@ -12,6 +12,9 @@
 #include <filters/filter_chain.hpp>
 #include <grid_map_core/GridMap.hpp>
 
+// Elevation Mapping
+#include "elevation_mapping/ThreadSafeDataWrapper.hpp"
+
 namespace elevation_mapping {
 
 /**
@@ -63,10 +66,7 @@ class PostprocessingPipelineFunctor {
   bool hasSubscribers() const;
 
  private:
-  /**
-   * @brief Reads in the parameters from the ROS parameter server.
-   * @return A flag whether the parameters were read successfully.
-   */
+  //! @brief Reads in the parameters from the ROS parameter server.
   void readParameters();
 
   //! ROS nodehandle.
@@ -84,7 +84,8 @@ class PostprocessingPipelineFunctor {
 
     //! Filter chain parameters name.
     std::string filterChainParametersName_;
-  } parameters_;
+  };
+  ThreadSafeDataWrapper<Parameters> parameters_;
 
   //! Flag indicating if the filter chain was successfully configured.
   bool filterChainConfigured_;

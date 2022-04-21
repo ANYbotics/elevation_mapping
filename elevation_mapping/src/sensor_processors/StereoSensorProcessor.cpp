@@ -25,22 +25,24 @@ StereoSensorProcessor::~StereoSensorProcessor() = default;
 
 bool StereoSensorProcessor::readParameters() {
   SensorProcessorBase::readParameters();
-  nodeHandle_.param("sensor_processor/p_1", parameters_.sensorParameters_["p_1"], 0.0);
-  nodeHandle_.param("sensor_processor/p_2", parameters_.sensorParameters_["p_2"], 0.0);
-  nodeHandle_.param("sensor_processor/p_3", parameters_.sensorParameters_["p_3"], 0.0);
-  nodeHandle_.param("sensor_processor/p_4", parameters_.sensorParameters_["p_4"], 0.0);
-  nodeHandle_.param("sensor_processor/p_5", parameters_.sensorParameters_["p_5"], 0.0);
-  nodeHandle_.param("sensor_processor/lateral_factor", parameters_.sensorParameters_["lateral_factor"], 0.0);
-  nodeHandle_.param("sensor_processor/depth_to_disparity_factor", parameters_.sensorParameters_["depth_to_disparity_factor"], 0.0);
-  nodeHandle_.param("sensor_processor/cutoff_min_depth", parameters_.sensorParameters_["cutoff_min_depth"],
+  auto [parameters, parameterGuard]{parameters_.getDataToWrite()};
+  nodeHandle_.param("sensor_processor/p_1", parameters.sensorParameters_["p_1"], 0.0);
+  nodeHandle_.param("sensor_processor/p_2", parameters.sensorParameters_["p_2"], 0.0);
+  nodeHandle_.param("sensor_processor/p_3", parameters.sensorParameters_["p_3"], 0.0);
+  nodeHandle_.param("sensor_processor/p_4", parameters.sensorParameters_["p_4"], 0.0);
+  nodeHandle_.param("sensor_processor/p_5", parameters.sensorParameters_["p_5"], 0.0);
+  nodeHandle_.param("sensor_processor/lateral_factor", parameters.sensorParameters_["lateral_factor"], 0.0);
+  nodeHandle_.param("sensor_processor/depth_to_disparity_factor", parameters.sensorParameters_["depth_to_disparity_factor"], 0.0);
+  nodeHandle_.param("sensor_processor/cutoff_min_depth", parameters.sensorParameters_["cutoff_min_depth"],
                     std::numeric_limits<double>::min());
-  nodeHandle_.param("sensor_processor/cutoff_max_depth", parameters_.sensorParameters_["cutoff_max_depth"],
+  nodeHandle_.param("sensor_processor/cutoff_max_depth", parameters.sensorParameters_["cutoff_max_depth"],
                     std::numeric_limits<double>::max());
   return true;
 }
 
 bool StereoSensorProcessor::computeVariances(const PointCloudType::ConstPtr pointCloud,
                                              const Eigen::Matrix<double, 6, 6>& robotPoseCovariance, Eigen::VectorXf& variances) {
+  const Parameters parameters{parameters_.getData()};
   variances.resize(pointCloud->size());
 
   // Projection vector (P).
@@ -67,7 +69,7 @@ bool StereoSensorProcessor::computeVariances(const PointCloudType::ConstPtr poin
     // Preparation.
     pcl::PointXYZRGBConfidenceRatio point = pointCloud->points[i];
     double disparity =
-        parameters_.sensorParameters_.at("depth_to_disparity_factor") / point.z;  // NOLINT(cppcoreguidelines-pro-type-union-access)
+        parameters.sensorParameters_.at("depth_to_disparity_factor") / point.z;  // NOLINT(cppcoreguidelines-pro-type-union-access)
     Eigen::Vector3f pointVector(point.x, point.y, point.z);  // S_r_SP // NOLINT(cppcoreguidelines-pro-type-union-access)
     float heightVariance = 0.0;                              // sigma_p
 
@@ -76,12 +78,12 @@ bool StereoSensorProcessor::computeVariances(const PointCloudType::ConstPtr poin
 
     // Compute sensor covariance matrix (Sigma_S) with sensor model.
     float varianceNormal =
-        pow(parameters_.sensorParameters_.at("depth_to_disparity_factor") / pow(disparity, 2), 2) *
-        ((parameters_.sensorParameters_.at("p_5") * disparity + parameters_.sensorParameters_.at("p_2")) *
-             sqrt(pow(parameters_.sensorParameters_.at("p_3") * disparity + parameters_.sensorParameters_.at("p_4") - getJ(i), 2) +
+        pow(parameters.sensorParameters_.at("depth_to_disparity_factor") / pow(disparity, 2), 2) *
+        ((parameters.sensorParameters_.at("p_5") * disparity + parameters.sensorParameters_.at("p_2")) *
+             sqrt(pow(parameters.sensorParameters_.at("p_3") * disparity + parameters.sensorParameters_.at("p_4") - getJ(i), 2) +
                   pow(240 - getI(i), 2)) +
-         parameters_.sensorParameters_.at("p_1"));
-    float varianceLateral = pow(parameters_.sensorParameters_.at("lateral_factor") * measurementDistance, 2);
+         parameters.sensorParameters_.at("p_1"));
+    float varianceLateral = pow(parameters.sensorParameters_.at("lateral_factor") * measurementDistance, 2);
     Eigen::Matrix3f sensorVariance = Eigen::Matrix3f::Zero();
     sensorVariance.diagonal() << varianceLateral, varianceLateral, varianceNormal;
 
@@ -101,14 +103,15 @@ bool StereoSensorProcessor::computeVariances(const PointCloudType::ConstPtr poin
 }
 
 bool StereoSensorProcessor::filterPointCloudSensorType(const PointCloudType::Ptr pointCloud) {
+  const Parameters parameters{parameters_.getData()};
   pcl::PassThrough<pcl::PointXYZRGBConfidenceRatio> passThroughFilter;
   PointCloudType tempPointCloud;
 
   // cutoff points with z values
   passThroughFilter.setInputCloud(pointCloud);
   passThroughFilter.setFilterFieldName("z");
-  passThroughFilter.setFilterLimits(parameters_.sensorParameters_.at("cutoff_min_depth"),
-                                    parameters_.sensorParameters_.at("cutoff_max_depth"));
+  passThroughFilter.setFilterLimits(parameters.sensorParameters_.at("cutoff_min_depth"),
+                                    parameters.sensorParameters_.at("cutoff_max_depth"));
   passThroughFilter.filter(tempPointCloud);
   pointCloud->swap(tempPointCloud);
 
