@@ -34,6 +34,11 @@ class Input {
   explicit Input(ros::NodeHandle nh);
 
   /**
+   * Whether the input source is enabled or not.
+   */
+  bool isEnabled() const { return parameters_.isEnabled_; }
+
+  /**
    * @brief Configure the input source.
    * @param name Name of this input source.
    * @param parameters The configuration parameters.
@@ -86,6 +91,7 @@ class Input {
   struct Parameters {
     std::string name_;
     std::string type_;
+    bool isEnabled_{true};
     uint32_t queueSize_{0};
     std::string topic_;
     bool publishOnUpdate_{true};

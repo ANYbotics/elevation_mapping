@@ -30,6 +30,19 @@ bool Input::configure(std::string name, const XmlRpc::XmlRpcValue& parameters,
     return false;
   }
 
+  // Check Optional enabled parameter.
+  if (parameters.hasMember("enabled")) {
+    if (parameters["enabled"].getType() != XmlRpc::XmlRpcValue::TypeBoolean) {
+      ROS_ERROR(
+          "Could not configure input source %s because parameter 'enabled' has the "
+          "wrong type.",
+          name.c_str());
+      return false;
+    }
+
+    parameters_.isEnabled_ = static_cast<bool>(parameters["enabled"]);
+  }
+
   // Check that parameters exist and has an appropriate type.
   using nameAndType = std::pair<std::string, XmlRpc::XmlRpcValue::Type>;
   for (const nameAndType& member : std::vector<nameAndType>{{"type", XmlRpc::XmlRpcValue::TypeString},

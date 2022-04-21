@@ -55,6 +55,10 @@ bool InputSourceManager::configure(const XmlRpc::XmlRpcValue& config, const std:
       continue;
     }
 
+    if (!source.isEnabled()) {
+      continue;
+    }
+
     std::string subscribedTopic = source.getSubscribedTopic();
     bool topicIsUnique = subscribedTopics.insert(subscribedTopic).second;
 
