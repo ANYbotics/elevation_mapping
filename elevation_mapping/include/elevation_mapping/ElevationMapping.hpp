@@ -20,6 +20,7 @@
 #include <ros/ros.h>
 #include <sensor_msgs/PointCloud2.h>
 #include <std_srvs/Empty.h>
+#include <std_srvs/Trigger.h>
 #include <tf/transform_listener.h>
 
 // Eigen
@@ -180,13 +181,23 @@ class ElevationMapping {
    */
   bool loadMapServiceCallback(grid_map_msgs::ProcessFile::Request& request, grid_map_msgs::ProcessFile::Response& response);
 
+  /*!
+   * ROS service callback function to reload parameters from the ros parameter server.
+   *
+   * @param request     The ROS service request.
+   * @param response    The ROS service response.
+   * @return true if successful.
+   */
+  bool reloadParametersServiceCallback(std_srvs::Trigger::Request& request, std_srvs::Trigger::Response& response);
+
  private:
   /*!
    * Reads and verifies the ROS parameters.
-   *
+   * @param reload if enabled disables any geometric resize while reading parameters.
+   * Reloading geometry is not supported.
    * @return true if successful.
    */
-  bool readParameters();
+  bool readParameters(bool reload = false);
 
   /*!
    * Performs the initialization procedure.
@@ -276,6 +287,7 @@ class ElevationMapping {
   ros::ServiceServer maskedReplaceService_;
   ros::ServiceServer saveMapService_;
   ros::ServiceServer loadMapService_;
+  ros::ServiceServer reloadParametersService_;
 
   //! Callback thread for the fusion services.
   boost::thread fusionServiceThread_;

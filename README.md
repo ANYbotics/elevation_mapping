@@ -233,6 +233,12 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
         rosservice call /elevation_mapping/load_map "file_path: '/home/integration/elevation_map.bag' topic_name: ''"
 
+* **`reload_parameters`** ([std_srvs/Trigger])
+
+  Triggers a re-load of all elevation mapping parameters, can be used to online reconfigure the parameters. Example usage:
+
+        rosservice call /elevation_mapping/reload_parameters {}
+
 * **`disable_updates`** ([std_srvs/Empty])
 
     Stops updating the elevation map with sensor input. Trigger the update stopping with

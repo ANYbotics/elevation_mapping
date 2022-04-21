@@ -103,6 +103,7 @@ void ElevationMapping::setupServices() {
   maskedReplaceService_ = nodeHandle_.advertiseService("masked_replace", &ElevationMapping::maskedReplaceServiceCallback, this);
   saveMapService_ = nodeHandle_.advertiseService("save_map", &ElevationMapping::saveMapServiceCallback, this);
   loadMapService_ = nodeHandle_.advertiseService("load_map", &ElevationMapping::loadMapServiceCallback, this);
+  reloadParametersService_ = nodeHandle_.advertiseService("reload_parameters", &ElevationMapping::reloadParametersServiceCallback, this);
 }
 
 void ElevationMapping::setupTimers() {
@@ -157,10 +158,11 @@ ElevationMapping::~ElevationMapping() {
   }
 }
 
-bool ElevationMapping::readParameters() {
-  // ElevationMapping parameters.
-  Parameters parameters;
-  ElevationMap::Parameters mapParameters;
+bool ElevationMapping::readParameters(bool reload) {
+  // Using getDataToWrite gets a write-lock on the parameters thereby blocking all reading threads for the whole scope of this
+  // readParameters, which is desired.
+  auto [parameters, parametersGuard] = parameters_.getDataToWrite();
+  auto [mapParameters, mapParametersGuard] = map_.parameters_.getDataToWrite();
   nodeHandle_.param("point_cloud_topic", parameters.pointCloudTopic_, std::string("/points"));
   nodeHandle_.param("robot_pose_with_covariance_topic", parameters.robotPoseTopic_, std::string("/pose"));
   nodeHandle_.param("track_point_frame_id", parameters.trackPointFrameId_, std::string("/robot"));
@@ -211,7 +213,6 @@ bool ElevationMapping::readParameters() {
 
   // ElevationMap parameters. TODO Move this to the elevation map class.
   nodeHandle_.param("map_frame_id", parameters.mapFrameId_, std::string("/map"));
-  map_.setFrameId(parameters.mapFrameId_);
 
   grid_map::Length length;
   grid_map::Position position;
@@ -221,7 +222,11 @@ bool ElevationMapping::readParameters() {
   nodeHandle_.param("position_x", position.x(), 0.0);
   nodeHandle_.param("position_y", position.y(), 0.0);
   nodeHandle_.param("resolution", resolution, resolution);
-  map_.setGeometry(length, resolution, position);
+
+  if (!reload) {
+    map_.setFrameId(parameters.mapFrameId_);
+    map_.setGeometry(length, resolution, position);
+  }
 
   nodeHandle_.param("min_variance", mapParameters.minVariance_, pow(0.003, 2));
   nodeHandle_.param("max_variance", mapParameters.maxVariance_, pow(0.03, 2));
@@ -250,10 +255,6 @@ bool ElevationMapping::readParameters() {
 
   SensorProcessorBase::GeneralParameters generalSensorProcessorConfig{nodeHandle_.param("robot_base_frame_id", std::string("/robot")),
                                                                       parameters.mapFrameId_};
-
-  parameters_.setData(parameters);
-  map_.parameters_.setData(mapParameters);
-
   if (sensorType == "structured_light") {
     sensorProcessor_ = std::make_unique<StructuredLightSensorProcessor>(nodeHandle_, generalSensorProcessorConfig);
   } else if (sensorType == "stereo") {
@@ -754,6 +755,22 @@ bool ElevationMapping::loadMapServiceCallback(grid_map_msgs::ProcessFile::Reques
   map_.setTimestamp(ros::Time::now());
   map_.postprocessAndPublishRawElevationMap();
   return static_cast<bool>(response.success);
+}
+
+bool ElevationMapping::reloadParametersServiceCallback(std_srvs::Trigger::Request& /*request*/, std_srvs::Trigger::Response& response) {
+  Parameters fallbackParameters{parameters_.getData()};
+
+  const bool success{readParameters(true)};
+  response.success = success;
+
+  if (success) {
+    response.message = "Successfully reloaded parameters!";
+  } else {
+    parameters_.setData(fallbackParameters);
+    response.message = "Reloading parameters failed, reverted parameters to previous state!";
+  }
+
+  return true;
 }
 
 void ElevationMapping::resetMapUpdateTimer() {
