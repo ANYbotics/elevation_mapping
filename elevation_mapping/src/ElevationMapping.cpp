@@ -238,6 +238,7 @@ bool ElevationMapping::readParameters(bool reload) {
   nodeHandle_.param("enable_visibility_cleanup", mapParameters.enableVisibilityCleanup_, true);
   nodeHandle_.param("enable_continuous_cleanup", mapParameters.enableContinuousCleanup_, false);
   nodeHandle_.param("scanning_duration", mapParameters.scanningDuration_, 1.0);
+  nodeHandle_.param("increase_height_alpha", mapParameters.increaseHeightAlpha_, 0.0);
   nodeHandle_.param("masked_replace_service_mask_layer_name", parameters.maskedReplaceServiceMaskLayerName_, std::string("mask"));
 
   // Settings for initializing elevation map

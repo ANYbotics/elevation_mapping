@@ -330,6 +330,7 @@ class ElevationMap {
     bool enableContinuousCleanup_{false};
     double visibilityCleanupDuration_{0.0};
     double scanningDuration_{1.0};
+    double increaseHeightAlpha_{1.0};
   };
   ThreadSafeDataWrapper<Parameters> parameters_;
 };

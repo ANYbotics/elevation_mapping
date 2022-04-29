@@ -148,8 +148,9 @@ bool ElevationMap::add(const PointCloudType::Ptr pointCloud, Eigen::VectorXf& po
         // if measurement is lower then the elevation in the map.
       } else if (scanTimeSinceInitialization - time <= parameters.scanningDuration_) {
         // If point is higher.
-        elevation = point.z;  // NOLINT(cppcoreguidelines-pro-type-union-access)
-        variance = pointVariance;
+        elevation = parameters.increaseHeightAlpha_ * elevation +
+                    (1.0 - parameters.increaseHeightAlpha_) * point.z;  // NOLINT(cppcoreguidelines-pro-type-union-access)
+        variance = parameters.increaseHeightAlpha_ * variance + (1.0 - parameters.increaseHeightAlpha_) * pointVariance;
       } else {
         variance += parameters.multiHeightNoise_;
       }
