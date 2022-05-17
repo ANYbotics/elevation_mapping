@@ -353,14 +353,14 @@ class ElevationMapping {
     //! Height of submap of the elevation map with a constant height
     double lengthInYInitSubmap_{1.8};
 
-    //! Margin of submap of the elevation map with a constant height
-    double marginInitSubmap_{0.3};
-
     //! Target frame to get the init height of the elevation map
     std::string targetFrameInitSubmap_;
 
     //! Additional offset of the height value
     double initSubmapHeightOffset_{0.0};
+
+    //! Initial variance when setting a submap.
+    double initSubmapVariance_{0.01};
   };
   ThreadSafeDataWrapper<Parameters> parameters_;
 

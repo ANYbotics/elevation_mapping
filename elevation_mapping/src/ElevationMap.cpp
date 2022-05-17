@@ -707,9 +707,9 @@ void ElevationMap::underlyingMapCallback(const grid_map_msgs::GridMap& underlyin
   rawMap_.addDataFrom(underlyingMap_, false, false, true);
 }
 
-void ElevationMap::setRawSubmapHeight(const grid_map::Position& initPosition, float mapHeight, double lengthInXSubmap,
-                                      double lengthInYSubmap, double margin) {
-  // Set a submap area (lengthInYSubmap + margin, lengthInXSubmap + margin) with a constant height (mapHeight).
+void ElevationMap::setRawSubmapHeight(const grid_map::Position& initPosition, float mapHeight, float variance, double lengthInXSubmap,
+                                      double lengthInYSubmap) {
+  // Set a submap area (lengthInYSubmap, lengthInXSubmap) with a constant height (mapHeight) and variance.
   boost::recursive_mutex::scoped_lock scopedLockForRawData(rawMapMutex_);
 
   // Calculate submap iterator start index.
@@ -719,8 +719,8 @@ void ElevationMap::setRawSubmapHeight(const grid_map::Position& initPosition, fl
 
   // Calculate submap area.
   const double resolution = rawMap_.getResolution();
-  const int lengthInXSubmapI = static_cast<int>(lengthInXSubmap / resolution + 2 * margin);
-  const int lengthInYSubmapI = static_cast<int>(lengthInYSubmap / resolution + 2 * margin);
+  const int lengthInXSubmapI = static_cast<int>(lengthInXSubmap / resolution);
+  const int lengthInYSubmapI = static_cast<int>(lengthInYSubmap / resolution);
   const Eigen::Array2i submapBufferSize(lengthInYSubmapI, lengthInXSubmapI);
 
   // Iterate through submap and fill height values.
@@ -729,7 +729,7 @@ void ElevationMap::setRawSubmapHeight(const grid_map::Position& initPosition, fl
   for (grid_map::SubmapIterator iterator(rawMap_, submapTopLeftIndex, submapBufferSize); !iterator.isPastEnd(); ++iterator) {
     const grid_map::Index index(*iterator);
     elevationData(index(0), index(1)) = mapHeight;
-    varianceData(index(0), index(1)) = 0.0;
+    varianceData(index(0), index(1)) = variance;
   }
 }
 

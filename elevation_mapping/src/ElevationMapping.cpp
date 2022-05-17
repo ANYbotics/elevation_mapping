@@ -246,8 +246,8 @@ bool ElevationMapping::readParameters(bool reload) {
   nodeHandle_.param("initialization_method", parameters.initializationMethod_, 0);
   nodeHandle_.param("length_in_x_init_submap", parameters.lengthInXInitSubmap_, 1.2);
   nodeHandle_.param("length_in_y_init_submap", parameters.lengthInYInitSubmap_, 1.8);
-  nodeHandle_.param("margin_init_submap", parameters.marginInitSubmap_, 0.3);
   nodeHandle_.param("init_submap_height_offset", parameters.initSubmapHeightOffset_, 0.0);
+  nodeHandle_.param("init_submap_variance", parameters.initSubmapVariance_, 0.01);
   nodeHandle_.param("target_frame_init_submap", parameters.targetFrameInitSubmap_, std::string("/footprint"));
 
   // SensorProcessor parameters. Deprecated, use the sensorProcessor from within input sources instead!
@@ -643,7 +643,7 @@ bool ElevationMapping::initializeElevationMap() {
         map_.move(positionRobot);
 
         map_.setRawSubmapHeight(positionRobot, transform.getOrigin().z() + parameters.initSubmapHeightOffset_,
-                                parameters.lengthInXInitSubmap_, parameters.lengthInYInitSubmap_, parameters.marginInitSubmap_);
+                                parameters.initSubmapVariance_, parameters.lengthInXInitSubmap_, parameters.lengthInYInitSubmap_);
         return true;
       } catch (tf::TransformException& ex) {
         ROS_DEBUG("%s", ex.what());

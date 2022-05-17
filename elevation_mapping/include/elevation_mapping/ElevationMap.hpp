@@ -237,10 +237,9 @@ class ElevationMap {
    * @param mapHeight The height that gets set uniformly.
    * @param lengthInXSubmap Length of the submap in X direction.
    * @param lengthInYSubmap Length of the submap in Y direction.
-   * @param margin Extra margin that gets added to the submap boundaries.
    */
-  void setRawSubmapHeight(const grid_map::Position& initPosition, float mapHeight, double lengthInXSubmap, double lengthInYSubmap,
-                          double margin);
+  void setRawSubmapHeight(const grid_map::Position& initPosition, float mapHeight, float variance, double lengthInXSubmap,
+                          double lengthInYSubmap);
 
   friend class ElevationMapping;
 

@@ -392,6 +392,19 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
 
     The data for the sensor noise model.
 
+* **`initialize_elevation_map`** (bool),
+  **`initialization_method`** (int),
+  **`length_in_x_init_submap`** (double, m),
+  **`length_in_y_init_submap`** (double, m),
+  **`init_submap_height_offset`** (double, m),
+  **`init_submap_variance`** (double),
+  **`target_frame_init_submap`** (string)
+  
+  If enabled (`initialize_elevation_map`: true), 
+  initializes a plane (`initialization_method`: 0) of size (`submap_length_x`, `submap_length_y`) 
+  at a height offset of `init_submap_height_offset` around the origin of `target_frame_init_submap`. 
+  The variance is set to `init_submap_variance`.
+
 ## Changelog
 
 See [Changelog]
