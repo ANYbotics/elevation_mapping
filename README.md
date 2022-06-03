@@ -405,6 +405,19 @@ This is the main Robot-Centric Elevation Mapping node. It uses the distance sens
   at a height offset of `init_submap_height_offset` around the origin of `target_frame_init_submap`. 
   The variance is set to `init_submap_variance`.
 
+* **`increase_height_alpha`** (double, default: 0.0, min: 0.0, max: 0.99)
+
+  elevation = increase_height_alpha * previous_z + (1.0 - increase_height_alpha) * new_measured_z
+  Convex combination parameter to form a new, fused height observation for out of distribution points.
+  Observations with a height above the upper mahalanobis threshold for cells that have not been observed for `scanning_duration`
+  trigger a re-initialization of the height estimate. The re-initialization is parameterized as convex combination of the prior height
+  estimate and the observation:
+  - 0.0: The new observation serves as is to initialize a new mode, prior data is discarded.
+  - 1.0: The new observation of a higher, out of distribution, point from the current scan is not put into account. The prior is kept as
+    mode.
+  - In between: A higher value puts more bias on the existing, prior estimate. A convex combination of both height and variance between
+    estimate and measurement will be formed to initialize the new gaussian height distribution.
+
 ## Changelog
 
 See [Changelog]
