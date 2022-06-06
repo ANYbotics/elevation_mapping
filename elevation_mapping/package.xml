@@ -23,6 +23,7 @@
   <depend>kindr</depend>
   <depend>kindr_ros</depend>
   <depend>message_filters</depend>
+  <depend>filters</depend>
   <depend>pcl_ros</depend>
   <depend>roscpp</depend>
   <depend>sensor_msgs</depend>
