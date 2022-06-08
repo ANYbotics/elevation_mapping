@@ -15,6 +15,7 @@ set(
     kindr
     kindr_ros
     message_filters
+    message_logger
     pcl_ros
     roscpp
     sensor_msgs
