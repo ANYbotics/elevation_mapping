@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <package format="2">
   <name>elevation_mapping_demos</name>
-  <version>0.7.10</version>
+  <version>0.7.11</version>
   <description>Demonstrations for the elevation mapping framework.</description>
   <maintainer email="mwulf@anybotics.com">Maximilian Wulf</maintainer>
   <maintainer email="ynava@anybotics.com">Yoshua Nava</maintainer>
