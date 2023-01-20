@@ -65,6 +65,7 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
   include
+  SYSTEM
   ${catkin_INCLUDE_DIRS}
   ${Boost_INCLUDE_DIRS}
   ${Eigen_INCLUDE_DIRS}

@@ -79,7 +79,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
   if (initialTime_.toSec() == 0) {
     initialTime_ = timestamp;
   }
-  const double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
+  double scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
   for (unsigned int i = 0; i < pointCloud->size(); ++i) {
     auto& point = pointCloud->points[i];
@@ -100,7 +100,7 @@ bool ElevationMap::add(const pcl::PointCloud<pcl::PointXYZRGB>::Ptr pointCloud, 
     auto& sensorZatLowestScan = rawMap_.at("sensor_z_at_lowest_scan", index);
 
     const float& pointVariance = pointCloudVariances(i);
-    const float scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
+    scanTimeSinceInitialization = (timestamp - initialTime_).toSec();
 
     if (!rawMap_.isValid(index)) {
       // No prior information in elevation map, use measurement.
@@ -414,14 +414,14 @@ void ElevationMap::visibilityCleanup(const ros::Time& updatedTime)
     float pointDiffY = point.y() - sensorYatLowestScan;
     float distanceToPoint = sqrt(pointDiffX * pointDiffX + pointDiffY * pointDiffY);
     if (distanceToPoint > 0.0) {
-      for (grid_map::LineIterator iterator(visibilityCleanupMap_, indexAtSensor, *iterator); !iterator.isPastEnd(); ++iterator) {
+      for (grid_map::LineIterator line_iterator(visibilityCleanupMap_, indexAtSensor, *iterator); !line_iterator.isPastEnd(); ++line_iterator) {
         Position cellPosition;
-        visibilityCleanupMap_.getPosition(*iterator, cellPosition);
+        visibilityCleanupMap_.getPosition(*line_iterator, cellPosition);
         const float cellDiffX = cellPosition.x() - sensorXatLowestScan;
         const float cellDiffY = cellPosition.y() - sensorYatLowestScan;
         const float distanceToCell = distanceToPoint - sqrt(cellDiffX * cellDiffX + cellDiffY * cellDiffY);
         const float maxHeightPoint = lowestScanPoint + (sensorZatLowestScan - lowestScanPoint) / distanceToPoint * distanceToCell;
-        auto& cellMaxHeight = visibilityCleanupMap_.at("max_height", *iterator);
+        auto& cellMaxHeight = visibilityCleanupMap_.at("max_height", *line_iterator);
         if (std::isnan(cellMaxHeight) || cellMaxHeight > maxHeightPoint) {
           cellMaxHeight = maxHeightPoint;
         }
