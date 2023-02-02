@@ -18,8 +18,9 @@
   <depend>eigen</depend>
   <depend>eigen_conversions</depend>
   <depend>grid_map_core</depend>
-  <depend>grid_map_ros</depend>
+  <depend>grid_map_filters</depend>
   <depend>grid_map_msgs</depend>
+  <depend>grid_map_ros</depend>
   <depend>kindr</depend>
   <depend>kindr_ros</depend>
   <depend>message_filters</depend>
