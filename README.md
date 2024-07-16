@@ -67,6 +67,7 @@ This software is built on the Robotic Operating System ([ROS]), which needs to b
 - [kindr](http://github.com/anybotics/kindr) (kinematics and dynamics library for robotics),
 - [kindr_ros](https://github.com/anybotics/kindr_ros) (ROS wrapper for kindr),
 - [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing),
+- [Point Cloud IO](https://github.com/ANYbotics/point_cloud_io) (IO for point cloud files),
 - [Eigen](http://eigen.tuxfamily.org) (linear algebra library).
 
 
