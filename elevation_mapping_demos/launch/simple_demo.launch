@@ -7,13 +7,14 @@
     <rosparam command="load" file="$(find elevation_mapping_demos)/config/postprocessing/postprocessor_pipeline.yaml" />
   </node>
 
+  <!-- Pre-condition: clone and build https://github.com/ANYbotics/point_cloud_io in your workspace -->
   <!-- Publish some points -->
-  <node pkg="point_cloud_io" type="read" name="read_ply" output="screen">
+  <!-- <node pkg="point_cloud_io" type="read" name="read_ply" output="screen">
     <param name="file_path" value="$(find elevation_mapping_demos)/sample_data/maze.ply" />
     <param name="topic" value="/points" />
     <param name="frame" value="map" />
     <param name="rate" value="1.0" />
-  </node>
+  </node> -->
 
   <!-- Setup a transform between the world and the robot -->
   <node pkg="tf" type="static_transform_publisher" name="world_to_robot" args="2.0 6.0 0 0 0.0 0 /map /base 100"/>
