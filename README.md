@@ -69,6 +69,7 @@ This software is built on the Robotic Operating System ([ROS]), which needs to b
 - [Grid Map](https://github.com/anybotics/grid_map) (grid map library for mobile robots)
 - [kindr](http://github.com/anybotics/kindr) (kinematics and dynamics library for robotics),
 - [kindr_ros](https://github.com/anybotics/kindr_ros) (ROS wrapper for kindr),
+- [message_logger](https://github.com/anybotics/message_logger) (interface for message logging),
 - [Point Cloud Library (PCL)](http://pointclouds.org/) (point cloud processing),
 - [Eigen](http://eigen.tuxfamily.org) (linear algebra library).
 
